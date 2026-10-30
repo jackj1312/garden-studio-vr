@@ -170,6 +170,32 @@ One button, two behaviours, because they have to be different:
 A properly rendered film (ray tracing, depth of field, motion blur) is a separate deliverable
 out of Blender once the model is worth filming.
 
+## Quality tiers are the price points
+
+Decided 30 Oct 2026. The basic version is not a stepping stone to be thrown away — it is
+the entry product. So quality is a switch in one codebase, never a second codebase.
+
+`?q=basic` · `?q=standard` (default) · `?q=premium`
+
+| | Basic | Standard | Premium |
+|---|---|---|---|
+| Shadow map | 1024 | 2048 | 4096 |
+| Grass instances | 2,500 | 14,000 | 30,000 |
+| Anisotropy | 4 | 8 | 16 |
+| Bloom | no | yes | yes |
+| Ambient occlusion | no | no | yes |
+| Pixel ratio cap | 1.25 | 1.75 | 1.25 |
+
+Measured on the M1 Air at 2048 x 1536: standard holds 60 fps. Screen-space ambient
+occlusion costs about three quarters of the frame rate on integrated graphics, which is
+why it sits in premium alone and why premium drops its pixel ratio to pay for it. It is
+also temporary — baked lighting does the same job better and costs nothing at runtime, so
+when the bake lands, AO comes out and premium spends that budget on something else.
+
+A VR profile is applied over whichever tier is active: 1024 shadows, no post-processing,
+a third of the grass. Holding 90 Hz in the headset outranks every tier, because dropped
+frames make people ill and nobody buys a walkthrough that made them ill.
+
 ## Selling this
 
 Decided 30 Oct 2026: this becomes a service sold to other people, which changes three

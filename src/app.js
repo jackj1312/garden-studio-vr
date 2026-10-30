@@ -4,7 +4,8 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR } from "./config.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE } from "./config.js";
 import { buildMaterials } from "./materials.js";
 import { buildWorld } from "./world.js";
 
@@ -15,8 +16,15 @@ const easeOut = t => 1 - Math.pow(1 - t, 3);
 /* ------------------------------------------------------------------ *
  *  Renderer
  * ------------------------------------------------------------------ */
+/* The tier is the product. ?q=basic | standard | premium */
+const tierKey = (() => {
+  const q = new URLSearchParams(location.search).get("q");
+  return QUALITY[q] ? q : "standard";
+})();
+const tier = QUALITY[tierKey];
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, tier.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -39,7 +47,7 @@ camera.position.set(0, eyeHeight, 0);
 
 const sun = new THREE.DirectionalLight(0xfff4e0, 2.4);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
 sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
 sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -20;
 sun.shadow.camera.far = 60;
@@ -50,9 +58,12 @@ scene.add(sun.target);
 /* ------------------------------------------------------------------ *
  *  World
  * ------------------------------------------------------------------ */
-const mats = buildMaterials(maxAniso);
-const world = buildWorld(scene, mats);
+const mats = buildMaterials(Math.min(maxAniso, tier.anisotropy));
+const world = buildWorld(scene, mats, tier);
 const { stageGroups, obstacles, removals, practicals } = world;
+
+let grassMesh = null, grassFull = 0;
+world.existing.traverse(o => { if (o.isInstancedMesh) { grassMesh = o; grassFull = o.count; } });
 
 let variant = "A";
 world.applyVariant(variant);
@@ -534,14 +545,45 @@ $("variantB").addEventListener("click", () => setVariant("B"));
  * ------------------------------------------------------------------ */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight), 0.11, 0.6, 1.05);
-composer.addPass(bloom);
+
+/* Ambient occlusion is doing the job that bounced light would do if we
+   had any. It is the single biggest reason a rendered frame stops
+   looking like it is floating — contact darkening where surfaces meet.
+   Real baked GI will replace most of this; until then it carries it. */
+let gtao = null;
+if (tier.ao) {
+  gtao = new GTAOPass(scene, camera, window.innerWidth, window.innerHeight);
+  gtao.output = GTAOPass.OUTPUT.Default;
+  gtao.updateGtaoMaterial({
+    radius: 0.45,
+    distanceExponent: 1.2,
+    thickness: 0.6,
+    scale: 1.1,
+    samples: tier.aoQuality === "High" ? 32 : 16
+  });
+  composer.addPass(gtao);
+}
+
+let bloom = null;
+if (tier.bloom) {
+  bloom = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight), 0.11, 0.6, 1.05);
+  composer.addPass(bloom);
+}
 composer.addPass(new OutputPass());
 
 /* ------------------------------------------------------------------ *
  *  VR session
  * ------------------------------------------------------------------ */
+/* In the headset the tier gives way to the frame budget. */
+function applyVRProfile(on) {
+  const size = on ? VR_PROFILE.shadowMap : tier.shadowMap;
+  sun.shadow.mapSize.set(size, size);
+  sun.shadow.map?.dispose();
+  sun.shadow.map = null;
+  if (grassMesh) grassMesh.count = on ? Math.floor(grassFull * VR_PROFILE.grassScale) : grassFull;
+}
+
 async function enterVR() {
   if (!navigator.xr) return;
   try {
@@ -549,13 +591,11 @@ async function enterVR() {
       optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking"]
     });
     await renderer.xr.setSession(session);
-    sun.shadow.mapSize.set(1024, 1024);     // the headset has a tighter budget
-    sun.shadow.map?.dispose();
-    sun.shadow.map = null;
+    applyVRProfile(true);
     $("start").hidden = true;
     $("hud").classList.add("hidden");
     session.addEventListener("end", () => {
-      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
       sun.shadow.map?.dispose();
       sun.shadow.map = null;
       $("hud").classList.remove("hidden");
@@ -611,6 +651,7 @@ addEventListener("resize", () => {
 
 applyTime("midday");
 setStage(1);
+$("meta").textContent = `${STUDIO.w} × ${STUDIO.d} m · ${STUDIO.ridge} m to the ridge · ${tier.label}`;
 
 let lastFrame = performance.now();
 renderer.setAnimationLoop(() => {

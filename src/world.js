@@ -20,7 +20,7 @@ function block(parent, mat, w, h, d, x, y, z, opts = {}) {
 const flat = (colour, extra = {}) =>
   new THREE.MeshStandardMaterial({ color: colour, roughness: 0.75, metalness: 0, ...extra });
 
-export function buildWorld(scene, mats) {
+export function buildWorld(scene, mats, quality) {
   const obstacles = [];
   const removals = [];
   const practicals = [];
@@ -180,7 +180,7 @@ export function buildWorld(scene, mats) {
 
   /* ---- grass tufts, kept off the hard surfaces ---- */
   const grass = makeGrass({
-    count: 14000,
+    count: quality.grass,
     width: SITE.garden.width - 0.3,
     length: SITE.garden.length - SITE.patio.depth - 0.4,
     centreZ: -SITE.patio.depth - (SITE.garden.length - SITE.patio.depth) / 2,

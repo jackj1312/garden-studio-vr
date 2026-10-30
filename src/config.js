@@ -132,3 +132,41 @@ export const COLOURS = {
   lampWarm:  0xffd9a0,
   hedge:     0x44632f
 };
+
+/* ------------------------------------------------------------------ *
+ *  Quality tiers
+ *
+ *  These are the price points, not debug switches. One codebase serves
+ *  all of them; a client buys a tier and gets the same scene rendered
+ *  to a different standard. The VR profile is applied on top of
+ *  whichever tier is active, because 90 Hz in the headset is a promise
+ *  that outranks any of them.
+ * ------------------------------------------------------------------ */
+export const QUALITY = {
+  basic: {
+    label: "Basic",
+    shadowMap: 1024, anisotropy: 4, grass: 2500,
+    ao: false, bloom: false, pixelRatio: 1.25
+  },
+  standard: {
+    label: "Standard",
+    shadowMap: 2048, anisotropy: 8, grass: 14000,
+    ao: false, bloom: true, pixelRatio: 1.75
+  },
+  /* Premium turns on screen-space ambient occlusion, which costs roughly
+     three quarters of the frame rate on integrated graphics — it needs a
+     discrete GPU. It is also a stopgap: baked lighting does the same job
+     better and for free at runtime, and will replace it. */
+  premium: {
+    label: "Premium",
+    shadowMap: 4096, anisotropy: 16, grass: 30000,
+    ao: true, aoQuality: "Medium", bloom: true, pixelRatio: 1.25
+  }
+};
+
+/* Applied over the top of the chosen tier whenever a headset session
+   is running. Nothing here is negotiable: dropped frames make people
+   ill, and nobody buys a walkthrough that made them ill. */
+export const VR_PROFILE = {
+  shadowMap: 1024, ao: false, bloom: false, grassScale: 0.35
+};

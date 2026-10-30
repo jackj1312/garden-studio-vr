@@ -8,6 +8,7 @@ import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE } from "./config.js";
 import { buildMaterials } from "./materials.js";
 import { buildWorld } from "./world.js";
+import { installStudio } from "./studio.js";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -62,6 +63,9 @@ const mats = buildMaterials(Math.min(maxAniso, tier.anisotropy));
 const world = buildWorld(scene, mats, tier);
 const { stageGroups, obstacles, removals, practicals } = world;
 
+let studioParts = 0;
+installStudio(stageGroups, mats, n => { studioParts = n; });
+
 let grassMesh = null, grassFull = 0;
 world.existing.traverse(o => { if (o.isInstancedMesh) { grassMesh = o; grassFull = o.count; } });
 
@@ -110,17 +114,23 @@ function applyTime(key) {
  *  Stage animation
  * ------------------------------------------------------------------ */
 const animated = [];
-stageGroups.forEach((g, gi) => {
-  g.children.forEach((m, i, arr) => {
-    animated.push({
-      mesh: m, group: gi,
-      delay: arr.length > 1 ? (i / arr.length) * 0.55 : 0,
-      span: 0.45,
-      baseY: m.position.y,
-      baseScale: m.scale.clone()
+
+/* Rebuilt once the Blender model has been slotted into the stage
+   groups, since most of what animates arrives with it. */
+function buildStageAnimation() {
+  animated.length = 0;
+  stageGroups.forEach((g, gi) => {
+    g.children.forEach((m, i, arr) => {
+      animated.push({
+        mesh: m, group: gi,
+        delay: arr.length > 1 ? (i / arr.length) * 0.55 : 0,
+        span: 0.45,
+        baseY: m.position.y,
+        baseScale: m.scale.clone()
+      });
     });
   });
-});
+}
 
 const removalState = removals.map(m => ({
   mesh: m, at: m.userData.removeAt, baseY: m.position.y, baseScale: m.scale.clone()
@@ -632,11 +642,13 @@ THREE.DefaultLoadingManager.onLoad = () => {
      the first time a stage appears the shaders compile mid-frame and the
      whole thing hitches — which is survivable when scrubbing by hand and
      ruinous during a timed sequence. */
+  buildStageAnimation();
   for (const a of animated) a.mesh.visible = true;
   for (const r of removalState) r.mesh.visible = true;
   renderer.compile(scene, camera);
   applyStage(stageValue);
 
+  console.info(`studio: ${studioParts} parts from the Blender master | ${renderer.info.render.triangles.toLocaleString()} triangles drawn`);
   $("loading").hidden = true;
   $("startDesktop").disabled = false;
   $("startVR").disabled = false;

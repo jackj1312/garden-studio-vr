@@ -44,3 +44,11 @@ Scans, addresses, drawings and anything identifying a client's property must nev
 a public repository. This repo is public because it holds the engine and a placeholder
 garden. Per-client sites belong in private repos or private hosting, with only the shared
 engine in the open.
+
+## Master model
+
+`master/studio.blend` is the source of truth for the studio. `assets/models/studio.glb`
+is exported from it: geometry only, with the bevel and array modifiers applied and UVs
+unwrapped. glTF cannot carry Blender's procedural materials, so the master supplies the
+shapes and `src/studio.js` supplies the surfaces. The UV set is already in place for the
+lightmap bake, which will arrive as a texture on these same meshes.

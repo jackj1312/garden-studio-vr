@@ -220,137 +220,19 @@ export function buildWorld(scene, mats, quality) {
     g.add(strip);
   }
 
-  /* -- stage 3: slab and service trench -- */
-  {
-    const g = stageGroups[2];
-    const sl = T.slab;
-    block(g, mats.concrete, T.w + sl.oversail, sl.thickness, T.d + sl.oversail, 0, fl - sl.thickness, 0);
-    block(g, M.soil, 0.35, 0.12, 3.2, 0, 0, hd + 1.7);
-  }
-
-  /* -- stage 4: frame -- */
-  {
-    const g = stageGroups[3];
-    const wh = T.wallHeight;
-    for (const z of [-hd, hd]) block(g, M.timber, T.w, 0.1, 0.1, 0, fl, z);
-    for (const x of [-hw, hw]) block(g, M.timber, 0.1, 0.1, T.d, x, fl, 0);
-    for (const x of [-hw, hw]) for (const z of [-hd, hd])
-      block(g, M.timber, 0.12, wh, 0.12, x, fl, z);
-    for (let i = 1; i < 7; i++) {
-      const x = -hw + (T.w * i) / 7;
-      block(g, M.timber, 0.07, wh, 0.07, x, fl, -hd);
-      block(g, M.timber, 0.07, wh, 0.07, x, fl, hd);
-    }
-    for (const z of [-hd, hd]) block(g, M.timber, T.w, 0.14, 0.12, 0, fl + wh, z);
-    for (let i = 0; i <= 8; i++) {
-      const x = -hw + (T.w * i) / 8;
-      block(g, M.timber, 0.07, 0.16, T.d, x, fl + wh + 0.14, 0);
-    }
-  }
-
-  /* -- stage 5: clad, roofed and glazed -- */
-  {
-    const g = stageGroups[4];
-    const wh = T.wallHeight;
-    const o = T.openings;
-
-    // solid walls
-    block(g, mats.cladding, wt, wh, T.d, -hw + wt / 2, fl, 0);                 // west
-    block(g, mats.cladding, wt, wh, T.d,  hw - wt / 2, fl, 0);                 // east
-    // north wall, split around the clerestory
-    block(g, mats.cladding, T.w - wt * 2, o.clerestory.sill, wt, 0, fl, -hd + wt / 2);
-    block(g, mats.cladding, T.w - wt * 2, wh - o.clerestory.sill - o.clerestory.h, wt,
-      0, fl + o.clerestory.sill + o.clerestory.h, -hd + wt / 2);
-    const cSide = (T.w - wt * 2 - o.clerestory.w) / 2;
-    for (const s of [-1, 1])
-      block(g, mats.cladding, cSide, o.clerestory.h, wt,
-        s * (o.clerestory.w / 2 + cSide / 2), fl + o.clerestory.sill, -hd + wt / 2);
-
-    // south wall around the door and side light
-    const southSolid = [
-      { x: -hw + wt / 2 + 0.35, w: 0.7 },
-      { x: 0.35, w: 0.6 },
-      { x: hw - wt / 2 - 0.25, w: 0.5 }
-    ];
-    for (const p of southSolid) block(g, mats.cladding, p.w, wh, wt, p.x, fl, hd - wt / 2);
-    block(g, mats.cladding, T.w - wt * 2, wh - o.door.h - 0.06, wt, 0, fl + o.door.h + 0.06, hd - wt / 2);
-
-    // corner trims — the correct detail for a boarded cladding, and the
-    // thing that stops the corners reading as a mitre that does not exist
-    for (const sx of [-1, 1]) {
-      block(g, M.trim, 0.06, wh, 0.09, sx * (hw + 0.025), fl, hd - 0.06, { shadow: false });
-      block(g, M.trim, 0.09, wh, 0.06, sx * (hw - 0.06), fl, hd + 0.015, { shadow: false });
-      block(g, M.trim, 0.06, wh, 0.09, sx * (hw + 0.025), fl, -hd + 0.06, { shadow: false });
-    }
-
-    // glazing: door, side light, clerestory, gable vent
-    const glaze = (w, h, x, y, z, depth = 0.05) => {
-      block(g, M.darkTrim, w + 0.1, h + 0.1, depth + 0.04, x, y - 0.05, z);
-      block(g, M.glass, w, h, depth, x, y, z, { shadow: false });
-    };
-    glaze(o.door.w, o.door.h, o.door.x, fl, hd - wt / 2);
-    glaze(o.sideLight.w, o.sideLight.h, o.sideLight.x, fl, hd - wt / 2);
-    glaze(o.clerestory.w, o.clerestory.h, o.clerestory.x, fl + o.clerestory.sill, -hd + wt / 2);
-    block(g, M.darkTrim, 0.06, o.door.h + 0.08, 0.08, o.door.x - o.door.w / 2, fl, hd - 0.02);
-
-    // mono-pitch roof, falling to the rear, with a real eaves detail
-    const roof = new THREE.Group();
-    g.add(roof);
-    const rl = Math.hypot(T.d + 0.5, T.fallToRear);
-    const deck = new THREE.Mesh(boxGeo(T.w + 0.4, 0.1, rl, 1), M.roofing);
-    deck.position.set(0, fl + wh + 0.28 - T.fallToRear / 2, -0.05);
-    deck.rotation.x = Math.atan2(T.fallToRear, T.d + 0.5);
-    deck.castShadow = true; deck.receiveShadow = true;
-    roof.add(deck);
-    block(g, M.trim, T.w + 0.44, 0.16, 0.08, 0, fl + wh + 0.2, hd + 0.26);        // front fascia
-    block(g, M.darkTrim, T.w + 0.44, 0.09, 0.09, 0, fl + wh + 0.12, hd + 0.3);    // gutter
-    block(g, M.trim, 0.08, 0.16, T.d + 0.5, hw + 0.2, fl + wh + 0.04, -0.05);     // side fascia
-    block(g, M.trim, 0.08, 0.16, T.d + 0.5, -hw - 0.2, fl + wh + 0.04, -0.05);
-  }
-
-  /* -- stage 6: fit-out, deck, planting, light -- */
+  /* -- stages 3 to 6 come from the Blender master model, loaded as a
+        GLB and slotted into these groups. Everything below is the part
+        that stays procedural: planting, paths and the practical lights,
+        none of which belong in a building model. -- */
   {
     const g = stageGroups[5];
-    const F = T.fitout;
-
-    const deck = new THREE.Mesh(groundGeo(T.w + 0.6, 1.8, mats.deck.userData.tile), mats.deck);
-    deck.position.set(0, fl - 0.03, hd + 0.9);
-    deck.receiveShadow = true;
-    g.add(deck);
-    block(g, mats.deck, T.w + 0.6, 0.12, 0.08, 0, fl - 0.15, hd + 1.8);
+    const hd = T.d / 2;
 
     const spur = new THREE.Mesh(groundGeo(1.0, 2.6, mats.paving.userData.tile), mats.paving);
     spur.position.set(-T.w / 2 + 0.4, 0.02, hd + 3.1);
     spur.receiveShadow = true;
     g.add(spur);
 
-    // interior floor so it does not read as a hollow shell
-    const floor = new THREE.Mesh(groundGeo(T.w - wt * 2, T.d - wt * 2, 2.0), M.fitout);
-    floor.position.set(0, fl + 0.005, 0);
-    floor.receiveShadow = true;
-    g.add(floor);
-
-    // hygiene run — worktop, splashback, sink, under-counter storage
-    block(g, M.fitout, F.worktop.w, F.worktop.h - 0.04, F.worktop.d, F.worktop.x, fl, F.worktop.z);
-    block(g, M.worktop, F.worktop.w + 0.04, 0.04, F.worktop.d, F.worktop.x, fl + F.worktop.h - 0.04, F.worktop.z);
-    block(g, M.trim, 0.02, 0.5, F.worktop.d, F.worktop.x - F.worktop.w / 2 - 0.02, fl + F.worktop.h, F.worktop.z);
-    block(g, M.worktop, F.sink.w, 0.08, F.sink.d, F.sink.x, fl + F.worktop.h - 0.1, F.sink.z);
-    block(g, M.darkTrim, 0.04, 0.3, 0.04, F.sink.x - 0.15, fl + F.worktop.h, F.sink.z - 0.14);
-
-    // the station
-    block(g, M.darkTrim, F.bed.w, 0.18, F.bed.d, F.bed.x, fl + F.bed.h - 0.18, F.bed.z);
-    block(g, M.darkTrim, 0.12, F.bed.h - 0.18, 0.12, F.bed.x, fl, F.bed.z);
-    block(g, M.darkTrim, 0.8, 0.06, 0.5, F.bed.x, fl + 0.04, F.bed.z);
-    block(g, M.fitout, F.trolley.w, F.trolley.h, F.trolley.d, F.trolley.x, fl, F.trolley.z);
-    const stool = new THREE.Mesh(new THREE.CylinderGeometry(F.stool.r, F.stool.r * 0.8, 0.08, 16), M.darkTrim);
-    stool.position.set(F.stool.x, fl + F.stool.h, F.stool.z);
-    stool.castShadow = true;
-    g.add(stool);
-    block(g, M.darkTrim, 0.08, F.stool.h, 0.08, F.stool.x, fl, F.stool.z);
-    block(g, M.fitout, F.clientSeat.w, F.clientSeat.h, F.clientSeat.d, F.clientSeat.x, fl, F.clientSeat.z);
-    block(g, M.fitout, F.shelves.w, F.shelves.h, F.shelves.d, F.shelves.x, fl, F.shelves.z);
-
-    // planting either side of the deck
     for (const [x, z, r] of [[-2.9, 1.2, 0.55], [-2.4, 2.5, 0.4], [2.9, 1.5, 0.5], [2.4, 2.9, 0.38]]) {
       const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), Math.random() > 0.5 ? M.foliage : M.foliage2);
       b.position.set(x, r * 0.8, z + hd);
@@ -358,21 +240,19 @@ export function buildWorld(scene, mats, quality) {
       g.add(b);
     }
 
-    // practicals — these come on at dusk
+    const lampX = T.openings.door.x - T.openings.door.w / 2 - 0.28;
     const porch = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.08),
       new THREE.MeshStandardMaterial({ color: COLOURS.lampWarm, emissive: COLOURS.lampWarm, emissiveIntensity: 1 }));
-    porch.position.set(o_x(T), fl + 2.05, hd + 0.08);
+    porch.position.set(lampX, fl + 2.05, hd + 0.08);
     g.add(porch);
     const porchLight = new THREE.PointLight(0xffc98a, 0, 6, 2);
-    porchLight.position.set(o_x(T), fl + 1.95, hd + 0.3);
+    porchLight.position.set(lampX, fl + 1.95, hd + 0.3);
     g.add(porchLight);
     const interior = new THREE.PointLight(0xfff0d4, 0, 7, 2);
     interior.position.set(0, fl + 2.0, 0);
     g.add(interior);
     practicals.push({ light: porchLight, max: 3.5 }, { light: interior, max: 4.5 }, { emissive: porch });
   }
-
-  function o_x(t) { return t.openings.door.x - t.openings.door.w / 2 - 0.28; }
 
   // the studio only becomes solid once it has walls
   blockBox(0, 0, T.w / 2 + 0.1, T.d / 2 + 0.1, 0, 5);

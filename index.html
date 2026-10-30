@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Garden Studio Walkthrough</title>
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --panel: #fffffff2;
+    --ink: #22251f;
+    --ink-soft: #5c6157;
+    --line: #d8d6ce;
+    --accent: #4a7a3f;
+    --accent-ink: #ffffff;
+    --warn: #8a5a2b;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181a;
+      --panel: #1e2124f2;
+      --ink: #e8e7e1;
+      --ink-soft: #a0a39a;
+      --line: #33373a;
+      --accent: #7aa86a;
+      --accent-ink: #11140f;
+      --warn: #c99a63;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181a;
+    --panel: #1e2124f2;
+    --ink: #e8e7e1;
+    --ink-soft: #a0a39a;
+    --line: #33373a;
+    --accent: #7aa86a;
+    --accent-ink: #11140f;
+    --warn: #c99a63;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    z-index: 5;
+  }
+  #hud.hidden { display: none; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .stage-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .stage-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .stage-note { font-size: 12.5px; color: var(--ink-soft); }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    height: 24px;
+  }
+  button {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { border-color: var(--ink-soft); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .ticks { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ticks button { padding: 6px 9px; font-variant-numeric: tabular-nums; }
+  .spacer { flex: 1; }
+  .meta { font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  #start {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; text-align: center;
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+    background: var(--bg);
+    z-index: 10;
+  }
+  #start[hidden] { display: none; }
+  #start h1 { font-size: clamp(22px, 5vw, 30px); margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+  #start p { margin: 0; max-width: 42ch; color: var(--ink-soft); font-size: 14.5px; line-height: 1.6; }
+  #start .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  #start .note { font-size: 12.5px; color: var(--warn); max-width: 42ch; }
+  .kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; padding: 1px 5px; border: 1px solid var(--line);
+    border-radius: 4px; color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<div id="hud" class="hidden">
+  <div class="row">
+    <div class="stage-label">
+      <span class="stage-name" id="stageName">As it is today</span>
+      <span class="stage-note" id="stageNote">The garden as it stands. Nothing proposed.</span>
+    </div>
+    <span class="meta" id="meta"></span>
+  </div>
+  <input type="range" id="scrub" min="1" max="6" step="0.01" value="1" aria-label="Build stage">
+  <div class="row">
+    <div class="ticks" id="ticks"></div>
+    <div class="spacer"></div>
+    <button id="play">Play build</button>
+    <button id="variantA" aria-pressed="true">Corner</button>
+    <button id="variantB" aria-pressed="false">Along fence</button>
+    <button id="vr">Enter VR</button>
+  </div>
+</div>
+
+<div id="start">
+  <h1>Garden studio walkthrough</h1>
+  <p>A grey-box stand-in for the property at true scale, with the studio building itself
+     across six stages. Placeholder dimensions until the survey scan replaces them.</p>
+  <div class="actions">
+    <button class="primary" id="startDesktop">Explore on this screen</button>
+    <button id="startVR">Enter VR</button>
+  </div>
+  <p class="note" id="xrNote"></p>
+  <p><span class="kbd">W A S D</span> to walk · mouse to look · <span class="kbd">Esc</span> to release the cursor</p>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js";
+
+/* ------------------------------------------------------------------ *
+ *  PLACEHOLDER SITE DIMENSIONS — metres, replace after the scan.
+ *  Origin is the back door threshold. +X east, -Z down the garden.
+ * ------------------------------------------------------------------ */
+const SITE = {
+  gardenWidth: 8,
+  gardenLength: 14,
+  houseDepth: 8,
+  houseHeight: 6.4,
+  fenceHeight: 1.8,
+  patioDepth: 3,
+  hedgeDepth: 1.0,
+  hedgeHeight: 1.5,
+  studio: { w: 4.5, d: 3.5, h: 2.5, wall: 2.1 }  // 2.5 m ridge: the permitted-development ceiling within 2 m of a boundary
+};
+const HALF = SITE.gardenWidth / 2;
+const REAR = -SITE.gardenLength;
+
+const STAGES = [
+  { name: "As it is today",  note: "The garden as it stands. Nothing proposed." },
+  { name: "Cleared",         note: "Hedge out, slabs lifted, footprint stripped back." },
+  { name: "Base",            note: "Slab poured, service trench run to the house." },
+  { name: "Frame",           note: "Sole plates, studs and roof structure up." },
+  { name: "Clad and roofed", note: "Cladding, roof covering, window and door in." },
+  { name: "Finished",        note: "Fit-out, deck, path, planting and lighting." }
+];
+
+const COL = {
+  grass:    0x7f9159,
+  soil:     0x6f6250,
+  paving:   0x9b9893,
+  path:     0xa9a6a0,
+  fence:    0x8a7352,
+  house:    0xcdc7ba,
+  houseTrim:0xb0a899,
+  roofTile: 0x55575c,
+  glass:    0x9ec6d8,
+  hedge:    0x5b7a46,
+  trunk:    0x6a5a44,
+  foliage:  0x5f8046,
+  concrete: 0xa9a6a1,
+  timber:   0xc6a673,
+  cladding: 0x8b6f51,
+  deck:     0xb08a5e,
+  planting: 0x6b8f4e,
+  fitout:   0xd8d2c4,
+  lamp:     0xffe9b0
+};
+
+let uiDirty = true;      // the wrist panel redraws only when something changed
+let cursorUV = null;     // where the right controller's ray lands on the panel
+
+const mat = (color, opts = {}) => new THREE.MeshLambertMaterial({ color, ...opts });
+const MATS = Object.fromEntries(Object.entries(COL).map(([k, v]) => [k, mat(v)]));
+MATS.glass = mat(COL.glass, { transparent: true, opacity: 0.45 });
+MATS.lamp = new THREE.MeshBasicMaterial({ color: COL.lamp });
+
+/* ------------------------------------------------------------------ *
+ *  Renderer, scene, player
+ * ------------------------------------------------------------------ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType("local-floor");
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xa8c4d8);
+scene.fog = new THREE.Fog(0xa8c4d8, 40, 95);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 200);
+const player = new THREE.Group();          // the dolly: XR moves the camera inside this
+player.position.set(0, 0, -2.2);
+player.add(camera);
+scene.add(player);
+let eyeHeight = 1.68;                      // used on desktop only; XR takes it from the headset
+camera.position.set(0, eyeHeight, 0);
+
+const hemi = new THREE.HemisphereLight(0xbfd6e6, 0x5c5f4a, 0.85);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.5);
+sun.position.set(-7, 12, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
+sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -18;
+sun.shadow.camera.far = 50;
+sun.shadow.bias = -0.0008;
+scene.add(sun);
+
+/* ------------------------------------------------------------------ *
+ *  Geometry helpers. Every box is bottom-anchored: y is the base.
+ * ------------------------------------------------------------------ */
+const sharedBox = new THREE.BoxGeometry(1, 1, 1);
+
+function box(parent, { w, h, d, x = 0, y = 0, z = 0, material, ry = 0, shadow = true }) {
+  const m = new THREE.Mesh(sharedBox, material);
+  m.scale.set(w, h, d);
+  m.position.set(x, y + h / 2, z);
+  m.rotation.y = ry;
+  m.castShadow = shadow;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+
+function slab(parent, { w, d, x = 0, y = 0.01, z = 0, material, ry = 0 }) {
+  const m = new THREE.Mesh(sharedBox, material);
+  m.scale.set(w, 0.02, d);
+  m.position.set(x, y, z);
+  m.rotation.y = ry;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+
+/* obstacles: rotated boxes and circles, in world space, gated by stage */
+const obstacles = [];
+const blockBox = (cx, cz, hw, hd, rot = 0, from = 1) => obstacles.push({ kind: "box", cx, cz, hw, hd, rot, from });
+const blockCircle = (cx, cz, r, from = 1) => obstacles.push({ kind: "circle", cx, cz, r, from });
+
+/* ------------------------------------------------------------------ *
+ *  EXISTING — the property as it is
+ * ------------------------------------------------------------------ */
+const EXISTING = new THREE.Group();
+EXISTING.name = "EXISTING";
+scene.add(EXISTING);
+
+// ground: lawn, with a wide apron so the horizon is not an edge
+const apron = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), mat(0x74854f));
+apron.rotation.x = -Math.PI / 2;
+apron.position.y = -0.02;
+apron.receiveShadow = true;
+EXISTING.add(apron);
+
+const lawn = new THREE.Mesh(new THREE.PlaneGeometry(SITE.gardenWidth, SITE.gardenLength), MATS.grass);
+lawn.rotation.x = -Math.PI / 2;
+lawn.position.set(0, 0, REAR / 2);
+lawn.receiveShadow = true;
+EXISTING.add(lawn);
+
+// house: back wall, two storeys, door and windows as insets
+const house = new THREE.Group();
+EXISTING.add(house);
+box(house, { w: SITE.gardenWidth, h: SITE.houseHeight, d: SITE.houseDepth, z: SITE.houseDepth / 2, material: MATS.house });
+box(house, { w: 1.0, h: 2.05, d: 0.14, y: 0, z: -0.02, material: MATS.houseTrim });   // back door
+box(house, { w: 1.6, h: 1.25, d: 0.12, x: -2.4, y: 1.0, z: -0.01, material: MATS.glass }); // kitchen window
+box(house, { w: 2.2, h: 1.4, d: 0.12, x: 2.1, y: 0.9, z: -0.01, material: MATS.glass });   // living window
+box(house, { w: 1.3, h: 1.2, d: 0.12, x: -2.0, y: 3.6, z: -0.01, material: MATS.glass });  // bedroom
+box(house, { w: 1.3, h: 1.2, d: 0.12, x: 2.0, y: 3.6, z: -0.01, material: MATS.glass });
+box(house, { w: SITE.gardenWidth + 0.3, h: 0.25, d: SITE.houseDepth + 0.2, y: SITE.houseHeight, z: SITE.houseDepth / 2, material: MATS.roofTile });
+blockBox(0, SITE.houseDepth / 2, SITE.gardenWidth / 2, SITE.houseDepth / 2);
+
+// boundaries: close-board fence on three sides
+const fenceMat = MATS.fence;
+for (const side of [-1, 1]) {
+  box(EXISTING, { w: 0.08, h: SITE.fenceHeight, d: SITE.gardenLength, x: side * HALF, z: REAR / 2, material: fenceMat });
+  blockBox(side * HALF, REAR / 2, 0.14, SITE.gardenLength / 2);
+}
+box(EXISTING, { w: SITE.gardenWidth, h: SITE.fenceHeight, d: 0.08, z: REAR, material: fenceMat });
+blockBox(0, REAR, SITE.gardenWidth / 2, 0.14);
+
+// patio: lifted at stage 2 where it overlaps the works
+const patio = slab(EXISTING, { w: SITE.gardenWidth - 0.4, d: SITE.patioDepth, z: -SITE.patioDepth / 2, material: MATS.paving });
+// path down the left-hand side
+const path = slab(EXISTING, { w: 0.9, d: SITE.gardenLength - SITE.patioDepth, x: -HALF + 0.75, z: -SITE.patioDepth - (SITE.gardenLength - SITE.patioDepth) / 2, material: MATS.path });
+
+// hedge across the rear — in the studio footprint, so it goes at stage 2
+const hedge = box(EXISTING, {
+  w: SITE.gardenWidth - 0.2, h: SITE.hedgeHeight, d: SITE.hedgeDepth,
+  z: REAR + SITE.hedgeDepth / 2 + 0.1, material: MATS.hedge
+});
+hedge.userData.removeAt = 2;
+
+// shed, rear-left
+const shed = new THREE.Group();
+EXISTING.add(shed);
+box(shed, { w: 2.0, h: 1.9, d: 1.5, x: -HALF + 1.2, z: REAR + 2.0, material: MATS.fence });
+box(shed, { w: 2.2, h: 0.12, d: 1.7, x: -HALF + 1.2, y: 1.9, z: REAR + 2.0, material: MATS.roofTile });
+blockBox(-HALF + 1.2, REAR + 2.0, 1.0, 0.75);
+
+// trees
+function tree(x, z, h, r) {
+  const g = new THREE.Group();
+  box(g, { w: 0.26, h: h * 0.45, d: 0.26, x, z, material: MATS.trunk });
+  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), MATS.foliage);
+  crown.position.set(x, h * 0.45 + r * 0.75, z);
+  crown.castShadow = true;
+  g.add(crown);
+  EXISTING.add(g);
+  blockCircle(x, z, 0.4);
+}
+tree(-2.9, -9.4, 4.6, 1.5);
+tree(3.0, -5.6, 3.6, 1.2);
+
+// bin store by the house
+box(EXISTING, { w: 1.4, h: 1.1, d: 0.8, x: HALF - 1.1, y: 0, z: -1.2, material: MATS.houseTrim });
+blockBox(HALF - 1.1, -1.2, 0.7, 0.4);
+
+/* ------------------------------------------------------------------ *
+ *  THE STUDIO — stages 2..6, parented to an anchor so variants move it
+ * ------------------------------------------------------------------ */
+const anchor = new THREE.Group();
+anchor.name = "STUDIO_ANCHOR";
+scene.add(anchor);
+
+const VARIANTS = {
+  A: { label: "Corner", pos: new THREE.Vector3(1.35, 0, REAR + 2.45), ry: 0 },
+  B: { label: "Along fence", pos: new THREE.Vector3(HALF - 2.2, 0, REAR + 5.2), ry: Math.PI / 2 }
+};
+let variant = "A";
+
+const S = SITE.studio;
+const stageGroups = [];
+for (let i = 0; i < 6; i++) {
+  const g = new THREE.Group();
+  g.name = `STAGE_${String(i + 1).padStart(2, "0")}`;
+  anchor.add(g);
+  stageGroups.push(g);
+}
+
+// stage 2 — cleared: a stripped soil footprint
+{
+  const g = stageGroups[1];
+  slab(g, { w: S.w + 1.2, d: S.d + 1.2, y: 0.015, material: MATS.soil });
+}
+
+// stage 3 — base: slab plus a service trench back toward the house
+{
+  const g = stageGroups[2];
+  box(g, { w: S.w + 0.2, h: 0.18, d: S.d + 0.2, material: MATS.concrete });
+  box(g, { w: 0.35, h: 0.1, d: 3.2, z: S.d / 2 + 1.7, material: MATS.soil });
+}
+
+// stage 4 — frame: plates, corner posts, studs, rafters, ridge
+{
+  const g = stageGroups[3];
+  const y0 = 0.18;
+  const hw = S.w / 2, hd = S.d / 2;
+  box(g, { w: S.w, h: 0.1, d: 0.1, y: y0, z: -hd, material: MATS.timber });
+  box(g, { w: S.w, h: 0.1, d: 0.1, y: y0, z: hd, material: MATS.timber });
+  box(g, { w: 0.1, h: 0.1, d: S.d, y: y0, x: -hw, material: MATS.timber });
+  box(g, { w: 0.1, h: 0.1, d: S.d, y: y0, x: hw, material: MATS.timber });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    box(g, { w: 0.12, h: S.wall, d: 0.12, x: sx * hw, y: y0, z: sz * hd, material: MATS.timber });
+  }
+  for (let i = 1; i < 5; i++) {
+    const x = -hw + (S.w * i) / 5;
+    box(g, { w: 0.08, h: S.wall, d: 0.08, x, y: y0, z: -hd, material: MATS.timber });
+    box(g, { w: 0.08, h: S.wall, d: 0.08, x, y: y0, z: hd, material: MATS.timber });
+  }
+  box(g, { w: S.w, h: 0.12, d: 0.12, y: y0 + S.wall, z: -hd, material: MATS.timber });
+  box(g, { w: S.w, h: 0.12, d: 0.12, y: y0 + S.wall, z: hd, material: MATS.timber });
+  for (let i = 0; i <= 6; i++) {
+    const x = -hw + (S.w * i) / 6;
+    box(g, { w: 0.08, h: 0.16, d: S.d, x, y: y0 + S.wall + 0.12, material: MATS.timber });
+  }
+  box(g, { w: S.w + 0.1, h: 0.14, d: 0.14, y: S.h - 0.14, material: MATS.timber });
+}
+
+// stage 5 — clad and roofed
+{
+  const g = stageGroups[4];
+  const y0 = 0.18, hw = S.w / 2, hd = S.d / 2;
+  box(g, { w: S.w, h: S.wall, d: 0.1, y: y0, z: -hd, material: MATS.cladding });              // rear
+  box(g, { w: 0.1, h: S.wall, d: S.d, y: y0, x: -hw, material: MATS.cladding });              // left
+  box(g, { w: 0.1, h: S.wall, d: S.d, y: y0, x: hw, material: MATS.cladding });               // right
+  box(g, { w: 1.35, h: S.wall, d: 0.1, y: y0, x: -hw + 0.9, z: hd, material: MATS.cladding }); // front pier
+  box(g, { w: 0.9, h: S.wall, d: 0.1, y: y0, x: hw - 0.6, z: hd, material: MATS.cladding });
+  box(g, { w: 0.95, h: 2.05, d: 0.08, y: y0, x: -hw + 0.2, z: hd, material: MATS.houseTrim }); // door
+  box(g, { w: 1.5, h: 1.3, d: 0.07, y: y0 + 0.75, x: 0.75, z: hd, material: MATS.glass });     // window
+  box(g, { w: S.w + 0.3, h: 0.14, d: S.d + 0.3, y: S.h - 0.14, material: MATS.roofTile });     // roof
+  box(g, { w: S.w + 0.34, h: 0.08, d: 0.1, y: S.h - 0.2, z: hd + 0.15, material: MATS.houseTrim });
+}
+
+// stage 6 — finished: deck, path spur, planting, fit-out, light
+{
+  const g = stageGroups[5];
+  const hd = S.d / 2;
+  slab(g, { w: S.w + 0.6, d: 1.8, y: 0.09, z: hd + 0.9, material: MATS.deck });
+  slab(g, { w: 1.0, d: 3.0, y: 0.04, x: -S.w / 2 + 0.4, z: hd + 3.3, material: MATS.path });
+  for (const [x, z, r] of [[-2.9, 1.1, 0.5], [-2.4, 2.4, 0.4], [2.9, 1.4, 0.45], [2.5, 2.8, 0.35]]) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), MATS.planting);
+    b.position.set(x, r * 0.8, z + hd);
+    b.castShadow = true;
+    g.add(b);
+  }
+  box(g, { w: 2.4, h: 0.75, d: 0.6, y: 0.18, x: -0.6, z: -hd + 0.45, material: MATS.fitout }); // bench
+  box(g, { w: 0.9, h: 0.5, d: 1.9, y: 0.18, x: S.w / 2 - 0.7, material: MATS.fitout });        // chair
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), MATS.lamp);
+  lamp.position.set(-S.w / 2 + 0.2, 2.35, hd + 0.2);
+  g.add(lamp);
+  const glow = new THREE.PointLight(0xffd9a0, 2.2, 7);
+  glow.position.copy(lamp.position);
+  g.add(glow);
+}
+
+// the studio becomes solid once it has walls
+blockBox(0, 0, S.w / 2 + 0.1, S.d / 2 + 0.1, 0, 5);
+const studioObstacle = obstacles[obstacles.length - 1];
+
+function applyVariant(v) {
+  variant = v;
+  const def = VARIANTS[v];
+  anchor.position.copy(def.pos);
+  anchor.rotation.y = def.ry;
+  studioObstacle.cx = def.pos.x;
+  studioObstacle.cz = def.pos.z;
+  studioObstacle.rot = def.ry;
+  document.getElementById("variantA").setAttribute("aria-pressed", String(v === "A"));
+  document.getElementById("variantB").setAttribute("aria-pressed", String(v === "B"));
+  uiDirty = true;
+}
+applyVariant("A");
+
+/* ------------------------------------------------------------------ *
+ *  Stage animation. Each stage's children rise and grow in, staggered,
+ *  so dragging the scrubber part-way through a stage half-builds it.
+ * ------------------------------------------------------------------ */
+const animated = [];
+stageGroups.forEach((g, gi) => {
+  const kids = g.children.slice();
+  kids.forEach((m, i) => {
+    const delay = kids.length > 1 ? (i / kids.length) * 0.55 : 0;
+    animated.push({
+      mesh: m, group: gi, delay, span: 0.45,
+      baseY: m.position.y, baseScale: m.scale.clone()
+    });
+  });
+});
+
+const removals = [];
+EXISTING.traverse(o => { if (o.userData.removeAt) removals.push({ mesh: o, at: o.userData.removeAt, baseY: o.position.y, baseScale: o.scale.clone() }); });
+removals.push({ mesh: patio, at: 2, baseY: patio.position.y, baseScale: patio.scale.clone(), fadeOnly: true });
+
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
+
+let stageValue = 1;
+
+function applyStage(v) {
+  for (const a of animated) {
+    const p = clamp01(v - a.group);                       // group 0 is stage 1 (nothing to build)
+    const local = easeOut(clamp01((p - a.delay) / a.span));
+    a.mesh.visible = local > 0.001;
+    if (!a.mesh.visible) continue;
+    a.mesh.scale.set(
+      a.baseScale.x * (0.9 + 0.1 * local),
+      a.baseScale.y * local,
+      a.baseScale.z * (0.9 + 0.1 * local)
+    );
+    a.mesh.position.y = a.baseY - (1 - local) * 0.25 + (a.baseScale.y * (local - 1)) / 2;
+  }
+  for (const r of removals) {
+    const out = easeOut(clamp01(v - (r.at - 1)));
+    r.mesh.visible = out < 0.999;
+    if (!r.mesh.visible) continue;
+    if (r.fadeOnly) {
+      r.mesh.position.y = r.baseY - out * 0.12;
+    } else {
+      r.mesh.scale.set(r.baseScale.x, r.baseScale.y * (1 - out), r.baseScale.z);
+      r.mesh.position.y = r.baseY - (r.baseScale.y * out) / 2;
+    }
+  }
+  const idx = Math.min(5, Math.max(0, Math.round(v) - 1));
+  if (idx !== lastStageIdx) {
+    lastStageIdx = idx;
+    document.getElementById("stageName").textContent = STAGES[idx].name;
+    document.getElementById("stageNote").textContent = STAGES[idx].note;
+    for (const b of tickButtons) b.setAttribute("aria-pressed", String(+b.dataset.stage === idx + 1));
+    uiDirty = true;
+  }
+}
+let lastStageIdx = -1;
+
+/* ------------------------------------------------------------------ *
+ *  Collision — circle against rotated boxes and circles
+ * ------------------------------------------------------------------ */
+const PLAYER_R = 0.32;
+function resolve(x, z) {
+  for (const o of obstacles) {
+    if (stageValue + 0.001 < o.from) continue;
+    if (o.kind === "circle") {
+      const dx = x - o.cx, dz = z - o.cz;
+      const d = Math.hypot(dx, dz), min = o.r + PLAYER_R;
+      if (d < min && d > 1e-5) { x = o.cx + (dx / d) * min; z = o.cz + (dz / d) * min; }
+      continue;
+    }
+    const c = Math.cos(-o.rot), s = Math.sin(-o.rot);
+    const px = x - o.cx, pz = z - o.cz;
+    let lx = px * c - pz * s, lz = px * s + pz * c;
+    const ex = o.hw + PLAYER_R, ez = o.hd + PLAYER_R;
+    if (Math.abs(lx) < ex && Math.abs(lz) < ez) {
+      const ox = ex - Math.abs(lx), oz = ez - Math.abs(lz);
+      if (ox < oz) lx = Math.sign(lx || 1) * ex; else lz = Math.sign(lz || 1) * ez;
+      const c2 = Math.cos(o.rot), s2 = Math.sin(o.rot);
+      x = o.cx + (lx * c2 - lz * s2);
+      z = o.cz + (lx * s2 + lz * c2);
+    }
+  }
+  // stay on the plot
+  x = Math.min(HALF - PLAYER_R, Math.max(-HALF + PLAYER_R, x));
+  z = Math.min(SITE.houseDepth + 10, Math.max(REAR + PLAYER_R, z));
+  return [x, z];
+}
+
+/* ------------------------------------------------------------------ *
+ *  Comfort vignette, drawn once to a canvas
+ * ------------------------------------------------------------------ */
+const vigCanvas = document.createElement("canvas");
+vigCanvas.width = vigCanvas.height = 256;
+{
+  const c = vigCanvas.getContext("2d");
+  const g = c.createRadialGradient(128, 128, 48, 128, 128, 128);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(0.55, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.92)");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 256, 256);
+}
+const vignette = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.4, 1.4),
+  new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(vigCanvas), transparent: true, opacity: 0, depthTest: false, depthWrite: false })
+);
+vignette.position.z = -0.32;
+vignette.renderOrder = 999;
+camera.add(vignette);
+
+/* ------------------------------------------------------------------ *
+ *  In-VR wrist panel: a canvas texture on the left controller,
+ *  pointed at with the right controller.
+ * ------------------------------------------------------------------ */
+const PW = 512, PH = 320;
+const panelCanvas = document.createElement("canvas");
+panelCanvas.width = PW; panelCanvas.height = PH;
+const pctx = panelCanvas.getContext("2d");
+const panelTex = new THREE.CanvasTexture(panelCanvas);
+const panel = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.26, 0.1625),
+  new THREE.MeshBasicMaterial({ map: panelTex, transparent: true })
+);
+panel.position.set(0.02, 0.05, -0.08);
+panel.rotation.set(-Math.PI / 3.1, 0, 0);
+panel.visible = false;
+
+const HIT = {
+  scrub:   { x: 24, y: 118, w: 464, h: 54 },
+  play:    { x: 24, y: 246, w: 150, h: 50 },
+  varA:    { x: 190, y: 246, w: 142, h: 50 },
+  varB:    { x: 346, y: 246, w: 142, h: 50 }
+};
+const tickHit = [];
+for (let i = 0; i < 6; i++) tickHit.push({ x: 24 + i * 78, y: 186, w: 68, h: 44 });
+
+function drawPanel() {
+  pctx.clearRect(0, 0, PW, PH);
+  pctx.fillStyle = "rgba(18,20,18,0.92)";
+  pctx.strokeStyle = "rgba(255,255,255,0.14)";
+  pctx.lineWidth = 2;
+  roundRect(pctx, 2, 2, PW - 4, PH - 4, 18); pctx.fill(); pctx.stroke();
+
+  const idx = Math.min(5, Math.max(0, Math.round(stageValue) - 1));
+  pctx.fillStyle = "#f2f1ea";
+  pctx.font = "600 34px system-ui, sans-serif";
+  pctx.fillText(STAGES[idx].name, 24, 56);
+  pctx.fillStyle = "#a7ab9e";
+  pctx.font = "22px system-ui, sans-serif";
+  pctx.fillText(STAGES[idx].note.slice(0, 46), 24, 90);
+
+  // scrubber
+  const s = HIT.scrub;
+  pctx.fillStyle = "rgba(255,255,255,0.12)";
+  roundRect(pctx, s.x, s.y + 20, s.w, 12, 6); pctx.fill();
+  const frac = (stageValue - 1) / 5;
+  pctx.fillStyle = "#7aa86a";
+  roundRect(pctx, s.x, s.y + 20, Math.max(12, s.w * frac), 12, 6); pctx.fill();
+  pctx.beginPath();
+  pctx.arc(s.x + s.w * frac, s.y + 26, 15, 0, Math.PI * 2);
+  pctx.fillStyle = "#eef0e8"; pctx.fill();
+
+  // stage ticks
+  for (let i = 0; i < 6; i++) {
+    const t = tickHit[i], on = i === idx;
+    pctx.fillStyle = on ? "#7aa86a" : "rgba(255,255,255,0.08)";
+    roundRect(pctx, t.x, t.y, t.w, t.h, 10); pctx.fill();
+    pctx.fillStyle = on ? "#11140f" : "#d8dad1";
+    pctx.font = "600 24px system-ui, sans-serif";
+    pctx.textAlign = "center";
+    pctx.fillText(String(i + 1), t.x + t.w / 2, t.y + 30);
+    pctx.textAlign = "left";
+  }
+
+  const btn = (r, label, on) => {
+    pctx.fillStyle = on ? "#7aa86a" : "rgba(255,255,255,0.08)";
+    roundRect(pctx, r.x, r.y, r.w, r.h, 12); pctx.fill();
+    pctx.fillStyle = on ? "#11140f" : "#e4e6dd";
+    pctx.font = "600 23px system-ui, sans-serif";
+    pctx.textAlign = "center";
+    pctx.fillText(label, r.x + r.w / 2, r.y + 33);
+    pctx.textAlign = "left";
+  };
+  btn(HIT.play, playing ? "Pause" : "Play build", playing);
+  btn(HIT.varA, "Corner", variant === "A");
+  btn(HIT.varB, "Along fence", variant === "B");
+
+  if (cursorUV) {
+    pctx.beginPath();
+    pctx.arc(cursorUV.x * PW, cursorUV.y * PH, 9, 0, Math.PI * 2);
+    pctx.fillStyle = "rgba(255,255,255,0.85)"; pctx.fill();
+  }
+  panelTex.needsUpdate = true;
+  uiDirty = false;
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+const inHit = (uv, r) => uv.x * PW >= r.x && uv.x * PW <= r.x + r.w && uv.y * PH >= r.y && uv.y * PH <= r.y + r.h;
+
+/* ------------------------------------------------------------------ *
+ *  XR controllers
+ * ------------------------------------------------------------------ */
+const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
+const hands = { left: null, right: null };
+const rayGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+
+controllers.forEach(c => {
+  player.add(c);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.11), mat(0x2a2d30));
+  c.add(grip);
+  c.addEventListener("connected", e => {
+    const h = e.data.handedness;
+    c.userData.hand = h;
+    c.userData.source = e.data;
+    hands[h] = c;
+    if (h === "left") { c.add(panel); panel.visible = true; }
+    if (h === "right") {
+      const line = new THREE.Line(rayGeom, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+      line.scale.z = 1.2;
+      c.add(line);
+    }
+  });
+  c.addEventListener("disconnected", () => {
+    if (c.userData.hand === "left") panel.visible = false;
+    hands[c.userData.hand] = null;
+  });
+});
+
+const raycaster = new THREE.Raycaster();
+let triggerWasDown = false, dragging = false;
+
+function updatePointer() {
+  const right = hands.right;
+  if (!right || !panel.visible) { cursorUV = null; return; }
+  const origin = new THREE.Vector3(), dir = new THREE.Vector3(0, 0, -1);
+  right.getWorldPosition(origin);
+  dir.applyQuaternion(right.getWorldQuaternion(new THREE.Quaternion()));
+  raycaster.set(origin, dir);
+  const hit = raycaster.intersectObject(panel, false)[0];
+  const gp = right.userData.source?.gamepad;
+  const trigger = !!gp?.buttons?.[0]?.pressed;
+
+  if (!hit) { cursorUV = null; triggerWasDown = trigger; dragging = false; uiDirty = true; return; }
+  const uv = { x: hit.uv.x, y: 1 - hit.uv.y };
+  cursorUV = uv; uiDirty = true;
+
+  const pressed = trigger && !triggerWasDown;
+  if (pressed && inHit(uv, HIT.scrub)) dragging = true;
+  if (dragging && trigger) {
+    const f = clamp01((uv.x * PW - HIT.scrub.x) / HIT.scrub.w);
+    setStage(1 + f * 5, false);
+    playing = false;
+  }
+  if (!trigger) dragging = false;
+  if (pressed) {
+    if (inHit(uv, HIT.play)) togglePlay();
+    else if (inHit(uv, HIT.varA)) applyVariant("A");
+    else if (inHit(uv, HIT.varB)) applyVariant("B");
+    else for (let i = 0; i < 6; i++) if (inHit(uv, tickHit[i])) { goToStage(i + 1); break; }
+  }
+  triggerWasDown = trigger;
+}
+
+/* locomotion from thumbsticks */
+const SPEED = 1.4;          // m/s — a walk, deliberately
+const SNAP = Math.PI / 6;   // 30 degrees
+let snapLatch = false;
+const forward = new THREE.Vector3(), rightVec = new THREE.Vector3(), moveVec = new THREE.Vector3();
+let speedNow = 0;
+
+function axesOf(c) {
+  const gp = c?.userData.source?.gamepad;
+  if (!gp || !gp.axes) return [0, 0];
+  const a = gp.axes;
+  return a.length >= 4 ? [a[2], a[3]] : [a[0] || 0, a[1] || 0];
+}
+const dead = v => Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86;
+
+function xrLocomotion(dt) {
+  const [lx, ly] = axesOf(hands.left).map(dead);
+  const [rx] = axesOf(hands.right).map(dead);
+
+  if (Math.abs(rx) > 0.65) {
+    if (!snapLatch) { rotateAroundHead(-Math.sign(rx) * SNAP); snapLatch = true; }
+  } else if (Math.abs(rx) < 0.3) snapLatch = false;
+
+  if (lx === 0 && ly === 0) { speedNow = 0; return; }
+  camera.getWorldDirection(forward);
+  forward.y = 0;
+  if (forward.lengthSq() < 1e-6) return;
+  forward.normalize();
+  rightVec.set(forward.z, 0, -forward.x);
+  moveVec.set(0, 0, 0).addScaledVector(forward, -ly).addScaledVector(rightVec, -lx);
+  if (moveVec.lengthSq() > 1) moveVec.normalize();
+  speedNow = moveVec.length();
+  const headPos = new THREE.Vector3();
+  camera.getWorldPosition(headPos);
+  const nx = headPos.x + moveVec.x * SPEED * dt;
+  const nz = headPos.z + moveVec.z * SPEED * dt;
+  const [cx, cz] = resolve(nx, nz);
+  player.position.x += cx - headPos.x;
+  player.position.z += cz - headPos.z;
+}
+
+function rotateAroundHead(angle) {
+  const head = new THREE.Vector3();
+  camera.getWorldPosition(head);
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+  player.position.sub(head).applyQuaternion(q).add(head);
+  player.quaternion.premultiply(q);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Desktop controls — mouse look, WASD, same collision
+ * ------------------------------------------------------------------ */
+const keys = new Set();
+let yaw = 0, pitch = 0, locked = false;
+addEventListener("keydown", e => {
+  keys.add(e.code);
+  if (e.code === "Space") e.preventDefault();
+});
+addEventListener("keyup", e => keys.delete(e.code));
+const grabPointer = () => {
+  if (renderer.xr.isPresenting) return;
+  try { renderer.domElement.requestPointerLock?.()?.catch?.(() => {}); } catch (_) { /* some embedded views refuse it */ }
+};
+renderer.domElement.addEventListener("click", grabPointer);
+document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === renderer.domElement; });
+document.addEventListener("mousemove", e => {
+  if (!locked) return;
+  yaw -= e.movementX * 0.0022;
+  pitch = Math.max(-1.2, Math.min(1.2, pitch - e.movementY * 0.0022));
+});
+
+function desktopLocomotion(dt) {
+  camera.rotation.set(pitch, yaw, 0, "YXZ");
+  camera.position.y = eyeHeight;
+  let f = 0, s = 0;
+  if (keys.has("KeyW") || keys.has("ArrowUp")) f += 1;
+  if (keys.has("KeyS") || keys.has("ArrowDown")) f -= 1;
+  if (keys.has("KeyA") || keys.has("ArrowLeft")) s -= 1;
+  if (keys.has("KeyD") || keys.has("ArrowRight")) s += 1;
+  if (!f && !s) { speedNow = 0; return; }
+  moveVec.set(Math.sin(yaw) * -f + Math.cos(yaw) * s, 0, Math.cos(yaw) * -f + Math.sin(yaw) * -s);
+  if (moveVec.lengthSq() > 1) moveVec.normalize();
+  speedNow = moveVec.length();
+  const [cx, cz] = resolve(
+    player.position.x + moveVec.x * SPEED * dt,
+    player.position.z + moveVec.z * SPEED * dt
+  );
+  player.position.x = cx;
+  player.position.z = cz;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Stage control: scrubber, snapshots, play
+ * ------------------------------------------------------------------ */
+const scrub = document.getElementById("scrub");
+const ticksEl = document.getElementById("ticks");
+const tickButtons = [];
+STAGES.forEach((st, i) => {
+  const b = document.createElement("button");
+  b.textContent = `${i + 1}`;
+  b.title = st.name;
+  b.dataset.stage = String(i + 1);
+  b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => goToStage(i + 1));
+  ticksEl.appendChild(b);
+  tickButtons.push(b);
+});
+
+let playing = false, tween = null;
+
+function setStage(v, syncSlider = true) {
+  stageValue = Math.min(6, Math.max(1, v));
+  applyStage(stageValue);
+  if (syncSlider) scrub.value = String(stageValue);
+  document.getElementById("meta").textContent =
+    `${SITE.studio.w.toFixed(1)} × ${SITE.studio.d.toFixed(1)} m · ${SITE.studio.h.toFixed(1)} m high`;
+}
+
+function goToStage(n) {
+  playing = false;
+  tween = { from: stageValue, to: n, t: 0, dur: 1.1 };
+  uiDirty = true;
+}
+
+function togglePlay() {
+  playing = !playing;
+  tween = null;
+  if (playing && stageValue >= 5.99) setStage(1);
+  document.getElementById("play").textContent = playing ? "Pause" : "Play build";
+  uiDirty = true;
+}
+
+scrub.addEventListener("input", () => { playing = false; tween = null; setStage(parseFloat(scrub.value), false); });
+document.getElementById("play").addEventListener("click", togglePlay);
+document.getElementById("variantA").addEventListener("click", () => applyVariant("A"));
+document.getElementById("variantB").addEventListener("click", () => applyVariant("B"));
+
+/* ------------------------------------------------------------------ *
+ *  VR session
+ * ------------------------------------------------------------------ */
+const xrNote = document.getElementById("xrNote");
+let xrSupported = false;
+if (navigator.xr) {
+  navigator.xr.isSessionSupported("immersive-vr").then(ok => {
+    xrSupported = ok;
+    if (!ok) xrNote.textContent = "This browser has WebXR but no headset session available. Open the same link in the Quest browser.";
+  }).catch(() => { xrNote.textContent = "WebXR could not be queried in this browser."; });
+} else {
+  xrNote.textContent = "No WebXR in this browser. Open this link in the Quest browser to walk it in VR.";
+}
+
+async function enterVR() {
+  if (!navigator.xr) return;
+  try {
+    const session = await navigator.xr.requestSession("immersive-vr", {
+      optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking", "layers"]
+    });
+    await renderer.xr.setSession(session);
+    document.getElementById("start").hidden = true;
+    document.getElementById("hud").classList.add("hidden");
+    session.addEventListener("end", () => {
+      document.getElementById("hud").classList.remove("hidden");
+    });
+  } catch (err) {
+    xrNote.textContent = `Could not start VR: ${err.message}`;
+  }
+}
+document.getElementById("vr").addEventListener("click", enterVR);
+document.getElementById("startVR").addEventListener("click", enterVR);
+document.getElementById("startDesktop").addEventListener("click", () => {
+  document.getElementById("start").hidden = true;
+  document.getElementById("hud").classList.remove("hidden");
+  grabPointer();
+});
+
+/* ------------------------------------------------------------------ *
+ *  Loop
+ * ------------------------------------------------------------------ */
+addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+let lastFrame = performance.now();
+setStage(1);
+
+renderer.setAnimationLoop(() => {
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+
+  if (playing) {
+    const next = stageValue + (5 / 30) * dt * 6;   // ~30 s for the full build
+    if (next >= 6) { setStage(6); playing = false; document.getElementById("play").textContent = "Play build"; uiDirty = true; }
+    else setStage(next);
+  } else if (tween) {
+    tween.t += dt / tween.dur;
+    const k = easeOut(clamp01(tween.t));
+    setStage(tween.from + (tween.to - tween.from) * k);
+    if (tween.t >= 1) tween = null;
+  }
+
+  if (renderer.xr.isPresenting) {
+    xrLocomotion(dt);
+    updatePointer();
+    if (uiDirty || speedNow > 0) drawPanel();
+  } else {
+    desktopLocomotion(dt);
+  }
+
+  const targetVig = speedNow > 0.05 ? 0.55 : 0;
+  vignette.material.opacity += (targetVig - vignette.material.opacity) * Math.min(1, dt * 8);
+  vignette.visible = vignette.material.opacity > 0.01;
+
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

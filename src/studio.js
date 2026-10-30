@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { COLOURS } from "./config.js";
+import { COLOURS, BUILD } from "./config.js?v=edb8f7f-2353";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -64,7 +64,7 @@ export function installStudio(stageGroups, mats, onReady) {
     return M.inner;
   }
 
-  new GLTFLoader().load("assets/models/studio.glb", gltf => {
+  new GLTFLoader().load(`assets/models/studio.glb?v=${BUILD}`, gltf => {
     let placed = 0;
     for (const [nodeName, stageIndex] of Object.entries(STAGE_NODES)) {
       const node = gltf.scene.getObjectByName(nodeName);

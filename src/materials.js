@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS } from "./config.js";
+import { MATERIALS, BUILD } from "./config.js?v=edb8f7f-2353";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -8,7 +8,7 @@ import { MATERIALS } from "./config.js";
 const loader = new THREE.TextureLoader();
 
 function load(path, { srgb = false, aniso = 8 } = {}) {
-  const t = loader.load(path);
+  const t = loader.load(`${path}?v=${BUILD}`);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = aniso;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;

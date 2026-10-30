@@ -1,3 +1,5 @@
+export const BUILD = "edb8f7f-2353";   // stamped by tools/stamp-build.py
+
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
  *  this is the only file that has to change.

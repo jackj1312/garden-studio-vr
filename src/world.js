@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js";
-import { boxGeo, groundGeo, makeGrass } from "./materials.js";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=edb8f7f-2353";
+import { boxGeo, groundGeo, makeGrass } from "./materials.js?v=edb8f7f-2353";
 
 /* ------------------------------------------------------------------ *
  *  Helpers. y is always the bottom of the thing, which is how you

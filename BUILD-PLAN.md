@@ -170,6 +170,18 @@ One button, two behaviours, because they have to be different:
 A properly rendered film (ray tracing, depth of field, motion blur) is a separate deliverable
 out of Blender once the model is worth filming.
 
+## Selling this
+
+Decided 30 Oct 2026: this becomes a service sold to other people, which changes three
+things about how it gets built.
+
+- **Licence discipline.** Every dependency and asset is checked before use and recorded in
+  `CREDITS.md`. Everything currently in the project is MIT or CC0. AGPL libraries are out.
+- **One engine, many sites.** `src/config.js` holds everything site-specific, and nothing
+  else does. A new client is a new config plus their own assets, not a fork.
+- **Client data stays private.** Scans, addresses and drawings never enter a public repo.
+  The engine is public; each client's site is not.
+
 ## Open items
 
 - The architectural drawing of the property, when it turns up — upgrades everything.

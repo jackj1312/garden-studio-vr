@@ -129,6 +129,47 @@ running on the Quest. Proves the hard part and needs no scan or modelling.
 M1 first is deliberate: if the movement doesn't feel right in the headset, that's worth
 knowing before a week of modelling, and the fix is in the app rather than the geometry.
 
+
+## Three dials, not one
+
+The scene is controlled by three independent axes. Any combination is valid, which is what
+makes it worth walking rather than looking at.
+
+| Dial | Values | What it answers |
+|------|--------|-----------------|
+| Stage | 1-6, scrubbable | How built is it? |
+| Placement | Corner, along fence | Where does it sit? |
+| Setting | Time of day x occasion | What is it like to be there? |
+
+**Setting** was added 30 Oct 2026. It splits in two:
+
+- *Time of day* — discrete baked presets (morning, midday, golden hour, dusk, night) that
+  cross-fade. Baked rather than a continuous sun, because lightmaps are what buy the
+  fidelity at 90 Hz and a moving sun throws them away. Dusk and night switch the practical
+  lights on: studio interior, porch, festoon, path markers.
+- *Occasion* — a props and lighting layer: everyday, barbecue, evening party, quiet winter
+  evening. Each is a named collection that drops in furniture, people, and accent lights.
+
+An empty model shows a building. A lit garden with a table laid and people in it shows what
+the building is for, which is the thing that actually persuades a planner, a builder, or
+anyone else being asked to imagine it.
+
+Occasion layers are stage-6 only by default. Time of day applies at every stage, and the
+cinematic uses it as a shot device.
+
+## Cinematic mode
+
+One button, two behaviours, because they have to be different:
+
+- **Flat screens** — a real filmic flyby, around 60 seconds, choreographed so camera moves
+  and build stages land together. Dolly, crane, rack focus, the lot.
+- **In VR** — a guided tour. The viewer stays planted, the build animates in front of them,
+  and the scene cuts to the next vantage point. Cuts are comfortable; glides cause sickness.
+  The choreography lives in the build, not in the camera.
+
+A properly rendered film (ray tracing, depth of field, motion blur) is a separate deliverable
+out of Blender once the model is worth filming.
+
 ## Open items
 
 - The architectural drawing of the property, when it turns up — upgrades everything.

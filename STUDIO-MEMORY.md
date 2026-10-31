@@ -28,6 +28,9 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · Photos taken months apart differ (the pergola was built between April and October):
   date every photo and use the newest for "today".
 
+- 2026-10-31 · front garden · Most of Jack's 13 quality faults traced back to photos we never asked for: use the
+  standard capture list in SURVEY-METHOD.md on the first visit.
+
 ## Measuring (G1)
 - 2026-10-31 · front garden · Scale from known points (window corners, arch) seen in two photos: rms 4 cm.
 - 2026-10-31 · front garden · Orthophoto from the walk video at 2 cm/px gives ground edges to ±5 cm; trace by
@@ -38,6 +41,8 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · UK semis are not always symmetrical: the neighbour's windows were not a mirror of ours.
 
 ## Textures and modelling (G4, G5)
+- 2026-10-31 · front garden · Restarted the 3D build (v2) from the measured facts: the first build was patched from
+  pre-survey code and could not reach the Airbnb bar. Keep the survey, data and tools; rebuild the model.
 - 2026-10-31 · front garden · tools/phototex: random surfaces (gravel, lawn) tile well with make_tile.py; brick,
   block paving and boards need make_tile_periodic.py (whole repeats) or they ghost; one-off faces (shed front,
   door) are straightened with rectify.py and used once, not tiled.

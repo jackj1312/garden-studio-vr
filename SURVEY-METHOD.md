@@ -58,6 +58,18 @@ wrong. The same will happen at every customer's house unless the plan is measure
 Result on Jack's garden: path 0.87 m against a 0.90 m tape; posts within 5–12 cm of the scan;
 two independent solves within 10 cm.
 
+## The standard capture list (every property; learned on Jack's garden, 31 Oct 2026)
+Missing photos were the cause of most of the faults Jack found (CORRECTIONS-LOG 32-44). On the first visit, get:
+1. A slow walk video of the whole site; then walk the pavement filming the whole front boundary.
+2. Straight-on photos of every face of the house (and the side and back, for roof heights and depth).
+3. The neighbours' fronts, straight on (never assume they mirror the client's house).
+4. Close-ups, straight on, A4 in some: each kind of brick, each window type, doors, roof tiles, every paved area
+   (each style separately), gravel, lawn, kerbs and edgings, fence boards, posts, caps and gravel boards, sheds,
+   bins, benches, pots, ornaments.
+5. Levels with a tape in shot: every step, threshold, upstand and raised edge.
+6. Every plant: one close-up and one whole-plant photo; every tree from four sides plus its trunk.
+7. Every bed, including strips against the house, straight on and from above.
+
 ## Back at the desk
 1. DXF + scan + targets → **plan drawing** (as plan v0, but every line measured).
 2. You (and later the customer) sign it off. Corrections go on the plan, not the model.

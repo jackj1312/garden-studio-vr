@@ -34,6 +34,23 @@ found, before the fix. Test site: Jack's own front garden (Oct 2026).
 | 25 | Windows clashed into the brickwork | Jack | Surrounds and heads placed by formula, not from the elevation | Window, surround, lintel and sill sizes come from the measured elevation | G2, G5 |
 | 26 | Cloud rendering started before the model was right | Jack | Rushed to spend before checking | No cloud spend until the model passes the matched-view check and Jack signs off | G6 |
 | 27 | Answered "lighting is the Airbnb secret" | Jack | Half-read the reference | Study every reference fully from the primary source; say back what it is before building | G0 |
+| 28 | Porch side wall built 0.3 m outside the scanned outline (−2.15 instead of −1.85), so it appeared to clash with the left-wing window | Me, drawing the elevation | Wall thickness added outwards instead of inwards | Scanned outlines are OUTER faces; walls grow inwards from them | G1, G5 |
+| 29 | Assumed the porch fascia and soffit were white like the house; they are dark grey with two downlights | Me, on close photos | Copied one element's finish onto another | Every element's finish is read from its own photo, never copied | G3 |
+| 30 | Placed the house number on the porch front from an angled photo; it is on the side wall | Me, on the true-plane elevation | Read position from an oblique photo | Positions are read on the element's own plane (facade_ortho at that plane) | G1 |
+| 31 | The VR build is "absolutely miles off the actual scene" | Jack | The model grew by patching a script written before anything was measured: boxes and formulas, fixed piece by piece | Never patch a build that predates the measurements: build v2 from scratch from the signed-off plan, elevations and inventory, element by element, each checked in matched views | G5, G6 |
+| 32 | Paving is the wrong style | Jack | One generated pattern used for every paved area | Each paved area's unit, bond and colour is read from its own close-up; different areas get different paving | G3, G4 |
+| 33 | Gravel has no depth | Jack | Flat textured plane | Loose surfaces get real relief: displaced pebble geometry or parallax, a raised layer against the kerbs | G5 |
+| 34 | Lawn and bed curves inconsistent and not matching reality | Jack | Curves traced from colour, hand-read kerb points and smoothing mixed | Edges are traced once from the orthophoto kerb line and checked by overlay on every matched view | G1, G6 |
+| 35 | Front (street) hedge missing in places; boundary hedge cuts off part way | Jack | Hedge extent measured only where 3D points existed; west end guessed | Boundaries run their full measured length; ends confirmed in photos, never cut where data thins | G1, G3 |
+| 36 | Apple tree a poor reconstruction | Jack | A stock tree scaled to fit | Trees are built to the real one: trunk splits, stems, crown shape and leaf colour from photos | G3, G5 |
+| 37 | Bins are boxes | Jack | Placeholder shapes | Every object is modelled to its real shape and details from its close-up | G5 |
+| 38 | Fence wrong | Jack | Photo texture on a slab; boards, posts, cap and gravel board not modelled | Fences built as their real parts (boards, posts, rails, caps, gravel boards) at measured spacing | G3, G5 |
+| 39 | Grass feels fake | Jack | Instanced cards over a flat texture | Lawns get real blade geometry with mowing, clumping, leaf litter, and colour from the close-up | G5 |
+| 40 | Neighbour scaled badly and reuses my porch; theirs is different | Jack | Mirrored our house to make theirs | Neighbouring houses modelled from their own photos; never copied or mirrored (see 23) | G3 |
+| 41 | Flower bed against the house missing | Jack | Not on the plan; plan stopped at the paving band | The plan includes every bed and planted strip, including those against walls | G1, G2 |
+| 42 | Planting in the bed is bad | Jack | Generic plant set | Plant-by-plant inventory from close-ups; each species modelled or sourced to match | G3, G5 |
+| 43 | Curved upstand (raised edge) of the bed not present | Jack | Edge built flush | Edges' heights measured: upstands, raised kerbs and steps are part of the plan | G1, G5 |
+| 44 | No step at the front door | Jack | Levels not surveyed | Every change of level (steps, thresholds, upstands) is measured and drawn on the plan | G1, G2 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

@@ -63,6 +63,10 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   pea shingle 15–20 mm, fence boards ~100 mm pitch.
 - 2026-10-31 · front garden · glTF caps colour factors at 1.0: lighten a texture in its image, not with a tint.
 
+- 2026-10-31 · front garden · Build v2 (master/front-garden-v2.py) builds in 7 s; Eevee mockups render in 2-11 s per view
+  headless at ~1000 px (1.1 GB peak): iterate on mockups freely on the Mac. Export of both GLBs: 46 s, 2.1 GB peak.
+- 2026-10-31 · front garden · Close-ups shot in shade are grey-blue: colour-match each to the sunlit walk (match_colour.py).
+
 ## Lighting and look (G5, G7)
 - 2026-10-31 · front garden · Sun direction and height from the client's own frames (shadows, sun in shot); for
   Jack's garden: ~22° up, from the street side and the west.

@@ -5,15 +5,16 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=6854cb0-1526";
-import { buildMaterials } from "./materials.js?v=6854cb0-1526";
-import { buildWorld } from "./world.js?v=6854cb0-1526";
-import { installStudio, installGarden } from "./studio.js?v=6854cb0-1526";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=6854cb0-1526";
-import { installSite } from "./site.js?v=6854cb0-1526";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=6854cb0-1526";
-import { createAmbience } from "./ambience.js?v=6854cb0-1526";
-import { updateWind } from "./wind.js?v=6854cb0-1526";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=3a8191b-1626";
+import { buildMaterials } from "./materials.js?v=3a8191b-1626";
+import { buildWorld } from "./world.js?v=3a8191b-1626";
+import { installStudio, installGarden } from "./studio.js?v=3a8191b-1626";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=3a8191b-1626";
+import { installSite } from "./site.js?v=3a8191b-1626";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=3a8191b-1626";
+import { createAmbience } from "./ambience.js?v=3a8191b-1626";
+import { updateWind } from "./wind.js?v=3a8191b-1626";
+import { createMarks } from "./marks.js?v=3a8191b-1626";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -75,6 +76,8 @@ const ambience = createAmbience();
 const grips = attachControllerModels(renderer, player);
 attachHandModels(renderer, player);
 const blobs = createBlobShadows(scene);
+/* Mark mode: draw corrections and proposals on the ground (src/marks.js) */
+const marks = createMarks({ scene, camera, renderer, siteKey });
 const _head = new THREE.Vector3(), _local = new THREE.Vector3();
 const _lastHead = new THREE.Vector3(0, 0, -2.2);
 let stepDist = 0;
@@ -106,6 +109,8 @@ if (siteKey) {
   $("stageName").textContent = "As it is today"; $("stageNote").textContent = "Built from the measured plan. Nothing proposed yet."; $("meta").textContent = "";
   installSite(scene, world, player, siteKey).then(r => {
     site = r; siteBounds = r.meta.bounds || null;
+    marks.setGround(r.root);
+    marks.load();
     if (r.meta.name) { document.querySelector("#start h1").textContent = r.meta.name.split(" — ")[0]; document.title = r.meta.name; }
     if (r.meta.sun) {
       siteSun = { ...r.meta.sun, time: r.meta.time };
@@ -532,6 +537,7 @@ controllers.forEach(c => {
       rayLine.scale.z = 1.3;
       rayLine.visible = false;
       c.add(rayLine);
+      marks.attachHint(c);
     }
   });
   c.addEventListener("disconnected", () => {
@@ -560,6 +566,13 @@ function updatePointer() {
   updatePanelVisibility();
   const right = hands.right;
   if (rayLine) rayLine.visible = false;
+  if (marks.active) {                         // Mark mode owns the trigger: no panel, no placing
+    if (cursorUV) uiDirty = true;
+    cursorUV = null; dragging = false;
+    triggerWasDown = !!right?.userData.source?.gamepad?.buttons?.[0]?.pressed;
+    marks.updateXR(right, triggerWasDown);
+    return;
+  }
   if (!right || !panel.visible || !panelWanted) { cursorUV = null; return; }
   const origin = new THREE.Vector3(), dir = new THREE.Vector3(0, 0, -1);
   right.getWorldPosition(origin);
@@ -618,18 +631,26 @@ const axesOf = c => {
 const dead = v => Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86;
 
 /* Nobody should have to aim a laser at a 2 cm handle. A = next stage,
-   B = previous, Y = play/pause, X = pin the panel open. */
-const btnWas = { a: false, b: false, x: false, y: false };
+   B = previous, Y = play/pause, X = pin the panel open.
+   Mark mode: B or Y toggles it on a real site (left-stick click in the demo, where B and Y
+   are the stage keys); in Mark mode A or right-stick click switches the kind, grip undoes. */
+const btnWas = { a: false, b: false, x: false, y: false, rs: false, ls: false, grip: false };
 function faceButtons() {
   const r = hands.right?.userData.source?.gamepad?.buttons, l = hands.left?.userData.source?.gamepad?.buttons;
   const a = !!r?.[4]?.pressed, b = !!r?.[5]?.pressed, x = !!l?.[4]?.pressed, y = !!l?.[5]?.pressed;
-  if (!siteKey) {                                 // stages belong to the demo studio
+  const rs = !!r?.[3]?.pressed, ls = !!l?.[3]?.pressed, grip = !!r?.[1]?.pressed;
+  const markToggle = siteKey ? (b && !btnWas.b) || (y && !btnWas.y) : (ls && !btnWas.ls);
+  if (markToggle) { marks.toggle(); hapticPulse([hands.right], 0.5, 30); }
+  if (marks.active) {
+    if ((a && !btnWas.a) || (rs && !btnWas.rs)) { marks.cycleKind(); hapticPulse([hands.right], 0.35, 20); }
+    if (grip && !btnWas.grip) { marks.undo(); hapticPulse([hands.right], 0.5, 40); }
+  } else if (!siteKey) {                          // stages belong to the demo studio
     if (a && !btnWas.a) { goToStage(Math.min(6, Math.round(stageValue) + 1)); hapticPulse([hands.right], 0.5, 30); }
     if (b && !btnWas.b) { goToStage(Math.max(1, Math.round(stageValue) - 1)); hapticPulse([hands.right], 0.5, 30); }
     if (y && !btnWas.y) { togglePlay(); hapticPulse([hands.left], 0.5, 30); }
   }
   if (x && !btnWas.x) { panelPinned = !panelPinned; hapticPulse([hands.left], 0.3, 20); }
-  btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y;
+  btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y; btnWas.rs = rs; btnWas.ls = ls; btnWas.grip = grip;
 }
 
 function rotateAroundHead(angle) {
@@ -671,7 +692,7 @@ let yaw = 0, pitch = 0, locked = false;
 addEventListener("keydown", e => { keys.add(e.code); if (e.code === "Space") e.preventDefault(); });
 addEventListener("keyup", e => keys.delete(e.code));
 const grabPointer = () => {
-  if (renderer.xr.isPresenting) return;
+  if (renderer.xr.isPresenting || marks.active) return;      // Mark mode draws with the free cursor
   try { renderer.domElement.requestPointerLock?.()?.catch?.(() => {}); } catch (_) {}
 };
 renderer.domElement.addEventListener("click", grabPointer);
@@ -1013,7 +1034,7 @@ setStage(1);
 /* a hook for testing from the console: move the viewer, read the frame
    cost, drive the dials. Not a user-facing API. */
 window.__garden = {
-  player, camera, renderer, scene, composer,
+  player, camera, renderer, scene, composer, marks,
   setStage, goToStage, setVariant, applyTime,
   get yaw() { return yaw; }, set yaw(v) { yaw = v; },
   get pitch() { return pitch; }, set pitch(v) { pitch = v; },
@@ -1073,6 +1094,7 @@ renderer.setAnimationLoop(() => {
     if (renderer.xr.isPresenting && FOOTSTEP_HAPTICS) hapticPulse(controllers, 0.22, 35);
   }
   updateWind(now / 1000);
+  marks.update(dt);
   if (ambience.started) {
     camera.getWorldPosition(_head);
     world.anchor.worldToLocal(_local.copy(_head));

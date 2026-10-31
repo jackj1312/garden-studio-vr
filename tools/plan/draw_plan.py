@@ -83,6 +83,9 @@ if "shed" in plan:   # front face measured; the depth is drawn dashed until it i
     d.line([P(sx0, sy), P(sx1, sy)], fill=PH, width=4); T(sx0 + 0.1, sy + 1.0, "SHED", (255, 255, 255), FS)
 poly(lawn, GRASS, PH, 3)
 poly([tuple(p) for p in plan["bed"]["edge"]], SOIL, PH, 3)
+for e in plan.get("edgings", []):     # every edging run as its own laid line, full length
+    (ax, ay), (bx, by) = e["line"]; L = math.hypot(bx - ax, by - ay); nx, ny = -(by - ay) / L * e["width"] / 2, (bx - ax) / L * e["width"] / 2
+    poly([(ax + nx, ay + ny), (bx + nx, by + ny), (bx - nx, by - ny), (ax - nx, ay - ny)], (150, 150, 146), (90, 90, 90), 1)
 if "hedge" in plan:
     (hx0, hx1), (hy0, hy1) = plan["hedge"]["xy_range"]
     poly([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], HEDGE); dash([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], EST, 2, True)

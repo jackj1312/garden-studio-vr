@@ -12,6 +12,8 @@ detail is found.
   down** to meet flush edging (47).
 - Curves are smooth with no kinks; straights are straight; true corners only where kerbs meet at an angle (5, 34, 46).
 - Where two areas share a kerb, it is one kerb, not two lines (46).
+- **Every edging run is its own item, drawn full length** from where it starts to where it really stops (path
+  edging to the street; a paving border on to the fence), even across stretches hidden by a car (48).
 
 ## Levels
 - Every step and threshold, with riser height and nosing (44).

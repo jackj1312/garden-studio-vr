@@ -5,15 +5,15 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=314bca9-1032";
-import { buildMaterials } from "./materials.js?v=314bca9-1032";
-import { buildWorld } from "./world.js?v=314bca9-1032";
-import { installStudio, installGarden } from "./studio.js?v=314bca9-1032";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=314bca9-1032";
-import { installSite } from "./site.js?v=314bca9-1032";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=314bca9-1032";
-import { createAmbience } from "./ambience.js?v=314bca9-1032";
-import { updateWind } from "./wind.js?v=314bca9-1032";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=039c075-1035";
+import { buildMaterials } from "./materials.js?v=039c075-1035";
+import { buildWorld } from "./world.js?v=039c075-1035";
+import { installStudio, installGarden } from "./studio.js?v=039c075-1035";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=039c075-1035";
+import { installSite } from "./site.js?v=039c075-1035";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=039c075-1035";
+import { createAmbience } from "./ambience.js?v=039c075-1035";
+import { updateWind } from "./wind.js?v=039c075-1035";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -93,6 +93,9 @@ installGarden(world.existing, mats, n => { gardenParts = n; });
 let treeParts = 0;
 let site = null;
 if (siteKey) {
+  // a real garden: the demo studio has no business appearing in it until a
+  // proposal for this site exists
+  world.anchor.visible = false;
   installSite(scene, world, player, siteKey).then(r => { site = r; }).catch(err => console.error("site failed:", err));
 } else {
   installTrees(world.existing, tierKey === "basic" ? "q" : "d", n => { treeParts = n; });

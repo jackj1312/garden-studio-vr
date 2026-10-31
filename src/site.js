@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { gltf, mergeByMaterial } from "./studio.js?v=314bca9-1032";
-import { makeGrass } from "./materials.js?v=314bca9-1032";
-import { BUILD } from "./config.js?v=314bca9-1032";
+import { gltf, mergeByMaterial } from "./studio.js?v=039c075-1035";
+import { makeGrass } from "./materials.js?v=039c075-1035";
+import { BUILD } from "./config.js?v=039c075-1035";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a
@@ -22,7 +22,11 @@ export async function installSite(scene, world, player, name) {
   try { meta = await (await fetch(`${base}/site.json?v=${BUILD}`)).json(); } catch (_) {}
 
   world.existing.visible = false;            // the fictional garden steps aside
-  world.obstacles.length = 0;                // the scan has no collision yet; walk freely
+  world.obstacles.length = 0;                // the demo garden's collision does not apply here
+  for (const o of meta.obstacles || []) {     // the site's own: boxes and circles in viewer coordinates
+    world.obstacles.push(o.r ? { kind: "circle", cx: o.x, cz: o.z, r: o.r, from: 1 }
+                             : { kind: "box", cx: o.x, cz: o.z, hw: o.hw, hd: o.hd, rot: 0, from: 1 });
+  }
 
   // the headset gets the lighter cut when the site has one
   const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);

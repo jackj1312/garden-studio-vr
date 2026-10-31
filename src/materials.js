@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=314bca9-1032";
-import { addWind } from "./wind.js?v=314bca9-1032";
+import { MATERIALS, BUILD } from "./config.js?v=039c075-1035";
+import { addWind } from "./wind.js?v=039c075-1035";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading

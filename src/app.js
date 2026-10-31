@@ -5,10 +5,10 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=7eb8edb-0012";
-import { buildMaterials } from "./materials.js?v=7eb8edb-0012";
-import { buildWorld } from "./world.js?v=7eb8edb-0012";
-import { installStudio } from "./studio.js?v=7eb8edb-0012";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=d82d67b-0020";
+import { buildMaterials } from "./materials.js?v=d82d67b-0020";
+import { buildWorld } from "./world.js?v=d82d67b-0020";
+import { installStudio, installGarden } from "./studio.js?v=d82d67b-0020";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -63,8 +63,9 @@ const mats = buildMaterials(Math.min(maxAniso, tier.anisotropy));
 const world = buildWorld(scene, mats, tier);
 const { stageGroups, obstacles, removals, practicals } = world;
 
-let studioParts = 0;
+let studioParts = 0, gardenParts = 0;
 installStudio(stageGroups, mats, n => { studioParts = n; });
+installGarden(world.existing, mats, n => { gardenParts = n; });
 
 let grassMesh = null, grassFull = 0;
 world.existing.traverse(o => { if (o.isInstancedMesh) { grassMesh = o; grassFull = o.count; } });
@@ -602,6 +603,8 @@ async function enterVR() {
     });
     await renderer.xr.setSession(session);
     applyVRProfile(true);
+    renderer.xr.setFoveation(1.0);              // shade the edges of vision at lower rate
+    renderer.xr.setFramebufferScaleFactor(1.0);
     $("start").hidden = true;
     $("hud").classList.add("hidden");
     session.addEventListener("end", () => {
@@ -648,7 +651,7 @@ THREE.DefaultLoadingManager.onLoad = () => {
   renderer.compile(scene, camera);
   applyStage(stageValue);
 
-  console.info(`studio: ${studioParts} parts from the Blender master | ${renderer.info.render.triangles.toLocaleString()} triangles drawn`);
+  console.info(`studio: ${studioParts} parts, garden: ${gardenParts} parts from the Blender master | ${renderer.info.render.triangles.toLocaleString()} triangles drawn`);
   $("loading").hidden = true;
   $("startDesktop").disabled = false;
   $("startVR").disabled = false;

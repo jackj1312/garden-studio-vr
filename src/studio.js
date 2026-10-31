@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { COLOURS, BUILD } from "./config.js?v=7eb8edb-0012";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { COLOURS, BUILD } from "./config.js?v=d82d67b-0020";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -18,6 +19,18 @@ const STAGE_NODES = {
   STAGE_05: 4,   // clad, roofed and glazed
   STAGE_06: 5    // fit-out and deck
 };
+
+/* Draco cuts the garden from 7.9 MB to 1.2 MB, which matters a great
+   deal when the client is a headset on someone's home wifi. */
+let loader = null;
+function gltf() {
+  if (!loader) {
+    const draco = new DRACOLoader();
+    draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/libs/draco/");
+    loader = new GLTFLoader().setDRACOLoader(draco);
+  }
+  return loader;
+}
 
 export function installStudio(stageGroups, mats, onReady) {
   const flat = (colour, extra = {}) =>
@@ -64,7 +77,7 @@ export function installStudio(stageGroups, mats, onReady) {
     return M.inner;
   }
 
-  new GLTFLoader().load(`assets/models/studio.glb?v=${BUILD}`, gltf => {
+  gltf().load(`assets/models/studio.glb?v=${BUILD}`, gltf => {
     let placed = 0;
     for (const [nodeName, stageIndex] of Object.entries(STAGE_NODES)) {
       const node = gltf.scene.getObjectByName(nodeName);
@@ -86,5 +99,67 @@ export function installStudio(stageGroups, mats, onReady) {
       }
     }
     onReady(placed);
+  });
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  The garden: house, fences, paving, shed and trees, all from the
+ *  same master model. The viewer keeps the ground, the grass and the
+ *  hedge, because those want tuning per quality tier.
+ * ------------------------------------------------------------------ */
+export function installGarden(parent, mats, onReady) {
+  const flat = (colour, extra = {}) =>
+    new THREE.MeshStandardMaterial({ color: colour, roughness: 0.8, metalness: 0, ...extra });
+
+  const G = {
+    bark:    flat(0x4a3a2c, { roughness: 0.95 }),
+    leaf:    flat(0x2f5520, { roughness: 0.78, flatShading: false }),
+    trim:    flat(0xdedacf, { roughness: 0.45 }),
+    dark:    flat(0x26292d, { roughness: 0.3, metalness: 0.8 }),
+    roof:    flat(0x33363b, { roughness: 0.35, metalness: 0.5 }),
+    glass:   new THREE.MeshStandardMaterial({
+               color: 0x1d2a33, roughness: 0.06, metalness: 0.1,
+               transparent: true, opacity: 0.5, envMapIntensity: 2.2
+             })
+  };
+
+  const RULES = [
+    ["_leaves", G.leaf], ["Shrub_", G.leaf],
+    ["Tree_", G.bark],
+    ["_glass", G.glass],
+    ["House_mass", () => mats.brick],
+    ["House_roof", G.roof], ["House_gutter", G.roof], ["House_downpipe", G.roof],
+    ["House_fascia", G.trim],
+    ["House_bin", () => mats.fence],
+    ["House_door", G.dark],
+    ["_reveal", G.trim], ["_sill", G.trim], ["_mullion", G.dark], ["_frame", G.dark],
+    ["Patio_", () => mats.paving], ["Path_", () => mats.paving],
+    ["Fence_", () => mats.fence], ["Shed_", () => mats.fence]
+  ].sort((a, b) => b[0].length - a[0].length);
+
+  const materialFor = name => {
+    for (const [key, m] of RULES) {
+      if (name.includes(key)) return typeof m === "function" ? m() : m;
+    }
+    return G.trim;
+  };
+
+  gltf().load(`assets/models/garden.glb?v=${BUILD}`, g => {
+    let n = 0;
+    for (const child of [...g.scene.children]) {
+      child.traverse(o => {
+        if (!o.isMesh) return;
+        o.material = materialFor(o.name);
+        o.castShadow = true;
+        o.receiveShadow = true;
+        if (o.geometry.attributes.uv && !o.geometry.attributes.uv1) {
+          o.geometry.setAttribute("uv1", o.geometry.attributes.uv);
+        }
+        n++;
+      });
+      parent.add(child);
+    }
+    onReady(n);
   });
 }

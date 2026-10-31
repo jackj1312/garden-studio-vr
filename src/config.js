@@ -1,4 +1,4 @@
-export const BUILD = "7eb8edb-0012";   // stamped by tools/stamp-build.py
+export const BUILD = "d82d67b-0020";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -112,10 +112,10 @@ export const MATERIALS = {
   cladding: { dir: "exterior_wall_cladding_03", tile: 1.4, roughness: 0.85 },
   deck:     { dir: "wood_floor_deck",           tile: 1.6, roughness: 0.7 },
   concrete: { dir: "brushed_concrete",          tile: 2.0, roughness: 0.9 },
-  grass:    { dir: "grass_ground",              tile: 1.6, roughness: 1.0 },
+  grass:    { dir: "grass_ground",              tile: 1.6, roughness: 1.0, tint: 0x8fae63 },
   brick:    { dir: "red_brick",                 tile: 1.8, roughness: 0.95 },
   paving:   { dir: "square_brick_paving",       tile: 1.5, roughness: 0.85 },
-  fence:    { dir: "weathered_plank_siding",    tile: 1.2, roughness: 0.9 }
+  fence:    { dir: "weathered_plank_siding",    tile: 1.2, roughness: 0.9, tint: 0xb59878 }
 };
 
 /* Flat colours for the parts that do not warrant a texture download. */

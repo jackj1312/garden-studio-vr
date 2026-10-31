@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=7eb8edb-0012";
+import { MATERIALS, BUILD } from "./config.js?v=d82d67b-0020";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -30,7 +30,10 @@ export function buildMaterials(maxAniso = 8) {
       aoMap:        load(`${base}/ao.jpg`,      { aniso: maxAniso }),
       roughness:    def.roughness,
       metalness:    0,
-      aoMapIntensity: 0.85
+      aoMapIntensity: 0.85,
+      /* the scan is dry ground; colour multiplies the map, which is the
+         cheapest way to push a photographed surface where you need it */
+      color:        def.tint ?? 0xffffff
     });
     out[name].userData.tile = def.tile;
   }

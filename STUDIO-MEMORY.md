@@ -30,6 +30,9 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · Jack wants a cheap Blender mockup before any cloud rental, and an in-headset
   drawing tool (Guardian-style) to mark corrections and lay out proposals, saved back into the plan.
 
+- 2026-10-31 · front garden · Jack wants his reference photos around him in the headset, ranked by where he
+  stands, cycled with the grip (export_refs.py + the viewer's reference view).
+
 ## Capture (G1)
 - 2026-10-31 · front garden · A 2-min 4K walk video + stills solves well (121 of 145 frames); frames ~1 per metre.
 - 2026-10-31 · front garden · Ask for close-ups of every surface and object early (12-item list in the chat of
@@ -66,6 +69,16 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · Build v2 (master/front-garden-v2.py) builds in 7 s; Eevee mockups render in 2-11 s per view
   headless at ~1000 px (1.1 GB peak): iterate on mockups freely on the Mac. Export of both GLBs: 46 s, 2.1 GB peak.
 - 2026-10-31 · front garden · Close-ups shot in shade are grey-blue: colour-match each to the sunlit walk (match_colour.py).
+
+- 2026-10-31 · front garden · The Airbnb method, re-read: CC0 scanned PBR materials (full map sets) + Python-generated
+  textures on modest models, then Unreal's lighting and camera effects carry the realism. Never replace a PBR set with a
+  colour-only photo; judge realism only in Unreal or Cycles.
+
+- 2026-10-31 · front garden · Hard surfaces that work: every brick/block real geometry (bevelled) wearing one of the
+  client's OWN unit faces cut from the close-up (tools/phototex/unit_library.py for blocks; mortar-mask cut for brick),
+  flipped copies doubling the library, mortar/joint plane recessed behind. tools/blender/unit_surfaces.py. Patch test
+  (1 m wall + 1.4 m paving, Cycles 96 spp, Mac GPU): 62 s, 3.7 GB peak. Traps: a mirrored axis turns bmesh cubes
+  inside out; assign UVs after bevel, by position.
 
 ## Lighting and look (G5, G7)
 - 2026-10-31 · front garden · Sun direction and height from the client's own frames (shadows, sun in shot); for

@@ -52,6 +52,7 @@ found, before the fix. Test site: Jack's own front garden (Oct 2026).
 | 43 | Curved upstand (raised edge) of the bed not present | Jack | Edge built flush | Edges' heights measured: upstands, raised kerbs and steps are part of the plan | G1, G5 |
 | 44 | No step at the front door | Jack | Levels not surveyed | Every change of level (steps, thresholds, upstands) is measured and drawn on the plan | G1, G2 |
 | 45 | Asked Jack for ~10 new photo jobs before using what he had already sent | Jack | Worked from 1080p solve frames instead of the full 4K video; never searched the footage for each element | Exhaust the existing capture first: search every 4K frame and photo for each inventory element; ask for new photos only for what no frame shows, naming the frames checked | G1, G3 |
+| 46 | Lawn and bed curves jumped (25° kink at the front-right; wobbles along the front and the bed); lawn and bed edges drifted apart along their shared kerb | Jack (review notes, 10 pins) | Curve stitched from colour trace + hand-read points + separate fits per edge | kerb_fit.py: kerb line re-found in the 1 cm orthophoto, one smoothing spline per stretch between true corners, edges sharing a kerb follow each other; a curvature-jump check must PASS before a plan is shown | G1, G2 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

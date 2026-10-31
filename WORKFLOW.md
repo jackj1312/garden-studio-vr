@@ -20,7 +20,8 @@ On site (SURVEY-METHOD.md, CAPTURE.md):
 
 At the desk (tools/photogrammetry):
 4. Solve the cameras (sfm_walk.py); lock the scale with known points (3); check camera heights and a known width.
-5. Ground: orthophoto (ortho.py), dense traced edges (trace_lawn.py, smooth.py) (2, 4, 5, 6).
+5. Ground: orthophoto (ortho.py) at 1 cm; kerb lines with kerb_fit.py (smooth splines between true corners,
+   curvature check must pass) (2, 4, 5, 6, 34, 46).
 6. Vertical things (fences, walls, hedges): fit to 3D points on their faces (7, 10).
 7. **Walls: straight-on elevations of every face** (facade_ortho.py) — windows, doors, eaves, roofs, party walls,
    chimneys, neighbours, measured from them (20, 23).
@@ -28,6 +29,21 @@ At the desk (tools/photogrammetry):
    frame) and list, for every inventory element, the frames and photos that see it (find_views.py: ranked,
    full-resolution crops). Model, texture and check each element from its sheet. Ask the client for new photos only
    for elements no frame shows, and say which frames were searched.
+
+## Presumed facts (Jack, 31 Oct 2026): ambiguity is filled by stated assumptions, never by gaps
+No client's garden is ever fully visible. Where the evidence runs out, apply a documented assumption so the model
+stays cohesive and lifelike, and mark it on the plan as **assumed** (its own colour) so the client can correct it:
+- **Continuity**: a kerb, hedge, fence or wall continues as it was laid until evidence says it stops (35).
+- **Regularity**: kerbs are smooth curves of steady radius and straight runs are straight; shared kerbs are one
+  line; parallel things stay parallel; repeated things (posts, windows, setts) keep their spacing.
+- **Standard sizes** (UK): brick 215 × 102.5 × 65 mm + 10 mm joints; block paving 200 × 100 mm (tumbled sets
+  140/210 mm); kerb setts 100 × 100 mm; doors 2.0–2.1 m; step risers ~150 mm; wheelie bins 240 l; fence posts
+  1.8 m apart; storey height ~2.6 m.
+- **Like-for-like**: an unseen side of an object matches its seen side; an unseen part of a bed matches the
+  planting beside it.
+- **Hidden ground**: under a parked car or in deep shadow, the surface around it continues.
+- Every assumption is listed in the site's plan JSON ("assumed": [...]) with what it fills and why; the client's
+  correction always wins and goes into CORRECTIONS-LOG if the assumption was wrong.
 
 ## G2 · Sign-off: plan and elevations
 - Draw the plan (draw_plan.py) and the elevations; publish the review page with the review bar (1, 9).

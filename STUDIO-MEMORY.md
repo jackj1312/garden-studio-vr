@@ -21,6 +21,9 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · He judges against reality: matched side-by-sides (real photo | model, same camera)
   are the most useful thing to show him.
 
+- 2026-10-31 · front garden · Fill ambiguity with stated presumed facts (continuity, regularity, UK standard
+  sizes, like-for-like), marked as assumed on the plan; the client corrects. See WORKFLOW.md "Presumed facts".
+
 ## Capture (G1)
 - 2026-10-31 · front garden · A 2-min 4K walk video + stills solves well (121 of 145 frames); frames ~1 per metre.
 - 2026-10-31 · front garden · Ask for close-ups of every surface and object early (12-item list in the chat of
@@ -32,6 +35,8 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   standard capture list in SURVEY-METHOD.md on the first visit.
 
 ## Measuring (G1)
+- 2026-10-31 · front garden · kerb_fit.py: lawn kerb found at 175/351 points, fit median 2 cm, curvature step
+  0.34/m; a lawn edge beside a bed follows the bed's kerb at 0.11 m (one kerb, not two lines).
 - 2026-10-31 · front garden · Extract the walk video at full 4K (frames match the solve 1:1) and run
   find_all_views.py: 26 elements, each seen in 7–61 views. It answered 11 of my 12 photo requests.
 - 2026-10-31 · front garden · Scale from known points (window corners, arch) seen in two photos: rms 4 cm.

@@ -11,6 +11,19 @@ Benchmarks are in BENCHMARKS.md. Honest gap today:
 | Design | studio in an unchanged lawn | a designed garden: slatted fence, curved lawn, lighting plan | large |
 | Film | none | 1:22 drone arcs, reveal, day→night, music | not started |
 
+## Three outputs from one master (Jack, 31 Oct)
+
+The Quest 3 is the limiting factor, so it must not limit the top of the range:
+1. **Quest build** — the best the headset can hold at 90 fps (LOD, impostors, baked light),
+   measured in the headset and then frozen as *the VR experience*.
+2. **Desktop walkthrough** — the same assets at full detail with GTAO, big shadows and bloom;
+   no Quest budget.
+3. **Rendered film** — Blender (EEVEE Next or Cycles, cloud GPU if needed) wherever it beats
+   real time. This is the realistic route to the SE Landscapes film itself; the in-app
+   cinematic mode plays the same camera path live.
+
+Every asset is built once with a full version and a Quest version, so the three never drift.
+
 ## Steps, in order
 
 1. **Trees and shrubs from scans (today).** Poly Haven has photoscanned CC0 vegetation:

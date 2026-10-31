@@ -1,0 +1,112 @@
+{
+ "shrub_01": {
+  "height": 0.396,
+  "radius": 1.293,
+  "tris_full": 156012,
+  "ratios": [
+   0.04,
+   0.12
+  ],
+  "tris_d": 18721,
+  "tris_q": 6240
+ },
+ "shrub_02": {
+  "height": 2.607,
+  "radius": 2.991,
+  "tris_full": 27254,
+  "ratios": [
+   0.25,
+   0.6
+  ],
+  "tris_d": 16351,
+  "tris_q": 6813
+ },
+ "shrub_03": {
+  "height": 0.403,
+  "radius": 0.683,
+  "tris_full": 8287,
+  "ratios": [
+   1,
+   1
+  ],
+  "tris_d": 8287,
+  "tris_q": 8287
+ },
+ "shrub_04": {
+  "height": 0.219,
+  "radius": 0.292,
+  "tris_full": 27327,
+  "ratios": [
+   0.25,
+   0.6
+  ],
+  "tris_d": 16396,
+  "tris_q": 6831
+ },
+ "fern_02": {
+  "height": 0.428,
+  "radius": 0.986,
+  "tris_full": 6232,
+  "ratios": [
+   1,
+   1
+  ],
+  "tris_d": 6232,
+  "tris_q": 6232
+ },
+ "grass_medium_01": {
+  "height": 0.343,
+  "radius": 2.802,
+  "tris_full": 24730,
+  "ratios": [
+   0.3,
+   0.7
+  ],
+  "tris_d": 17311,
+  "tris_q": 7418
+ },
+ "grass_medium_02": {
+  "height": 0.405,
+  "radius": 0.655,
+  "tris_full": 7842,
+  "ratios": [
+   1,
+   1
+  ],
+  "tris_d": 7842,
+  "tris_q": 7842
+ },
+ "periwinkle_plant": {
+  "height": 0.411,
+  "radius": 0.618,
+  "tris_full": 34350,
+  "ratios": [
+   0.2,
+   0.5
+  ],
+  "tris_d": 17175,
+  "tris_q": 6870
+ },
+ "celandine_01": {
+  "height": 0.186,
+  "radius": 1.12,
+  "tris_full": 8966,
+  "ratios": [
+   0.8,
+   1
+  ],
+  "tris_d": 8966,
+  "tris_q": 7172
+ },
+ "moss_01": {
+  "height": 0.04,
+  "radius": 0.108,
+  "tris_full": 204,
+  "ratios": [
+   1,
+   1
+  ],
+  "tris_d": 204,
+  "tris_q": 204
+ }
+}

@@ -5,13 +5,14 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=bfdad1a-0843";
-import { buildMaterials } from "./materials.js?v=bfdad1a-0843";
-import { buildWorld } from "./world.js?v=bfdad1a-0843";
-import { installStudio, installGarden } from "./studio.js?v=bfdad1a-0843";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=bfdad1a-0843";
-import { createAmbience } from "./ambience.js?v=bfdad1a-0843";
-import { updateWind } from "./wind.js?v=bfdad1a-0843";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=fc49489-0903";
+import { buildMaterials } from "./materials.js?v=fc49489-0903";
+import { buildWorld } from "./world.js?v=fc49489-0903";
+import { installStudio, installGarden } from "./studio.js?v=fc49489-0903";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=fc49489-0903";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=fc49489-0903";
+import { createAmbience } from "./ambience.js?v=fc49489-0903";
+import { updateWind } from "./wind.js?v=fc49489-0903";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -82,6 +83,11 @@ const { stageGroups, obstacles, removals, practicals } = world;
 let studioParts = 0, gardenParts = 0;
 installStudio(stageGroups, mats, n => { studioParts = n; });
 installGarden(world.existing, mats, n => { gardenParts = n; });
+/* scanned trees: the headset and the basic tier get the collapsed
+   version, everything else the full one */
+let treeParts = 0;
+installTrees(world.existing, tierKey === "basic" ? "q" : "d", n => { treeParts = n; });
+installPlanting(world.existing, tierKey === "basic" ? "q" : "d", n => { treeParts += n; });
 
 let grassMesh = null, grassFull = 0;
 world.existing.traverse(o => { if (o.isInstancedMesh) { grassMesh = o; grassFull = o.count; } });
@@ -720,6 +726,8 @@ composer.addPass(new OutputPass());
  * ------------------------------------------------------------------ */
 /* In the headset the tier gives way to the frame budget. */
 function applyVRProfile(on) {
+  setTreeDetail(on || tierKey === "basic" ? "q" : "d");
+  setPlantDetail(on || tierKey === "basic" ? "q" : "d");
   shadowFollow.setVR(on);
   const size = on ? VR_PROFILE.shadowMap : tier.shadowMap;
   sun.shadow.mapSize.set(size, size);

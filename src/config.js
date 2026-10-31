@@ -1,4 +1,4 @@
-export const BUILD = "bfdad1a-0843";   // stamped by tools/stamp-build.py
+export const BUILD = "fc49489-0903";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -15,6 +15,7 @@ export const SITE = {
   patio:  { depth: 3, inset: 0.2 },
   path:   { width: 0.9, offsetFromWest: 0.75 },
   hedge:  { depth: 1.0, height: 1.5 },
+  bedDepth: 1.0,                      // planted borders either side and across the back
   shed:   { w: 2.0, d: 1.5, h: 1.9, x: -2.8, z: -12.0 },
   trees: [
     { x: -2.9, z: -9.4, height: 4.6, crown: 1.6 },

@@ -10,3 +10,6 @@ captures/
 *.ply
 *.splat
 *.ksplat
+
+# Poly Haven source downloads (CC0, re-fetchable with tools/fetch-polyhaven.py)
+master/polyhaven/

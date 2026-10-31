@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { COLOURS, BUILD } from "./config.js?v=bfdad1a-0843";
-import { addWind } from "./wind.js?v=bfdad1a-0843";
-import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=bfdad1a-0843";
+import { COLOURS, BUILD } from "./config.js?v=fc49489-0903";
+import { addWind } from "./wind.js?v=fc49489-0903";
+import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=fc49489-0903";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -104,7 +104,7 @@ function mergeByMaterial(roots, target) {
 }
 
 let loader = null;
-function gltf() {
+export function gltf() {
   if (!loader) {
     const draco = new DRACOLoader();
     draco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/libs/draco/");
@@ -251,9 +251,9 @@ export function installGarden(parent, mats, onReady) {
     const treePts = [], shrubPts = [];
     for (const child of [...g.scene.children]) {
       const nm = child.name || "";
-      if (nm.includes("_leaves") || nm.startsWith("Shrub_")) {
-        const every = nm.includes("_leaves") ? 11 : 6;
-        (nm.includes("_leaves") ? treePts : shrubPts).push(...samplePoints(child, every, parent));
+      if (nm.startsWith("Tree_")) continue;                 // scanned trees stand here now (vegetation.js)
+      if (nm.startsWith("Shrub_")) {
+        shrubPts.push(...samplePoints(child, 6, parent));
         continue;
       }
       child.traverse(o => {

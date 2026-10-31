@@ -42,8 +42,8 @@ PAGE = """<!doctype html>
 </style>
 <h1>Send a scan to the Mac</h1>
 <p>Straight over your wifi. Nothing is uploaded to the internet.</p>
-<label for="f" id="drop">Choose a video</label>
-<input id="f" type="file" accept="video/*,image/*">
+<label for="f" id="drop">Choose photos and videos</label>
+<input id="f" type="file" accept="video/*,image/*" multiple>
 <div id="bar"><div id="fill"></div></div>
 <div id="msg"></div>
 <button id="go" disabled>Send</button>
@@ -51,28 +51,34 @@ PAGE = """<!doctype html>
 const f=document.getElementById('f'),go=document.getElementById('go'),
       bar=document.getElementById('bar'),fill=document.getElementById('fill'),
       msg=document.getElementById('msg'),drop=document.getElementById('drop');
-let file=null;
-f.onchange=()=>{file=f.files[0];if(!file)return;
-  drop.textContent=file.name+'  ('+(file.size/1048576).toFixed(0)+' MB)';
+let files=[];
+f.onchange=()=>{files=[...f.files];if(!files.length)return;
+  const mb=files.reduce((a,b)=>a+b.size,0)/1048576;
+  drop.textContent=files.length+' file'+(files.length>1?'s':'')+'  ('+mb.toFixed(0)+' MB)';
   go.disabled=false;msg.textContent='';};
-go.onclick=()=>{
-  if(!file)return;
+function sendOne(file,i){
+  return new Promise(res=>{
+    const t0=Date.now();
+    const x=new XMLHttpRequest();
+    x.open('PUT','/upload?name='+encodeURIComponent(file.name));
+    x.upload.onprogress=e=>{
+      if(!e.lengthComputable)return;
+      fill.style.width=(e.loaded/e.total*100)+'%';
+      const rate=e.loaded/1048576/((Date.now()-t0)/1000);
+      msg.textContent=(i+1)+' of '+files.length+'   '+file.name+'   '+(e.loaded/1048576).toFixed(0)+' / '+(e.total/1048576).toFixed(0)+' MB   '+rate.toFixed(1)+' MB/s';
+    };
+    x.onload=()=>res(x.status===200);
+    x.onerror=()=>res(false);
+    x.send(file);
+  });
+}
+go.onclick=async()=>{
+  if(!files.length)return;
   go.disabled=true;bar.style.display='block';
-  const t0=Date.now();
-  const x=new XMLHttpRequest();
-  x.open('PUT','/upload?name='+encodeURIComponent(file.name));
-  x.upload.onprogress=e=>{
-    if(!e.lengthComputable)return;
-    const pct=e.loaded/e.total;
-    fill.style.width=(pct*100)+'%';
-    const mb=(e.loaded/1048576).toFixed(0), tot=(e.total/1048576).toFixed(0);
-    const rate=e.loaded/1048576/((Date.now()-t0)/1000);
-    msg.textContent=mb+' / '+tot+' MB   '+rate.toFixed(1)+' MB/s';
-  };
-  x.onload=()=>{msg.textContent=x.status===200?'Done. '+x.responseText:'Failed: '+x.status;
-                go.disabled=false;};
-  x.onerror=()=>{msg.textContent='Connection lost.';go.disabled=false;};
-  x.send(file);
+  let ok=0,bad=[];
+  for(let i=0;i<files.length;i++){ if(await sendOne(files[i],i))ok++; else bad.push(files[i].name); }
+  msg.textContent='Done: '+ok+' of '+files.length+' sent.'+(bad.length?' Failed: '+bad.join(', '):'');
+  go.disabled=false;files=[];f.value='';drop.textContent='Choose photos and videos';
 };
 </script>
 """

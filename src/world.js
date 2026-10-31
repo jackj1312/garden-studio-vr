@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=bfdad1a-0843";
-import { groundGeo, makeGrass } from "./materials.js?v=bfdad1a-0843";
-import { foliageMaterial, cardCluster, boxPoints, spherePoints } from "./foliage.js?v=bfdad1a-0843";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=fc49489-0903";
+import { groundGeo, makeGrass } from "./materials.js?v=fc49489-0903";
+import { foliageMaterial, cardCluster, boxPoints, spherePoints } from "./foliage.js?v=fc49489-0903";
 
 /* ------------------------------------------------------------------ *
  *  What stays procedural.
@@ -63,7 +63,7 @@ export function buildWorld(scene, mats, quality) {
 
   /* bare-earth borders along the fences, the way a tended garden has them */
   const soil = flat(COLOURS.soil, { roughness: 1 });
-  const BW = 0.42, bedLen = SITE.garden.length - SITE.patio.depth - 0.3;
+  const BW = SITE.bedDepth, bedLen = SITE.garden.length - SITE.patio.depth - 0.3;
   for (const sx of [-1, 1]) {
     const b = new THREE.Mesh(groundGeo(BW, bedLen, 1.0), soil);
     b.position.set(sx * (HALF - BW / 2 - 0.06), 0.009, -SITE.patio.depth - bedLen / 2);
@@ -133,46 +133,12 @@ export function buildWorld(scene, mats, quality) {
     }
   }
 
-  /* planting. A garden-design service cannot show bare soil borders:
-     three species along each bed at staggered sizes, pots on the patio,
-     and a taller specimen or two. All leaf cards, all swaying. */
+  /* planting comes from vegetation.js (scanned species, instanced).
+     Nobody walks through a border, so each bed is solid to the player. */
   {
-    const species = [
-      foliageMaterial({ tint: 0xd6e2c2, strength: 0.03, speed: 1.1, height: 1.4 }),   // mid green
-      foliageMaterial({ tint: 0xe6edb8, strength: 0.035, speed: 1.3, height: 1.2 }),  // lime
-      foliageMaterial({ tint: 0xb79ab0, strength: 0.025, speed: 1.0, height: 1.0 })   // plum
-    ];
-    const bedZ0 = -SITE.patio.depth - 0.6, bedZ1 = REAR + 0.9;
-    let i = 0;
-    for (const sx of [-1, 1]) {
-      for (let z = bedZ0; z > bedZ1; z -= 1.15) {
-        const r = 0.32 + ((i * 7) % 5) * 0.07;
-        const x = sx * (HALF - 0.3 - (i % 2) * 0.12);
-        const mat = species[i % 3];
-        const tall = i % 4 === 3;
-        existing.add(cardCluster(
-          spherePoints(new THREE.Vector3(x, r * (tall ? 1.4 : 0.8), z), r, tall ? 90 : 60, tall ? 1.6 : 0.8),
-          { size: r * 0.6, material: mat, shadow: i % 2 === 0 }));
-        blockCircle(x, z, r * 0.8);
-        i++;
-      }
-    }
-    // the rear bed, in front of the hedge line
-    for (let x = -HALF + 1.0; x < HALF - 0.8; x += 1.3) {
-      const r = 0.38 + ((i * 3) % 4) * 0.06;
-      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, r * 0.8, REAR + 1.45), r, 60, 0.8),
-        { size: r * 0.6, material: species[i % 3], shadow: false }));
-      i++;
-    }
-    // terracotta pots on the patio, with something in them
-    const terracotta = flat(0xa65d3f, { roughness: 0.85 });
-    for (const [x, z, pr] of [[-3.2, -0.6, 0.26], [-2.5, -0.5, 0.2], [3.3, -2.6, 0.3]]) {
-      const pot = new THREE.Mesh(new THREE.CylinderGeometry(pr, pr * 0.78, pr * 1.6, 14), terracotta);
-      pot.position.set(x, pr * 0.8 + 0.02, z); pot.castShadow = pot.receiveShadow = true; existing.add(pot);
-      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, pr * 1.6 + pr * 0.9, z), pr * 1.3, 45, 0.9),
-        { size: pr * 0.8, material: species[(i++) % 3], shadow: false }));
-      blockCircle(x, z, pr + 0.1);
-    }
+    const BW = SITE.bedDepth, bedLen = SITE.garden.length - SITE.patio.depth - 0.3;
+    for (const sx of [-1, 1]) blockBox(sx * (HALF - BW / 2 - 0.06), -SITE.patio.depth - bedLen / 2, BW / 2, bedLen / 2);
+    blockBox(0, REAR + BW / 2 + 0.06, SITE.garden.width / 2 - 0.12, BW / 2);
   }
 
   /* collision, matching the geometry that arrives in garden.glb */

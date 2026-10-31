@@ -29,6 +29,24 @@ the studio, new planting, fencing, lighting and the film itself. What makes it w
 - **Camera**: slow drone-height arcs, low tracking shots through planting, a reveal of
   the garden building, a day→night cut. 1:22 with music.
 
+### What the film actually is, shot by shot (stepped through 31 Oct)
+- 0:00–0:03 logo card on olive green; 1:19–1:22 end card "Award-Winning Garden Design".
+- 0:04–0:17 low tracking shots at about 1 m height, moving slowly through the beds:
+  slender multi-stem trees (birch / amelanchier type, airy canopies, pale trunks), perennial
+  beds of white umbels, ornamental grasses, lavender and salvia purples, cedar fence panels
+  with **horizontal slats**, square timber pergola posts, neighbour houses beyond the fence.
+  Bright, hazy, high-key light; soft shadows; a faint bloom on the brightest leaves.
+- 0:22–0:34 a Victorian-style glasshouse on a cedar base with potted plants inside, lavender
+  beds, gravel with stepping stones, the slatted fence behind.
+- 0:28 the client's house: white render over brick, slate roof, balcony — modelled, not a
+  photograph, but to scale with real window proportions.
+- 0:40–0:46 drone shots from 10–15 m: a **circular lawn with a crisp edge**, curved beds of
+  perennials and grasses, gravel paths, glasshouse at the far end; nothing is bare soil.
+- 0:52 the camera flies *through* a canopy — real leaf textures, close.
+- 0:57 cut to night: the same drone angles; uplighters on every tree and in the beds, path
+  lights, house and glasshouse lit from inside, sky deep blue-black, haze catches the light.
+- Camera grammar: slow dollies, slow drone arcs, one crane-down, one day→night cut; music.
+
 ## How to use these
 - Before any judge pass, open both and look at them again. Then look at ours.
 - "Does it feel like the SE Landscapes garden?" is the question for planting and light.

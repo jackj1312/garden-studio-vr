@@ -98,7 +98,19 @@ for flip in (False, True):
         if best is None or score < best[0]:
             best = (score, S, Rt, T, np.percentile(dist, 70))
 score, S, Rt, T, p70 = best
-print(f"aligned: scale {S:.4f}, median residual {score*100:.1f} cm, 70th pct {p70*100:.1f} cm")
+print(f"coarse: scale {S:.4f}, median residual {score*100:.1f} cm")
+# refine on overlap only: points with no scan underneath (lawn, drive) must not pull the fit
+for thr in ():   # free-scale refinement shrinks the model; scale is fixed separately (align_fixed_scale.py)
+    for it in range(15):
+        cur = S * (pts @ Rt.T) + T
+        idx, dist = nn(cur, scan_s)
+        keep = dist < thr
+        if keep.sum() < 200: break
+        S, Rt, T = umeyama(pts[keep], scan_s[idx[keep]])
+cur = S * (pts @ Rt.T) + T
+idx, dist = nn(cur, scan_s)
+inl = dist < 0.08
+print(f"aligned: scale {S:.4f}, {inl.sum()} overlap points, residual on them median {np.median(dist[inl])*100:.1f} cm, 90th {np.percentile(dist[inl],90)*100:.1f} cm")
 out = {"scale": S, "R": Rt.tolist(), "t": T.tolist(), "median_residual_m": float(score),
        "cameras": {}, "points": []}
 for img in rec.images.values():

@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { gltf } from "./studio.js?v=28d436e-0920";
-import { BUILD } from "./config.js?v=28d436e-0920";
+import { gltf } from "./studio.js?v=4d52a60-0926";
+import { BUILD } from "./config.js?v=4d52a60-0926";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a

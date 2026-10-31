@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { addWind } from "./wind.js?v=28d436e-0920";
-import { gltf } from "./studio.js?v=28d436e-0920";
-import { BUILD, SITE } from "./config.js?v=28d436e-0920";
+import { addWind } from "./wind.js?v=4d52a60-0926";
+import { gltf } from "./studio.js?v=4d52a60-0926";
+import { BUILD, SITE } from "./config.js?v=4d52a60-0926";
 
 /* ------------------------------------------------------------------ *
  *  Scanned vegetation.
@@ -179,8 +179,11 @@ export async function setTreeDetail(detail) {
  *    front      meadow grasses and celandine spilling onto the edge
  * ------------------------------------------------------------------ */
 const SPECIES = ["shrub_01", "shrub_02", "shrub_03", "shrub_04", "fern_02", "grass_medium_01", "grass_medium_02",
-                 "periwinkle_plant", "celandine_01", "moss_01"];
+                 "periwinkle_plant", "celandine_01", "moss_01",
+                 // built in Blender from vertex-coloured geometry: the UK border palette no scan library has
+                 "lavender", "salvia", "stipa", "allium", "box_ball"];
 const PLANT_FILES = { q: "assets/models/veg/plants_q.glb", d: "assets/models/veg/plants_d.glb" };
+const PERENNIALS = "assets/models/veg/perennials.glb";
 const plantCache = new Map();
 let plantGroup = null, plantDetail = null, plantInfo = null;
 
@@ -189,22 +192,30 @@ function seeded(seed) {
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
 
+function loadGLB(url) {
+  return new Promise((resolve, reject) => gltf().load(`${url}?v=${BUILD}`, resolve, undefined, reject));
+}
+
 function loadPlants(detail) {
   if (plantCache.has(detail)) return plantCache.get(detail);
-  const p = new Promise((resolve, reject) => {
-    gltf().load(`${PLANT_FILES[detail]}?v=${BUILD}`, g => {
-      const species = {};
+  const p = Promise.all([loadGLB(PLANT_FILES[detail]), loadGLB(PERENNIALS)]).then(scenes => {
+    const species = {};
+    for (const g of scenes) {
       g.scene.traverse(o => {
         if (!o.isMesh) return;
         o.geometry.computeBoundingBox();
+        const bb = o.geometry.boundingBox;
+        const height = bb.max.y - bb.min.y, radius = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2;
         bendNormalsUp(o.geometry, 0.4);
-        o.material = leafMaterial(o.material, { translucency: 0.45, wind: { strength: 0.02, speed: 1.1, height: 0.5 } });
+        o.material = leafMaterial(o.material, { translucency: 0.45, wind: { strength: 0.02, speed: 1.1, height: Math.max(0.2, height) } });
         // three.js strips the dot from Blender's ".001" suffix, so match on the prefix
         const key = SPECIES.find(n => o.name.startsWith(n));
-        if (key) species[key] = o; else console.warn("unexpected plant mesh", o.name);
+        if (!key) { console.warn("unexpected plant mesh", o.name); return; }
+        species[key] = o;
+        plantInfo[key] ??= { height, radius };               // the built perennials are not in plants.json
       });
-      resolve(species);
-    }, undefined, reject);
+    }
+    return species;
   });
   plantCache.set(detail, p);
   return p;
@@ -213,10 +224,13 @@ function loadPlants(detail) {
 /* Each scan has its own size, so a species is placed by the height it
    should stand at, not by a raw scale. Rows: back (tall, by the fence),
    middle, front (low, spilling over the edge). */
+/* The palette from the benchmark film and from Jack's own planting plan
+   (lavender edge, salvias, grasses): perennials in drifts, scans as the
+   structural shrubs and the shade layer. */
 const ROLE = {
-  back:   [["shrub_02", 1.1, 1.5], ["periwinkle_plant", 0.55, 0.75], ["fern_02", 0.55, 0.7]],
-  middle: [["fern_02", 0.45, 0.6], ["shrub_03", 0.45, 0.6], ["periwinkle_plant", 0.4, 0.55], ["shrub_04", 0.35, 0.5]],
-  front:  [["grass_medium_02", 0.35, 0.5], ["celandine_01", 0.18, 0.26], ["grass_medium_01", 0.3, 0.4], ["shrub_01", 0.3, 0.42]]
+  back:   [["shrub_02", 1.1, 1.5], ["box_ball", 0.6, 0.8], ["allium", 0.75, 0.95], ["salvia", 0.55, 0.7], ["periwinkle_plant", 0.55, 0.75]],
+  middle: [["salvia", 0.45, 0.6], ["stipa", 0.4, 0.55], ["allium", 0.7, 0.9], ["fern_02", 0.45, 0.6], ["box_ball", 0.45, 0.6], ["shrub_03", 0.45, 0.6]],
+  front:  [["lavender", 0.4, 0.5], ["lavender", 0.4, 0.5], ["stipa", 0.35, 0.45], ["grass_medium_02", 0.35, 0.5], ["celandine_01", 0.18, 0.26]]
 };
 const MAX_RADIUS = { back: 0.75, middle: 0.55, front: 0.45 };   // scans sprawl; keep them in the bed
 function pick(rnd, role) {
@@ -237,20 +251,25 @@ function layoutBeds() {
   const out = [];                                         // { species, x, z, yaw, scale }
   const drop = (species, x, z, scale) => out.push({ species, x, z, yaw: rnd() * Math.PI * 2, scale });
   const bed = (xFence, dir) => {                          // dir: +1 bed grows towards +x
-    for (let z = z0; z > z1; z -= 0.55 + rnd() * 0.25) {
+    let drift = { back: null, middle: null, front: null }, left = { back: 0, middle: 0, front: 0 };
+    const next = role => {                                 // the same plant 3–6 times, then another: drifts, not a tapestry
+      if (left[role] <= 0) { drift[role] = pick(rnd, role); left[role] = 3 + Math.floor(rnd() * 4); }
+      left[role]--;
+      return { name: drift[role].name, scale: drift[role].scale * (0.9 + rnd() * 0.2) };
+    };
+    for (let z = z0; z > z1; z -= 0.32 + rnd() * 0.12) {
       const back = xFence + dir * (0.18 + rnd() * 0.12);
       const mid  = xFence + dir * (BW * 0.5 + (rnd() - 0.5) * 0.2);
       const front = xFence + dir * (BW - 0.12 - rnd() * 0.15);
-      let c = pick(rnd, "back");  drop(c.name, back, z, c.scale);
-      c = pick(rnd, "middle");    drop(c.name, mid, z + 0.25, c.scale);
-      c = pick(rnd, "front");     drop(c.name, front, z - 0.1, c.scale);
-      if (rnd() < 0.5) { c = pick(rnd, "front"); drop(c.name, front - dir * 0.25, z + 0.3, c.scale); }
+      let c = next("back");   drop(c.name, back, z, c.scale);
+      c = next("middle");     drop(c.name, mid, z + 0.15, c.scale);
+      c = next("front");      drop(c.name, front, z - 0.05, c.scale);
     }
   };
   bed(-HALF + 0.08, +1);
   bed(HALF - 0.08, -1);
   // rear bed, in front of the back fence
-  for (let x = -HALF + 0.5; x < HALF - 0.4; x += 0.6 + rnd() * 0.3) {
+  for (let x = -HALF + 0.5; x < HALF - 0.4; x += 0.38 + rnd() * 0.15) {
     let c = pick(rnd, "back");   drop(c.name, x, REAR + 0.3 + rnd() * 0.15, c.scale);
     c = pick(rnd, "middle");     drop(c.name, x + 0.2, REAR + BW * 0.6 + rnd() * 0.2, c.scale);
     if (rnd() < 0.7) { c = pick(rnd, "front"); drop(c.name, x + 0.35, REAR + BW - 0.1, c.scale); }
@@ -267,7 +286,7 @@ export function installPlanting(parent, detail, onReady) {
 
 export async function setPlantDetail(detail) {
   if (!plantGroup || detail === plantDetail) return 0;
-  if (!plantInfo) plantInfo = await (await fetch(`assets/models/veg/plants.json?v=${BUILD}`)).json();
+  if (!plantInfo) plantInfo = await (await fetch(`assets/models/veg/plants.json?v=${BUILD}`)).json().catch(() => ({}));
   const species = await loadPlants(detail);
   if (detail === plantDetail) return 0;
   plantDetail = detail;

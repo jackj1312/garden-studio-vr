@@ -75,3 +75,34 @@ Gaussian splat and a mesh. Processing is cloud-side and takes a while.
 
 For a first test, one room and one good set of loops is plenty. The thing being tested is
 the method, not the room.
+
+## Reconstructing it locally
+
+`tools/photogrammetry/scan` is a small Swift tool built against Apple's `PhotogrammetrySession`,
+which ships with macOS and runs on the Apple Silicon GPU. Nothing to install, and the
+client's video never leaves the machine — which matters once this is a paid service.
+
+```
+cd tools/photogrammetry
+swiftc -O -o scan main.swift        # once
+./scan ~/Desktop/garden-scans/clip.mov ~/Desktop/garden-scans/out.usdz medium 160
+```
+
+It takes a video (pulling evenly spaced frames itself) or a folder of stills, and writes a
+USDZ you can import straight into Blender. Detail levels run preview, reduced, medium,
+full, raw — start at medium.
+
+**It suits outside-in capture**: walking around a garden studio, a house, an extension.
+It is the wrong tool for the inside of a room, which is the opposite geometry and what
+Gaussian splatting handles well.
+
+## Which route for which job
+
+| Subject | Best route | Why |
+|---|---|---|
+| Garden, building exterior, extension | `./scan` locally | Outside-in, private, free, no upload |
+| Inside of a room | Gaussian splat | Inside-out reconstruction, far better results |
+| Fast first test of your technique | Luma AI free tier | Minutes, no setup, handles both |
+
+Local splat training on this Mac is possible with Brush, which runs on Apple Silicon via
+Metal. Not set up yet.

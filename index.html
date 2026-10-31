@@ -91,10 +91,37 @@
     padding: 9px 14px 9px 12px; border-radius: 10px; background: rgba(14,16,14,0.88); color: #f4f3ee;
     border-left: 5px solid var(--mark, #ff5a1f); font-size: 12.5px; pointer-events: none;
   }
-  #markHint[hidden] { display: none; }
+  #markHint[hidden], #refHint[hidden] { display: none; }
+  #refHint {
+    position: fixed; top: max(12px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+    max-width: calc(100vw - 32px); z-index: 6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 14px 9px 12px; border-radius: 10px; background: rgba(14,16,14,0.88); color: #f4f3ee;
+    border-left: 5px solid #f2d36b; font-size: 12.5px; pointer-events: none;
+  }
+  #refHint b { color: #f2d36b; font-weight: 700; letter-spacing: 0.02em; }
+  #refHint .k { color: #b9bcb2; }
+  #refHint .kbd { color: #d8dad1; border-color: #4a4e47; }
   #markHint b { color: var(--mark, #ff5a1f); font-weight: 700; letter-spacing: 0.02em; }
   #markHint .k { color: #b9bcb2; }
   #markHint .kbd { color: #d8dad1; border-color: #4a4e47; }
+  #noteBox {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+    width: min(560px, calc(100vw - 32px)); z-index: 7; display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 16px; border-radius: 12px; background: rgba(14,16,14,0.94); color: #f4f3ee;
+    border: 1px solid #33373a; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  #noteBox[hidden] { display: none; }
+  #noteBox .nb-title { font-weight: 700; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; }
+  #noteBox input {
+    font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 8px; border: 1px solid #4a4e47;
+    background: #1b1e1b; color: #f4f3ee; width: 100%;
+  }
+  #noteBox input:focus-visible { outline: 2px solid #7aa86a; outline-offset: 1px; }
+  #noteBox .nb-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #noteBox .nb-row button { color: #f4f3ee; border-color: #4a4e47; }
+  #noteBox .nb-row button.primary { color: #11140f; }
+  #noteBox #noteRec.rec { background: #d8342b; border-color: #d8342b; }
+  #noteBox [data-status] { font-size: 12px; color: #b9bcb2; }
   .kbd {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
     padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-soft);
@@ -127,8 +154,25 @@
 
 <div id="markHint" hidden>
   <b>MARK · <span data-kind>Correction</span></b>
-  <span class="k">drag on the ground to draw · <span class="kbd">K</span> kind · <span class="kbd">Z</span> undo · <span class="kbd">M</span> done</span>
+  <span class="k">drag on the ground or a wall to draw · click a label to edit its note · <span class="kbd">K</span> kind · <span class="kbd">Z</span> undo · <span class="kbd">M</span> done</span>
   <span class="k" data-status></span>
+</div>
+
+<div id="refHint" hidden>
+  <b>REFERENCE · <span data-tab>loading…</span></b>
+  <span class="k"><span class="kbd">Tab</span> next tab · click a photo to enlarge · <span class="kbd">R</span> done</span>
+</div>
+
+<div id="noteBox" hidden role="dialog" aria-label="Note for this mark">
+  <div class="nb-title" data-title>Note</div>
+  <input id="noteText" type="text" maxlength="500" placeholder="What's wrong here, or what's proposed?" autocomplete="off">
+  <div class="nb-row">
+    <button id="noteRec" type="button">● Record</button>
+    <span data-status></span>
+    <span class="spacer"></span>
+    <button id="noteSkip" type="button">Skip</button>
+    <button id="noteSave" type="button" class="primary">Save</button>
+  </div>
 </div>
 
 <div id="start">
@@ -156,6 +200,6 @@
   }
 }
 </script>
-<script type="module" src="src/app.js?v=3a8191b-1626"></script>
+<script type="module" src="src/app.js?v=f383e46-1642"></script>
 </body>
 </html>

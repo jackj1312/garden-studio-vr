@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { gltf, mergeByMaterial } from "./studio.js?v=3a8191b-1626";
-import { makeGrass } from "./materials.js?v=3a8191b-1626";
-import { BUILD } from "./config.js?v=3a8191b-1626";
+import { gltf, mergeByMaterial } from "./studio.js?v=f383e46-1642";
+import { makeGrass } from "./materials.js?v=f383e46-1642";
+import { BUILD } from "./config.js?v=f383e46-1642";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a

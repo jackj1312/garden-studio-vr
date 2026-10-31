@@ -5,16 +5,17 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=3a8191b-1626";
-import { buildMaterials } from "./materials.js?v=3a8191b-1626";
-import { buildWorld } from "./world.js?v=3a8191b-1626";
-import { installStudio, installGarden } from "./studio.js?v=3a8191b-1626";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=3a8191b-1626";
-import { installSite } from "./site.js?v=3a8191b-1626";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=3a8191b-1626";
-import { createAmbience } from "./ambience.js?v=3a8191b-1626";
-import { updateWind } from "./wind.js?v=3a8191b-1626";
-import { createMarks } from "./marks.js?v=3a8191b-1626";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=f383e46-1642";
+import { buildMaterials } from "./materials.js?v=f383e46-1642";
+import { buildWorld } from "./world.js?v=f383e46-1642";
+import { installStudio, installGarden } from "./studio.js?v=f383e46-1642";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=f383e46-1642";
+import { installSite } from "./site.js?v=f383e46-1642";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=f383e46-1642";
+import { createAmbience } from "./ambience.js?v=f383e46-1642";
+import { updateWind } from "./wind.js?v=f383e46-1642";
+import { createMarks } from "./marks.js?v=f383e46-1642";
+import { createRefs } from "./refs.js?v=f383e46-1642";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -77,7 +78,9 @@ const grips = attachControllerModels(renderer, player);
 attachHandModels(renderer, player);
 const blobs = createBlobShadows(scene);
 /* Mark mode: draw corrections and proposals on the ground (src/marks.js) */
-const marks = createMarks({ scene, camera, renderer, siteKey });
+const marks = createMarks({ scene, camera, renderer, siteKey, onActive: on => { if (on) refs.setActive(false); } });
+/* Reference view: the client's photos around you, nearest first (src/refs.js); one or the other, never both */
+const refs = createRefs({ scene, camera, renderer, siteKey, onActive: on => { if (on) marks.setActive(false); } });
 const _head = new THREE.Vector3(), _local = new THREE.Vector3();
 const _lastHead = new THREE.Vector3(0, 0, -2.2);
 let stepDist = 0;
@@ -538,6 +541,7 @@ controllers.forEach(c => {
       rayLine.visible = false;
       c.add(rayLine);
       marks.attachHint(c);
+      refs.attachHint(c);
     }
   });
   c.addEventListener("disconnected", () => {
@@ -566,11 +570,12 @@ function updatePointer() {
   updatePanelVisibility();
   const right = hands.right;
   if (rayLine) rayLine.visible = false;
-  if (marks.active) {                         // Mark mode owns the trigger: no panel, no placing
+  if (marks.active || refs.active) {          // Mark mode / Reference view own the trigger: no panel, no placing
     if (cursorUV) uiDirty = true;
     cursorUV = null; dragging = false;
     triggerWasDown = !!right?.userData.source?.gamepad?.buttons?.[0]?.pressed;
-    marks.updateXR(right, triggerWasDown);
+    if (marks.active) marks.updateXR(right, triggerWasDown);
+    else refs.updateXR(right, triggerWasDown);
     return;
   }
   if (!right || !panel.visible || !panelWanted) { cursorUV = null; return; }
@@ -632,16 +637,26 @@ const dead = v => Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86;
 
 /* Nobody should have to aim a laser at a 2 cm handle. A = next stage,
    B = previous, Y = play/pause, X = pin the panel open.
-   Mark mode: B or Y toggles it on a real site (left-stick click in the demo, where B and Y
-   are the stage keys); in Mark mode A or right-stick click switches the kind, grip undoes. */
-const btnWas = { a: false, b: false, x: false, y: false, rs: false, ls: false, grip: false };
+   Mark mode: B toggles it on a real site (left-stick click in the demo, where B and Y
+   are the stage keys); in Mark mode A or right-stick click switches the kind, grip undoes.
+   While a mark's note is open, hold A to talk.
+   Reference view (real sites only): Y toggles it; either grip = next tab, A = previous tab. */
+const btnWas = { a: false, b: false, x: false, y: false, rs: false, ls: false, grip: false, lgrip: false };
 function faceButtons() {
   const r = hands.right?.userData.source?.gamepad?.buttons, l = hands.left?.userData.source?.gamepad?.buttons;
   const a = !!r?.[4]?.pressed, b = !!r?.[5]?.pressed, x = !!l?.[4]?.pressed, y = !!l?.[5]?.pressed;
-  const rs = !!r?.[3]?.pressed, ls = !!l?.[3]?.pressed, grip = !!r?.[1]?.pressed;
-  const markToggle = siteKey ? (b && !btnWas.b) || (y && !btnWas.y) : (ls && !btnWas.ls);
+  const rs = !!r?.[3]?.pressed, ls = !!l?.[3]?.pressed, grip = !!r?.[1]?.pressed, lgrip = !!l?.[1]?.pressed;
+  const markToggle = siteKey ? (b && !btnWas.b) : (ls && !btnWas.ls);
   if (markToggle) { marks.toggle(); hapticPulse([hands.right], 0.5, 30); }
-  if (marks.active) {
+  if (siteKey && y && !btnWas.y) { refs.toggle(); hapticPulse([hands.left], 0.5, 30); }
+  if (refs.active) {
+    if ((grip && !btnWas.grip) || (lgrip && !btnWas.lgrip)) { refs.next(); hapticPulse([grip ? hands.right : hands.left], 0.35, 20); }
+    if (a && !btnWas.a) { refs.prev(); hapticPulse([hands.right], 0.35, 20); }
+  } else if (marks.active && (marks.noteOpen || btnWas.a)) {   // a note is open: A is hold-to-talk
+    if (a && !btnWas.a) { marks.talk(true); hapticPulse([hands.right], 0.5, 30); }
+    if (!a && btnWas.a) marks.talk(false);
+    if (grip && !btnWas.grip) { marks.undo(); hapticPulse([hands.right], 0.5, 40); }
+  } else if (marks.active) {
     if ((a && !btnWas.a) || (rs && !btnWas.rs)) { marks.cycleKind(); hapticPulse([hands.right], 0.35, 20); }
     if (grip && !btnWas.grip) { marks.undo(); hapticPulse([hands.right], 0.5, 40); }
   } else if (!siteKey) {                          // stages belong to the demo studio
@@ -650,7 +665,7 @@ function faceButtons() {
     if (y && !btnWas.y) { togglePlay(); hapticPulse([hands.left], 0.5, 30); }
   }
   if (x && !btnWas.x) { panelPinned = !panelPinned; hapticPulse([hands.left], 0.3, 20); }
-  btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y; btnWas.rs = rs; btnWas.ls = ls; btnWas.grip = grip;
+  btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y; btnWas.rs = rs; btnWas.ls = ls; btnWas.grip = grip; btnWas.lgrip = lgrip;
 }
 
 function rotateAroundHead(angle) {
@@ -689,7 +704,7 @@ function xrLocomotion(dt) {
 
 const keys = new Set();
 let yaw = 0, pitch = 0, locked = false;
-addEventListener("keydown", e => { keys.add(e.code); if (e.code === "Space") e.preventDefault(); });
+addEventListener("keydown", e => { if (/INPUT|TEXTAREA/.test(e.target?.tagName)) return; keys.add(e.code); if (e.code === "Space") e.preventDefault(); });
 addEventListener("keyup", e => keys.delete(e.code));
 const grabPointer = () => {
   if (renderer.xr.isPresenting || marks.active) return;      // Mark mode draws with the free cursor
@@ -1034,7 +1049,7 @@ setStage(1);
 /* a hook for testing from the console: move the viewer, read the frame
    cost, drive the dials. Not a user-facing API. */
 window.__garden = {
-  player, camera, renderer, scene, composer, marks,
+  player, camera, renderer, scene, composer, marks, refs,
   setStage, goToStage, setVariant, applyTime,
   get yaw() { return yaw; }, set yaw(v) { yaw = v; },
   get pitch() { return pitch; }, set pitch(v) { pitch = v; },
@@ -1095,6 +1110,7 @@ renderer.setAnimationLoop(() => {
   }
   updateWind(now / 1000);
   marks.update(dt);
+  refs.update(dt);
   if (ambience.started) {
     camera.getWorldPosition(_head);
     world.anchor.worldToLocal(_local.copy(_head));

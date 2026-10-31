@@ -1,24 +1,29 @@
 import * as THREE from "three";
-import { hapticPulse } from "./presence.js?v=3a8191b-1626";
+import { hapticPulse } from "./presence.js?v=f383e46-1642";
+import { buildCollision } from "./surface.js?v=f383e46-1642";
+import { createNotes } from "./notes.js?v=f383e46-1642";
 
 /* ------------------------------------------------------------------ *
- *  Marking: draw on the ground the way you draw the Quest's Guardian.
+ *  Marking: draw on the garden the way you draw the Quest's Guardian.
  *
- *  Point the right controller at the ground, hold the trigger and walk
- *  or sweep: a bright ribbon follows the cursor. Two kinds of mark —
- *  a correction ("this is wrong here") and a proposal (a new bed, a
- *  path, a studio footprint). A stroke that ends within 25 cm of where
- *  it began closes into a shape and shows its area and perimeter.
+ *  Point the right controller at anything — the ground, a wall, the
+ *  fence, a roof — hold the trigger and sweep: a bright ribbon follows
+ *  the surface. Two kinds of mark: a correction ("this is wrong here")
+ *  and a proposal (a new bed, a path, a studio footprint). A stroke
+ *  that ends within 25 cm of where it began closes into a shape and
+ *  shows its area and perimeter. Each finished mark opens a note:
+ *  say what's wrong (hold to talk) or type it.
  *
- *  Every stroke is saved in PLAN coordinates (plan x = viewer x,
- *  plan y = -viewer z, metres) to assets/sites/<site>/marks.json via
- *  POST /marks?site=<site> (tools/https-serve.py), so a mark made in
- *  the headset can come straight back into the plan and the next build.
+ *  Saved to assets/sites/<site>/marks.json via POST /marks?site=<site>
+ *  (tools/https-serve.py). "points" are PLAN coordinates (plan x =
+ *  viewer x, plan y = -viewer z, metres); "points3d" and "normals" are
+ *  the surface points in viewer coordinates; "surface" is the material
+ *  the stroke mostly lay on (FG_brick_gltf: a wall).
  * ------------------------------------------------------------------ */
 
 export const KINDS = {
-  correction: { label: "Correction", hex: 0xff5a1f, css: "#ff5a1f", note: "this is wrong here" },
-  proposal:   { label: "Proposal",   hex: 0x1fd8ff, css: "#1fd8ff", note: "a proposed change" },
+  correction: { label: "Correction", hex: 0xff5a1f, css: "#ff5a1f" },
+  proposal:   { label: "Proposal",   hex: 0x1fd8ff, css: "#1fd8ff" },
 };
 const KIND_ORDER = ["correction", "proposal"];
 
@@ -26,28 +31,36 @@ const SAMPLE = 0.05;          // a point every 5 cm of cursor travel
 const CLOSE_DIST = 0.25;      // ends this near its start: a closed shape
 const MIN_CLOSE_LEN = 0.75;   // ...but not a tap or a tiny wiggle
 const MAX_REACH = 30;         // metres along the ray
-const HALF_W = 0.04;          // ribbon half-width at the ground
-const LIFT = 0.015;           // ribbon base above the surface it was drawn on
-const HEIGHT = 0.03;          // ribbon top above its base
+const HALF_W = 0.04;          // ribbon half-width
+const LIFT = 0.015;           // ribbon base off the surface, along its normal
+const HEIGHT = 0.03;          // ribbon thickness, along the normal
+const POLL_MS = 4000;         // while a voice note is being transcribed
+const POLL_FOR = 5 * 60 * 1000;
 
+const UP = new THREE.Vector3(0, 1, 0);
 const r3 = v => Math.round(v * 1000) / 1000;
 
-function ribbonGeometry(pts, closed, hex) {
+function ribbonGeometry(pts, nrm, closed, hex) {
   const n = pts.length;
   if (n < 2) return null;
   const pos = new Float32Array(n * 4 * 3), col = new Float32Array(n * 4 * 3);
   const c = new THREE.Color(hex), lo = c.clone().multiplyScalar(0.55), hi = c.clone().lerp(new THREE.Color(1, 1, 1), 0.18);
+  const t = new THREE.Vector3(), side = new THREE.Vector3(), base = new THREE.Vector3(), top = new THREE.Vector3(), v = new THREE.Vector3();
   for (let i = 0; i < n; i++) {
-    const p = pts[i];
+    const p = pts[i], nn = nrm[i];
     const a = closed ? pts[(i - 1 + n) % n] : pts[Math.max(0, i - 1)];
     const b = closed ? pts[(i + 1) % n] : pts[Math.min(n - 1, i + 1)];
-    let tx = b.x - a.x, tz = b.z - a.z;
-    const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
-    const nx = -tz, nz = tx, y0 = p.y + LIFT, y1 = y0 + HEIGHT;
-    const ring = [[-HALF_W, y0, lo], [-HALF_W * 0.55, y1, hi], [HALF_W * 0.55, y1, hi], [HALF_W, y0, lo]];
-    ring.forEach(([o, y, cc], k) => {
+    t.subVectors(b, a);
+    side.crossVectors(t, nn);
+    if (side.lengthSq() < 1e-10) side.set(1, 0, 0).cross(nn);         // along the normal: any perpendicular
+    side.normalize();
+    base.copy(p).addScaledVector(nn, LIFT);
+    top.copy(base).addScaledVector(nn, HEIGHT);
+    const ring = [[base, -HALF_W, lo], [top, -HALF_W * 0.55, hi], [top, HALF_W * 0.55, hi], [base, HALF_W, lo]];
+    ring.forEach(([o, s, cc], k) => {
+      v.copy(o).addScaledVector(side, s);
       const j = (i * 4 + k) * 3;
-      pos[j] = p.x + nx * o; pos[j + 1] = y; pos[j + 2] = p.z + nz * o;
+      pos[j] = v.x; pos[j + 1] = v.y; pos[j + 2] = v.z;
       col[j] = cc.r; col[j + 1] = cc.g; col[j + 2] = cc.b;
     });
   }
@@ -67,19 +80,20 @@ function ribbonGeometry(pts, closed, hex) {
   return g;
 }
 
-function planLength(pts, closed) {
+function length3(pts, closed) {
   let L = 0;
-  for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z);
-  if (closed && pts.length > 2) L += Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].z - pts[pts.length - 1].z);
+  for (let i = 1; i < pts.length; i++) L += pts[i].distanceTo(pts[i - 1]);
+  if (closed && pts.length > 2) L += pts[0].distanceTo(pts[pts.length - 1]);
   return L;
 }
-function planArea(pts) {           // shoelace in plan coordinates (x, -z)
-  let A = 0;
+/* area of a closed 3D polygon (Newell): on the ground it is the plan area, on a wall the wall area */
+function area3(pts) {
+  let x = 0, y = 0, z = 0;
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i], q = pts[(i + 1) % pts.length];
-    A += p.x * (-q.z) - q.x * (-p.z);
+    x += (p.y - q.y) * (p.z + q.z); y += (p.z - q.z) * (p.x + q.x); z += (p.x - q.x) * (p.y + q.y);
   }
-  return Math.abs(A) / 2;
+  return Math.hypot(x, y, z) / 2;
 }
 
 function roundRect(c, x, y, w, h, r) {
@@ -87,27 +101,33 @@ function roundRect(c, x, y, w, h, r) {
   c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
+const shorten = (s, n) => s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
 
-function makeLabel(text, css) {
+function makeLabel(line1, line2, css) {
+  const H = line2 ? 196 : 128;
   const cv = document.createElement("canvas");
-  cv.width = 512; cv.height = 128;
+  cv.width = 512; cv.height = H;
   const c = cv.getContext("2d");
   c.font = "600 54px system-ui, sans-serif";
-  const w = Math.min(500, c.measureText(text).width + 64);
+  let w = c.measureText(line1).width;
+  if (line2) { c.font = "38px system-ui, sans-serif"; w = Math.max(w, c.measureText(line2).width); }
+  w = Math.min(500, w + 64);
   const x = (512 - w) / 2;
-  c.fillStyle = "rgba(14,16,14,0.88)"; roundRect(c, x, 14, w, 100, 22); c.fill();
-  c.fillStyle = css; roundRect(c, x, 14, 14, 100, 7); c.fill();
-  c.fillStyle = "#f4f3ee"; c.textAlign = "center"; c.textBaseline = "middle";
-  c.fillText(text, 256 + 7, 66);
+  c.fillStyle = "rgba(14,16,14,0.88)"; roundRect(c, x, 14, w, H - 28, 22); c.fill();
+  c.fillStyle = css; roundRect(c, x, 14, 14, H - 28, 7); c.fill();
+  c.textAlign = "center"; c.textBaseline = "middle";
+  c.fillStyle = "#f4f3ee"; c.font = "600 54px system-ui, sans-serif";
+  c.fillText(line1, 256 + 7, 66);
+  if (line2) { c.fillStyle = "#d6d8cf"; c.font = "38px system-ui, sans-serif"; c.fillText(line2, 256 + 7, 132); }
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, toneMapped: false, fog: false, depthTest: false, transparent: true }));
-  s.scale.set(0.72, 0.18, 1);
+  s.scale.set(0.72, 0.72 * H / 512, 1);
   s.renderOrder = 960;
   return s;
 }
 
-export function createMarks({ scene, camera, renderer, siteKey }) {
+export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   const ribbonMat = new THREE.MeshBasicMaterial({
     vertexColors: true, toneMapped: false, fog: false, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
@@ -122,8 +142,9 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
   const group = new THREE.Group();
   group.name = "Marks";
   scene.add(group);
+  const notes = createNotes({ scene, camera, renderer, siteKey });
 
-  /* cursor: a glowing ring on the ground, like the Guardian's */
+  /* cursor: a glowing ring lying on whatever the ray hits, like the Guardian's */
   const cursor = new THREE.Group();
   const ringMat = new THREE.MeshBasicMaterial({ color: KINDS.correction.hex, toneMapped: false, fog: false, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.075, 0.105, 48).rotateX(-Math.PI / 2), ringMat);
@@ -162,10 +183,12 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
   const strokes = [];
   let live = null;                       // the stroke being drawn
   const raycaster = new THREE.Raycaster();
+  raycaster.camera = camera;             // sprites (the labels) need it
   const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  let groundMeshes = [];
-  const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion(), _hit = new THREE.Vector3();
-  let t = 0, cursorBase = 1;
+  let collision = null;
+  const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion();
+  const surf = { point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), surface: "ground" };
+  let t = 0, cursorBase = 1, triggerWas = false, hoverLabel = null;
 
   function drawHint() {
     const k = KINDS[kind];
@@ -175,9 +198,10 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     hctx.fillStyle = k.css; hctx.font = "700 46px system-ui, sans-serif";
     hctx.fillText(`MARK · ${k.label}`, 36, 58);
     hctx.fillStyle = "#e6e7e0"; hctx.font = "26px system-ui, sans-serif";
-    hctx.fillText(`Trigger draw · Grip undo · A kind · ${siteKey ? "B" : "L-stick"} done`, 36, 104);
+    hctx.fillText(notes.isOpen ? "Trigger types · hold A (or the button) to talk"
+      : `Trigger draw · Grip undo · A kind · ${siteKey ? "B" : "L-stick"} done`, 36, 104);
     hctx.fillStyle = "#a7ab9e"; hctx.font = "24px system-ui, sans-serif";
-    hctx.fillText(`${strokes.length} mark${strokes.length === 1 ? "" : "s"}${status ? " · " + status : ""}`, 36, 146);
+    hctx.fillText(`${strokes.length} mark${strokes.length === 1 ? "" : "s"}${status ? " · " + status : ""} · point at a label to edit its note`.slice(0, 60), 36, 146);
     hintTex.needsUpdate = true;
     if (domHint) {
       domHint.hidden = !active;
@@ -193,37 +217,41 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     rayMat.color.setHex(KINDS[kind].hex);
   }
 
-  /* where a ray meets the ground: the site's own flat surfaces (lawn,
-     paving, kerbs — a few thousand triangles), else the y = 0 plane */
-  function castGround() {
-    if (groundMeshes.length) {
-      const h = raycaster.intersectObjects(groundMeshes, false)[0];
-      if (h && h.distance <= MAX_REACH) return _hit.copy(h.point);
+  /* where the ray meets the site: walls, roofs, fences, kerbs, ground (the
+     collision copy), else the y = 0 plane */
+  function castSurface() {
+    const h = collision?.raycast(raycaster.ray, MAX_REACH);
+    if (h) {
+      surf.point.copy(h.point); surf.normal.copy(h.normal); surf.surface = h.surface;
+      return surf;
     }
-    if (!raycaster.ray.intersectPlane(floor, _hit)) return null;
-    return raycaster.ray.origin.distanceTo(_hit) <= MAX_REACH ? _hit : null;
+    if (!raycaster.ray.intersectPlane(floor, surf.point)) return null;
+    if (raycaster.ray.origin.distanceTo(surf.point) > MAX_REACH) return null;
+    surf.normal.copy(UP); surf.surface = "ground";
+    return surf;
   }
   function groundY(x, z) {
-    if (!groundMeshes.length) return 0;
+    if (!collision) return 0;
     raycaster.set(_o.set(x, 3, z), _d.set(0, -1, 0));
-    const h = raycaster.intersectObjects(groundMeshes, false)[0];
+    const h = collision.raycast(raycaster.ray, 6);
     return h ? h.point.y : 0;
   }
 
-  function showCursor(p) {
-    if (!p) { cursor.visible = false; return; }
+  function showCursor(h) {
+    if (!h) { cursor.visible = false; return; }
     cursor.visible = true;
-    cursor.position.set(p.x, p.y + 0.012, p.z);
+    cursor.position.copy(h.point).addScaledVector(h.normal, 0.012);
+    cursor.quaternion.setFromUnitVectors(UP, h.normal);
     // near the start of a long enough stroke: the ring turns white and grows — let go to close it
-    const closing = live && live.pts.length > 2 && planLength(live.pts, false) > MIN_CLOSE_LEN &&
-      Math.hypot(p.x - live.pts[0].x, p.z - live.pts[0].z) <= CLOSE_DIST;
+    const closing = live && live.pts.length > 2 && length3(live.pts, false) > MIN_CLOSE_LEN &&
+      h.point.distanceTo(live.pts[0]) <= CLOSE_DIST;
     ringMat.color.setHex(closing ? 0xffffff : KINDS[kind].hex);
     cursorBase = closing ? 1.5 : 1;
     cursor.scale.setScalar(cursorBase * (1 + 0.07 * Math.sin(t * 6)));
   }
 
   function buildMesh(s) {
-    const g = ribbonGeometry(s.pts, s.closed, KINDS[s.kind].hex);
+    const g = ribbonGeometry(s.pts, s.nrm, s.closed, KINDS[s.kind].hex);
     if (!s.mesh) {
       s.mesh = new THREE.Mesh(g || new THREE.BufferGeometry(), ribbonMat);
       s.ghost = new THREE.Mesh(s.mesh.geometry, ghostMat);
@@ -235,27 +263,39 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     }
   }
 
+  function dropLabel(s) {
+    if (!s.label) return;
+    s.label.material.map.dispose(); s.label.material.dispose(); s.label.removeFromParent();
+    s.label = null;
+  }
   function addLabel(s) {
-    if (s.label) { s.label.material.map.dispose(); s.label.material.dispose(); s.label.removeFromParent(); }
-    const text = s.closed ? `${s.area.toFixed(1)} m² · ${s.length.toFixed(1)} m` : `${s.length.toFixed(1)} m`;
-    s.label = makeLabel(text, KINDS[s.kind].css);
-    let at;
-    if (s.closed) {
-      at = new THREE.Vector3();
-      for (const p of s.pts) at.add(p);
-      at.divideScalar(s.pts.length);
-    } else at = s.pts[s.pts.length - 1].clone();
-    s.label.position.set(at.x, at.y + 0.45, at.z);
+    dropLabel(s);
+    const line1 = s.closed ? `${s.area.toFixed(1)} m² · ${s.length.toFixed(1)} m` : `${s.length.toFixed(1)} m`;
+    const line2 = s.note ? shorten(s.note, 34)
+      : s.note_status === "awaiting transcription" ? "voice note · transcribing…" : "";
+    s.label = makeLabel(line1, line2, KINDS[s.kind].css);
+    s.label.userData.stroke = s;
+    const at = new THREE.Vector3(), n = new THREE.Vector3();
+    if (s.closed) for (const p of s.pts) at.add(p);
+    else at.copy(s.pts[s.pts.length - 1]);
+    if (s.closed) at.divideScalar(s.pts.length);
+    for (const v of s.nrm) n.add(v);
+    if (n.lengthSq() < 1e-6) n.copy(UP);
+    n.normalize();
+    s.label.position.copy(at).addScaledVector(n, 0.3).addScaledVector(UP, 0.15);
     group.add(s.label);
   }
 
   function finish(s) {
     const n = s.pts.length;
-    s.length = planLength(s.pts, false);
-    s.closed = n >= 3 && s.length > MIN_CLOSE_LEN &&
-      Math.hypot(s.pts[n - 1].x - s.pts[0].x, s.pts[n - 1].z - s.pts[0].z) <= CLOSE_DIST;
-    if (s.closed) s.length = planLength(s.pts, true);
-    s.area = s.closed ? planArea(s.pts) : null;
+    s.closed = n >= 3 && length3(s.pts, false) > MIN_CLOSE_LEN && s.pts[n - 1].distanceTo(s.pts[0]) <= CLOSE_DIST;
+    s.length = length3(s.pts, s.closed);
+    s.area = s.closed ? area3(s.pts) : null;
+    if (!s.surface) {
+      let best = "ground", bc = 0;
+      for (const [k, c] of s.surfCount || []) if (c > bc) { best = k; bc = c; }
+      s.surface = best;
+    }
     buildMesh(s);
     addLabel(s);
   }
@@ -263,25 +303,30 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
   function disposeStroke(s) {
     s.mesh?.geometry.dispose();
     s.mesh?.removeFromParent(); s.ghost?.removeFromParent();
-    if (s.label) { s.label.material.map.dispose(); s.label.material.dispose(); s.label.removeFromParent(); }
+    dropLabel(s);
   }
 
-  function begin(p) {
+  function begin(h) {
     live = { id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind, closed: false,
-             pts: [p.clone()], created: new Date().toISOString(), since: 0 };
+             pts: [h.point.clone()], nrm: [h.normal.clone()], surfCount: new Map([[h.surface, 1]]),
+             created: new Date().toISOString(), since: 0, note: null, audio: null, note_status: null };
     buildMesh(live);
   }
   /* returns true when a point was added */
-  function extend(p) {
-    const last = live.pts[live.pts.length - 1];
-    const d = Math.hypot(p.x - last.x, p.z - last.z);
+  function extend(h) {
+    const last = live.pts[live.pts.length - 1], lastN = live.nrm[live.nrm.length - 1];
+    const d = h.point.distanceTo(last);
     if (d < SAMPLE) return false;
-    // a fast sweep: fill in at 5 cm so the line stays evenly sampled
-    const steps = Math.min(200, Math.max(1, Math.round(d / SAMPLE)));
+    // a sweep across one surface: fill in at 5 cm so the line stays evenly sampled.
+    // A jump to another surface (a corner, or the ray leaving a wall) is a single segment.
+    const sameFace = h.normal.dot(lastN) > 0.9 && d < 1.0;
+    const steps = sameFace ? Math.min(200, Math.max(1, Math.round(d / SAMPLE))) : 1;
     for (let i = 1; i <= steps; i++) {
       const f = i / steps;
-      live.pts.push(new THREE.Vector3(last.x + (p.x - last.x) * f, last.y + (p.y - last.y) * f, last.z + (p.z - last.z) * f));
+      live.pts.push(new THREE.Vector3().lerpVectors(last, h.point, f));
+      live.nrm.push(i === steps ? h.normal.clone() : new THREE.Vector3().lerpVectors(lastN, h.normal, f).normalize());
     }
+    live.surfCount.set(h.surface, (live.surfCount.get(h.surface) || 0) + steps);
     live.since += d;
     buildMesh(live);
     return true;
@@ -289,12 +334,66 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
   function end() {
     const s = live; live = null;
     if (!s) return null;
-    if (s.pts.length < 2 || planLength(s.pts, false) < 0.1) { disposeStroke(s); return null; }
+    if (s.pts.length < 2 || length3(s.pts, false) < 0.1) { disposeStroke(s); return null; }
     finish(s);
     strokes.push(s);
     save();
     drawHint();
+    openNote(s);
     return s;
+  }
+
+  /* ---------------- notes ---------------- */
+  const noteCallbacks = {
+    changed(s) {
+      if (!strokes.includes(s)) return;
+      addLabel(s);
+      save();
+      if (s.note_status === "awaiting transcription") watchTranscripts();
+      drawHint();
+    },
+  };
+  function openNote(s) { notes.open(s, noteCallbacks); drawHint(); }
+
+  /* poll marks.json while a voice note is being transcribed on the server */
+  let pollTimer = null, pollSince = 0;
+  function watchTranscripts() {
+    pollSince = Date.now();
+    if (pollTimer || !siteKey) return;
+    pollTimer = setInterval(pollOnce, POLL_MS);
+  }
+  async function pollOnce() {
+    const pending = strokes.filter(s => s.note_status === "awaiting transcription");
+    if (!pending.length || Date.now() - pollSince > POLL_FOR) { clearInterval(pollTimer); pollTimer = null; return; }
+    try {
+      const r = await fetch(`assets/sites/${encodeURIComponent(siteKey)}/marks.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const data = await r.json();
+      const byId = new Map((data.strokes || []).map(s => [s.id, s]));
+      for (const s of pending) {
+        const f = byId.get(s.id);
+        if (f && f.note_status === "transcribed" && f.note) {
+          s.note = f.note; s.note_status = "transcribed";
+          addLabel(s);
+          notes.refresh(s);
+          console.info(`marks: transcript for ${s.id}: ${f.note}`);
+        }
+      }
+    } catch (_) { /* try again next tick */ }
+  }
+
+  /* labels you can point at to reopen a note */
+  function pickLabel() {
+    const labels = strokes.map(s => s.label).filter(Boolean);
+    if (!labels.length) return null;
+    const h = raycaster.intersectObjects(labels, false)[0];
+    return h ? h : null;
+  }
+  function setHoverLabel(l) {
+    if (hoverLabel === l) return;
+    if (hoverLabel) hoverLabel.scale.multiplyScalar(1 / 1.12);
+    hoverLabel = l;
+    if (l) l.scale.multiplyScalar(1.12);
   }
 
   /* ---------------- saving ---------------- */
@@ -303,9 +402,15 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     strokes: strokes.map(s => ({
       id: s.id, kind: s.kind, closed: s.closed,
       points: s.pts.map(p => [r3(p.x), r3(-p.z)]),
+      points3d: s.pts.map(p => [r3(p.x), r3(p.y), r3(p.z)]),
+      normals: s.nrm.map(n => [r3(n.x), r3(n.y), r3(n.z)]),
+      surface: s.surface || "ground",
       length_m: Math.round(s.length * 100) / 100,
       area_m2: s.area == null ? null : Math.round(s.area * 100) / 100,
       created: s.created,
+      note: s.note || null,
+      audio: s.audio || null,
+      note_status: s.note_status || null,
     })),
   });
   let saving = null, again = false;
@@ -342,13 +447,19 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
       const data = await r.json();
       for (const st of data.strokes || []) {
         if (!KINDS[st.kind] || !Array.isArray(st.points) || st.points.length < 2) continue;
-        const pts = st.points.map(([x, y]) => new THREE.Vector3(x, groundY(x, -y), -y));
-        const s = { id: st.id, kind: st.kind, pts, created: st.created };
+        const has3d = Array.isArray(st.points3d) && st.points3d.length === st.points.length;
+        const pts = has3d ? st.points3d.map(([x, y, z]) => new THREE.Vector3(x, y, z))
+                          : st.points.map(([x, y]) => new THREE.Vector3(x, groundY(x, -y), -y));   // older, ground-only marks
+        const nrm = has3d && Array.isArray(st.normals) && st.normals.length === pts.length
+          ? st.normals.map(([x, y, z]) => new THREE.Vector3(x, y, z).normalize()) : pts.map(() => UP.clone());
+        const s = { id: st.id, kind: st.kind, pts, nrm, created: st.created, surface: st.surface || "ground",
+                    note: st.note || null, audio: st.audio || null, note_status: st.note_status || null };
         finish(s);
-        if (st.closed && !s.closed) { s.closed = true; s.length = planLength(pts, true); s.area = planArea(pts); buildMesh(s); addLabel(s); }
+        if (st.closed && !s.closed) { s.closed = true; s.length = length3(pts, true); s.area = area3(pts); buildMesh(s); addLabel(s); }
         strokes.push(s);
       }
       if (strokes.length) console.info(`marks: ${strokes.length} loaded for ${siteKey}`);
+      if (strokes.some(s => s.note_status === "awaiting transcription")) watchTranscripts();
       drawHint();
     } catch (err) {
       console.warn("marks: could not read marks.json", err);
@@ -357,8 +468,10 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
 
   /* ---------------- modes ---------------- */
   function setActive(on) {
+    const was = active;
     active = !!on;
-    if (!active) { if (live) end(); cursor.visible = false; ray.visible = false; }
+    if (active && !was) onActive?.(true);
+    if (!active) { if (live) end(); if (notes.isOpen) notes.save(); cursor.visible = false; ray.visible = false; setHoverLabel(null); }
     hint.visible = active;
     if (active && !renderer.xr.isPresenting && document.pointerLockElement) document.exitPointerLock();
     drawHint();
@@ -371,59 +484,84 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     if (live) { disposeStroke(live); live = null; return; }
     const s = strokes.pop();
     if (!s) return;
+    notes.forget(s);
     disposeStroke(s);
     save();
     drawHint();
   }
 
   /* ---------------- headset ---------------- */
+  function drawRay(len) {
+    const a = rayGeo.attributes.position;
+    a.setXYZ(0, _o.x, _o.y, _o.z);
+    a.setXYZ(1, _o.x + _d.x * len, _o.y + _d.y * len, _o.z + _d.z * len);
+    a.needsUpdate = true;
+    ray.visible = true;
+  }
   /* call every frame while presenting and in Mark mode */
   function updateXR(controller, trigger) {
-    if (!active || !controller) { ray.visible = false; return; }
+    if (!active || !controller) { ray.visible = false; triggerWas = trigger; return; }
     controller.getWorldPosition(_o);
     _d.set(0, 0, -1).applyQuaternion(controller.getWorldQuaternion(_q));
     raycaster.set(_o, _d);
-    const p = castGround();
-    const a = rayGeo.attributes.position;
-    a.setXYZ(0, _o.x, _o.y, _o.z);
-    if (p) a.setXYZ(1, p.x, p.y + 0.012, p.z);
-    else a.setXYZ(1, _o.x + _d.x * 3, _o.y + _d.y * 3, _o.z + _d.z * 3);
-    a.needsUpdate = true;
-    ray.visible = true;
-    if (trigger && p) {
-      if (!live) { begin(p); hapticPulse([controller], 0.4, 20); }
-      else if (extend(p) && live.since > 0.5) { live.since = 0; hapticPulse([controller], 0.12, 8); }
+    const pressed = trigger && !triggerWas;
+    triggerWas = trigger;
+
+    if (notes.isOpen) {                       // the note panel has the trigger
+      const d = notes.updateXR(raycaster, trigger, controller);
+      drawRay(d ?? 2); cursor.visible = false; setHoverLabel(null);
+      if (!notes.isOpen) drawHint();
+      return;
+    }
+    if (!live) {                              // pointing at a label: its note
+      const lh = pickLabel();
+      setHoverLabel(lh?.object || null);
+      if (lh) {
+        drawRay(lh.distance); cursor.visible = false;
+        if (pressed) { openNote(lh.object.userData.stroke); hapticPulse([controller], 0.3, 15); }
+        return;
+      }
+    }
+    const h = castSurface();
+    drawRay(h ? h.point.distanceTo(_o) : 3);
+    if (trigger && h) {
+      if (!live) { if (pressed) { begin(h); hapticPulse([controller], 0.4, 20); } }
+      else if (extend(h) && live.since > 0.5) { live.since = 0; hapticPulse([controller], 0.12, 8); }
     } else if (!trigger && live) {
       const s = end();
       if (s) hapticPulse([controller], s.closed ? 0.8 : 0.4, s.closed ? 60 : 25);
     }
-    showCursor(p);
+    showCursor(h);
   }
 
   /* ---------------- desktop ---------------- */
   const canvas = renderer.domElement;
   const ndc = new THREE.Vector2();
-  function pickAt(e) {
+  function aimAt(e) {
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     camera.updateMatrixWorld();
     raycaster.setFromCamera(ndc, camera);
-    return castGround();
   }
   canvas.addEventListener("pointerdown", e => {
     if (!active || renderer.xr.isPresenting || e.button !== 0) return;
-    const p = pickAt(e);
-    if (!p) return;
+    aimAt(e);
+    const lh = pickLabel();
+    if (lh) { e.preventDefault(); openNote(lh.object.userData.stroke); return; }
+    const h = castSurface();
+    if (!h) return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    begin(p);
-    showCursor(p);
+    begin(h);
+    showCursor(h);
   });
   canvas.addEventListener("pointermove", e => {
     if (!active || renderer.xr.isPresenting) return;
-    const p = pickAt(e);
-    if (live && p) extend(p);
-    showCursor(p);
+    aimAt(e);
+    if (!live) setHoverLabel(pickLabel()?.object || null);
+    const h = castSurface();
+    if (live && h) extend(h);
+    showCursor(h);
   });
   const up = e => {
     if (!live || renderer.xr.isPresenting) return;
@@ -446,23 +584,18 @@ export function createMarks({ scene, camera, renderer, siteKey }) {
     get kind() { return kind; },
     get drawing() { return !!live; },
     get status() { return status; },
-    strokes,
-    setActive, toggle: () => setActive(!active), cycleKind, undo, updateXR, load, save, toJSON,
+    get noteOpen() { return notes.isOpen; },
+    get collision() { return collision; },
+    strokes, notes,
+    setActive, toggle: () => setActive(!active), cycleKind, undo, updateXR, load, save, toJSON, openNote,
+    /* the A button while a note is open: hold to talk */
+    talk(down) { notes.talk(down); drawHint(); },
     attachHint(controller) { controller.add(hint); },
-    /* the site's flat surfaces, for the cursor and for laying loaded marks back on the ground */
-    setGround(root) {
-      groundMeshes = [];
-      root?.traverse(o => {
-        if (!o.isMesh || o.isInstancedMesh) return;
-        const g = o.geometry;
-        if (!g.boundingBox) g.computeBoundingBox();
-        const b = g.boundingBox.clone().applyMatrix4(o.matrixWorld);
-        const tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
-        if (b.max.y < 0.2 && b.min.y > -0.3 && tris < 50000) groundMeshes.push(o);
-      });
-    },
+    /* the site's surfaces, for the ray and for laying older marks back on the ground */
+    setGround(root) { collision = root ? buildCollision(root) : null; },
     update(dt) {
       t += dt;
+      notes.update(dt);
       if (!renderer.xr.isPresenting) ray.visible = false;
       if (cursor.visible) cursor.scale.setScalar(cursorBase * (1 + 0.07 * Math.sin(t * 6)));
     },

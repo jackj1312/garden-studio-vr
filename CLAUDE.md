@@ -21,6 +21,9 @@ create a studio software so every build follows the same flow."
   decision that costs money or Jack's time. Not once: regularly.
 - Add a dated line the moment something worth keeping is learned. Every project builds from the last.
 
+## Details matter most (Jack, 31 Oct 2026)
+- DETAIL-CHECKLIST.md is checked line by line on every project at G3 and G6, and grows with every new detail.
+
 ## Standing rules
 - Plan first: measured plan and elevations signed off before any modelling (SURVEY-METHOD.md).
 - The client's own photos are the truth; they outrank judges and assumptions.

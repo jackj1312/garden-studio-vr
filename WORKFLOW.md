@@ -20,7 +20,7 @@ On site (SURVEY-METHOD.md, CAPTURE.md):
 
 At the desk (tools/photogrammetry):
 4. Solve the cameras (sfm_walk.py); lock the scale with known points (3); check camera heights and a known width.
-5. Ground: orthophoto (ortho.py) at 1 cm; kerb lines with kerb_fit.py (smooth splines between true corners,
+5. Ground: orthophoto (ortho.py) at 1 cm; kerbs as laid runs with kerb_runs.py (lines, curves, true corners, eased joins), positions from kerb_fit.py (smooth splines between true corners,
    curvature check must pass) (2, 4, 5, 6, 34, 46).
 6. Vertical things (fences, walls, hedges): fit to 3D points on their faces (7, 10).
 7. **Walls: straight-on elevations of every face** (facade_ortho.py) — windows, doors, eaves, roofs, party walls,
@@ -53,6 +53,7 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 - A list of every element on the house and in the garden: what it IS (mirror, not window), material, colour,
   size, position, and the photos that prove it (at least two) (19, 21, 22).
 - Each element's evidence sheet (find_views.py) is attached to its inventory row.
+- **Go through DETAIL-CHECKLIST.md line by line**; every line is answered in the inventory (seen, assumed, or not present).
 - Each element is tagged fixed or movable (bins, broom, bike, pots, cushions, toys) for the clean build.
 - Vehicles are never built (8). Neighbours are modelled as seen, never mirrored (23).
 
@@ -69,6 +70,7 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 ## G6 · Self-check against reality (on the Mac, light)
 - tools/blender/inspect_house.py: the model rendered through every solved camera, side by side with the photo.
 - Go element by element through the inventory in every matched view; anything off goes in the log first (26).
+- Re-check every line of DETAIL-CHECKLIST.md against the matched views.
 - Export checks: no white or missing materials (11, 12).
 - Three judges (Sonnet) against the benchmarks and the matched views; act on all, but photos win (18).
 - **No cloud spend until this gate passes and Jack signs off the matched views (26).**

@@ -32,6 +32,8 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   standard capture list in SURVEY-METHOD.md on the first visit.
 
 ## Measuring (G1)
+- 2026-10-31 · front garden · Extract the walk video at full 4K (frames match the solve 1:1) and run
+  find_all_views.py: 26 elements, each seen in 7–61 views. It answered 11 of my 12 photo requests.
 - 2026-10-31 · front garden · Scale from known points (window corners, arch) seen in two photos: rms 4 cm.
 - 2026-10-31 · front garden · Orthophoto from the walk video at 2 cm/px gives ground edges to ±5 cm; trace by
   colour, read kerbs off 1 cm enlargements.

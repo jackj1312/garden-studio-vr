@@ -51,6 +51,7 @@ found, before the fix. Test site: Jack's own front garden (Oct 2026).
 | 42 | Planting in the bed is bad | Jack | Generic plant set | Plant-by-plant inventory from close-ups; each species modelled or sourced to match | G3, G5 |
 | 43 | Curved upstand (raised edge) of the bed not present | Jack | Edge built flush | Edges' heights measured: upstands, raised kerbs and steps are part of the plan | G1, G5 |
 | 44 | No step at the front door | Jack | Levels not surveyed | Every change of level (steps, thresholds, upstands) is measured and drawn on the plan | G1, G2 |
+| 45 | Asked Jack for ~10 new photo jobs before using what he had already sent | Jack | Worked from 1080p solve frames instead of the full 4K video; never searched the footage for each element | Exhaust the existing capture first: search every 4K frame and photo for each inventory element; ask for new photos only for what no frame shows, naming the frames checked | G1, G3 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

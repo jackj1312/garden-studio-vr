@@ -24,6 +24,10 @@ At the desk (tools/photogrammetry):
 6. Vertical things (fences, walls, hedges): fit to 3D points on their faces (7, 10).
 7. **Walls: straight-on elevations of every face** (facade_ortho.py) — windows, doors, eaves, roofs, party walls,
    chimneys, neighbours, measured from them (20, 23).
+8. **Mine the capture before asking for more (45).** Extract the walk video at full resolution (4K, every solved
+   frame) and list, for every inventory element, the frames and photos that see it (find_views.py: ranked,
+   full-resolution crops). Model, texture and check each element from its sheet. Ask the client for new photos only
+   for elements no frame shows, and say which frames were searched.
 
 ## G2 · Sign-off: plan and elevations
 - Draw the plan (draw_plan.py) and the elevations; publish the review page with the review bar (1, 9).
@@ -32,6 +36,7 @@ At the desk (tools/photogrammetry):
 ## G3 · Element inventory
 - A list of every element on the house and in the garden: what it IS (mirror, not window), material, colour,
   size, position, and the photos that prove it (at least two) (19, 21, 22).
+- Each element's evidence sheet (find_views.py) is attached to its inventory row.
 - Each element is tagged fixed or movable (bins, broom, bike, pots, cushions, toys) for the clean build.
 - Vehicles are never built (8). Neighbours are modelled as seen, never mirrored (23).
 

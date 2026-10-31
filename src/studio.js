@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { COLOURS, BUILD } from "./config.js?v=837d187-0145";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { COLOURS, BUILD } from "./config.js?v=9ebc8b7-0213";
+import { addWind } from "./wind.js?v=9ebc8b7-0213";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -42,6 +44,54 @@ function applyBakedLight(mat, intensity = 1.0) {
   mat.lightMap = bakedLight();
   mat.lightMapIntensity = intensity;
   return mat;
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  Draw calls are the budget that bites first on a Quest. The Blender
+ *  export is one mesh per object — 185 of them — and each costs a draw
+ *  call twice over once shadows are on. Merging everything that shares
+ *  a material into one mesh takes the garden from 62 calls to about 10
+ *  and the studio from 123 to a handful per stage, with no visual change.
+ *  Geometry is baked into the target group's space, so the studio still
+ *  moves with its anchor.
+ * ------------------------------------------------------------------ */
+const _inv = new THREE.Matrix4();
+function mergeByMaterial(roots, target) {
+  target.updateWorldMatrix(true, false);
+  _inv.copy(target.matrixWorld).invert();
+  const buckets = new Map();
+  for (const root of roots) {
+    root.updateWorldMatrix(true, true);
+    root.traverse(o => {
+      if (!o.isMesh) return;
+      const g = o.geometry.clone();
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(_inv, o.matrixWorld));
+      if (!g.attributes.normal) g.computeVertexNormals();
+      if (!g.attributes.uv) g.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+      if (!g.attributes.uv1) g.setAttribute("uv1", g.attributes.uv);
+      for (const name of Object.keys(g.attributes)) {
+        if (!["position", "normal", "uv", "uv1"].includes(name)) g.deleteAttribute(name);
+      }
+      if (!buckets.has(o.material)) buckets.set(o.material, []);
+      buckets.get(o.material).push(g);
+    });
+  }
+  let made = 0;
+  for (const [mat, geos] of buckets) {
+    const allIndexed = geos.every(g => g.index);
+    const parts = allIndexed ? geos : geos.map(g => g.index ? g.toNonIndexed() : g);
+    const merged = mergeGeometries(parts, false);
+    if (!merged) { console.warn("merge failed for a material; leaving its parts unmerged"); continue; }
+    const m = new THREE.Mesh(merged, mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.name = `merged_${made}`;
+    target.add(m);
+    made++;
+  }
+  for (const root of roots) root.removeFromParent();
+  return made;
 }
 
 let loader = null;
@@ -121,9 +171,15 @@ export function installStudio(stageGroups, mats, onReady) {
             o.geometry.setAttribute("uv1", o.geometry.attributes.uv);
           }
         });
+        child.userData.fromGLB = true;
         stageGroups[stageIndex].add(child);
         placed++;
       }
+    }
+    for (const [nodeName, stageIndex] of Object.entries(STAGE_NODES)) {
+      const g = stageGroups[stageIndex];
+      const imported = g.children.filter(c => c.userData.fromGLB);
+      if (imported.length) mergeByMaterial(imported, g);
     }
     onReady(placed);
   });
@@ -141,7 +197,7 @@ export function installGarden(parent, mats, onReady) {
 
   const G = {
     bark:    flat(0x4a3a2c, { roughness: 0.95 }),
-    leaf:    flat(0x2f5520, { roughness: 0.78, flatShading: false }),
+    leaf:    addWind(flat(0x2f5520, { roughness: 0.78 }), { strength: 0.06, speed: 0.9, height: 5.0 }),
     trim:    flat(0xdedacf, { roughness: 0.45 }),
     dark:    flat(0x26292d, { roughness: 0.3, metalness: 0.8 }),
     roof:    flat(0x33363b, { roughness: 0.35, metalness: 0.5 }),
@@ -191,7 +247,10 @@ export function installGarden(parent, mats, onReady) {
         n++;
       });
       parent.add(child);
+      child.userData.fromGLB = true;
     }
+    const imported = parent.children.filter(c => c.userData.fromGLB);
+    if (imported.length) mergeByMaterial(imported, parent);
     onReady(n);
   });
 }

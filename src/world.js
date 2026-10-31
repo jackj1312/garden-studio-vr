@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=837d187-0145";
-import { groundGeo, makeGrass } from "./materials.js?v=837d187-0145";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=9ebc8b7-0213";
+import { groundGeo, makeGrass } from "./materials.js?v=9ebc8b7-0213";
 
 /* ------------------------------------------------------------------ *
  *  What stays procedural.
@@ -42,11 +42,37 @@ export function buildWorld(scene, mats, quality) {
   apron.receiveShadow = true;
   existing.add(apron);
 
-  const lawn = new THREE.Mesh(
-    groundGeo(SITE.garden.width, SITE.garden.length, mats.grass.userData.tile), mats.grass);
+  /* a dead-flat lawn is the single biggest tell that a ground is a plane;
+     a couple of centimetres of undulation is enough to stop the eye reading it */
+  const lawnGeo = groundGeo(SITE.garden.width, SITE.garden.length, mats.grass.userData.tile, 40, 70);
+  {
+    const p = lawnGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i);
+      const edge = Math.min(1, (HALF - Math.abs(x)) / 0.6);      // flatten towards the fences
+      const h = (Math.sin(x * 1.7) * Math.cos(z * 1.1) * 0.014 + Math.sin(x * 4.3 + z * 3.1) * 0.007) * Math.max(0, edge);
+      p.setY(i, h);
+    }
+    lawnGeo.computeVertexNormals();
+  }
+  const lawn = new THREE.Mesh(lawnGeo, mats.grass);
   lawn.position.set(0, 0, REAR / 2);
   lawn.receiveShadow = true;
   existing.add(lawn);
+
+  /* bare-earth borders along the fences, the way a tended garden has them */
+  const soil = flat(COLOURS.soil, { roughness: 1 });
+  const BW = 0.42, bedLen = SITE.garden.length - SITE.patio.depth - 0.3;
+  for (const sx of [-1, 1]) {
+    const b = new THREE.Mesh(groundGeo(BW, bedLen, 1.0), soil);
+    b.position.set(sx * (HALF - BW / 2 - 0.06), 0.009, -SITE.patio.depth - bedLen / 2);
+    b.receiveShadow = true;
+    existing.add(b);
+  }
+  const rearBed = new THREE.Mesh(groundGeo(SITE.garden.width - 0.24, BW, 1.0), soil);
+  rearBed.position.set(0, 0.009, REAR + BW / 2 + 0.06);
+  rearBed.receiveShadow = true;
+  existing.add(rearBed);
 
   /* the hedge is the thing stage 2 takes away */
   const hedge = new THREE.Group();
@@ -79,7 +105,10 @@ export function buildWorld(scene, mats, quality) {
     centreZ: -SITE.patio.depth - (SITE.garden.length - SITE.patio.depth) / 2,
     avoid: [
       { x: -HALF + SITE.path.offsetFromWest, hw: SITE.path.width / 2 + 0.15, z: -7, hd: 7 },
-      { x: SITE.shed.x, hw: SITE.shed.w / 2 + 0.2, z: SITE.shed.z, hd: SITE.shed.d / 2 + 0.2 }
+      { x: SITE.shed.x, hw: SITE.shed.w / 2 + 0.2, z: SITE.shed.z, hd: SITE.shed.d / 2 + 0.2 },
+      { x: -HALF + 0.27, hw: 0.3, z: -7, hd: 7 },
+      { x:  HALF - 0.27, hw: 0.3, z: -7, hd: 7 },
+      { x: 0, hw: HALF, z: REAR + 0.3, hd: 0.32 }
     ]
   });
   existing.add(grass);

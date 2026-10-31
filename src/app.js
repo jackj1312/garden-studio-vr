@@ -1,14 +1,17 @@
 import * as THREE from "three";
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { EXRLoader } from "three/addons/loaders/EXRLoader.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=837d187-0145";
-import { buildMaterials } from "./materials.js?v=837d187-0145";
-import { buildWorld } from "./world.js?v=837d187-0145";
-import { installStudio, installGarden } from "./studio.js?v=837d187-0145";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=9ebc8b7-0213";
+import { buildMaterials } from "./materials.js?v=9ebc8b7-0213";
+import { buildWorld } from "./world.js?v=9ebc8b7-0213";
+import { installStudio, installGarden } from "./studio.js?v=9ebc8b7-0213";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=9ebc8b7-0213";
+import { createAmbience } from "./ambience.js?v=9ebc8b7-0213";
+import { updateWind } from "./wind.js?v=9ebc8b7-0213";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -56,6 +59,16 @@ sun.shadow.normalBias = 0.03;
 scene.add(sun);
 scene.add(sun.target);
 
+const fade = createFade(camera);
+const shadowFollow = createShadowFollow(sun);
+const ambience = createAmbience();
+const grips = attachControllerModels(renderer, player);
+attachHandModels(renderer, player);
+const blobs = createBlobShadows(scene);
+const _head = new THREE.Vector3(), _local = new THREE.Vector3();
+const _lastHead = new THREE.Vector3(0, 0, -2.2);
+let stepDist = 0;
+
 /* ------------------------------------------------------------------ *
  *  World
  * ------------------------------------------------------------------ */
@@ -76,6 +89,35 @@ world.applyVariant(variant);
 /* ------------------------------------------------------------------ *
  *  Image-based lighting, one environment per time of day
  * ------------------------------------------------------------------ */
+/* The sky is the biggest thing in a headset's view and a 2k equirect is
+   a third of the panel's pixel density. So lighting comes from the 2k
+   EXR, but what you SEE is a 4k tone-mapped JPEG on a sphere, drawn
+   last so it only fills pixels nothing else covered. */
+const skyTex = new Map();
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(220, 48, 24),
+  new THREE.MeshBasicMaterial({ side: THREE.BackSide, toneMapped: false, depthWrite: false, fog: false })
+);
+sky.renderOrder = 1000;
+sky.frustumCulled = false;
+scene.add(sky);
+
+function applySky(key) {
+  const t = TIMES[key];
+  if (!t?.sky) return;
+  if (!skyTex.has(key)) {
+    const tex = new THREE.TextureLoader().load(`${t.sky}?v=${BUILD}`);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.repeat.x = -1;             // inside-out sphere; mirror about the centre keeps +X at +X
+    tex.offset.x = 1;
+    tex.anisotropy = Math.min(maxAniso, 8);
+    skyTex.set(key, tex);
+  }
+  sky.material.map = skyTex.get(key);
+  sky.material.needsUpdate = true;
+}
+
 const pmrem = new THREE.PMREMGenerator(renderer);
 pmrem.compileEquirectangularShader();
 const hdrCache = new Map();
@@ -85,6 +127,7 @@ function applyTime(key) {
   const t = TIMES[key];
   if (!t) return;
   timeKey = key;
+  ambience.setTime(key);
   sun.position.set(t.sun.x, t.sun.y, t.sun.z);
   sun.target.position.set(0, 0, REAR / 2);
   sun.color.setHex(t.colour);
@@ -97,17 +140,17 @@ function applyTime(key) {
   for (const b of timeButtons) b.setAttribute("aria-pressed", String(b.dataset.time === key));
   uiDirty = true;
 
+  applySky(key);
   if (hdrCache.has(key)) {
     scene.environment = hdrCache.get(key);
-    scene.background = hdrCache.get(key);
     return;
   }
-  new RGBELoader().load(`${t.hdri}?v=${BUILD}`, tex => {
+  new EXRLoader().load(`${t.hdri}?v=${BUILD}`, tex => {
     tex.mapping = THREE.EquirectangularReflectionMapping;
     const env = pmrem.fromEquirectangular(tex).texture;
     tex.dispose();
     hdrCache.set(key, env);
-    if (timeKey === key) { scene.environment = env; scene.background = env; }
+    if (timeKey === key) scene.environment = env;
   });
 }
 
@@ -141,6 +184,7 @@ let stageValue = 1, lastStageIdx = -1;
 
 function applyStage(v) {
   for (const a of animated) {
+    if (a.group === 3 && v > 5.95) { a.mesh.visible = false; continue; }   // frame is inside the walls once clad
     const p = clamp01(v - a.group);
     const local = easeOut(clamp01((p - a.delay) / a.span));
     a.mesh.visible = local > 0.001;
@@ -336,11 +380,6 @@ const rayGeom = new THREE.BufferGeometry()
 
 controllers.forEach(c => {
   player.add(c);
-  const grip = new THREE.Mesh(
-    new THREE.BoxGeometry(0.035, 0.035, 0.11),
-    new THREE.MeshStandardMaterial({ color: 0x24282c, roughness: 0.5 })
-  );
-  c.add(grip);
   c.addEventListener("connected", e => {
     const h = e.data.handedness;
     c.userData.hand = h;
@@ -590,6 +629,7 @@ composer.addPass(new OutputPass());
  * ------------------------------------------------------------------ */
 /* In the headset the tier gives way to the frame budget. */
 function applyVRProfile(on) {
+  shadowFollow.setVR(on);
   const size = on ? VR_PROFILE.shadowMap : tier.shadowMap;
   sun.shadow.mapSize.set(size, size);
   sun.shadow.map?.dispose();
@@ -622,6 +662,7 @@ function setARMode(on) {
   if (on) {
     savedBackground = scene.background;
     scene.background = null;              // let the cameras through
+    sky.visible = false;
     world.existing.visible = false;       // the real garden replaces ours
     shadowCatcher.visible = true;
     sun.intensity = 1.1;                  // real light is doing most of the work
@@ -632,6 +673,7 @@ function setARMode(on) {
     world.anchor.rotation.y = 0;
   } else {
     scene.background = savedBackground;
+    sky.visible = true;
     world.existing.visible = true;
     shadowCatcher.visible = false;
     hemi.intensity = 0.85;
@@ -663,7 +705,7 @@ async function enterAR() {
     });
     await renderer.xr.setSession(session);
     applyVRProfile(true);
-    renderer.xr.setFoveation(1.0);
+    renderer.xr.setFoveation(0.4);
     setARMode(true);
     $("start").hidden = true;
     $("hud").classList.add("hidden");
@@ -684,8 +726,11 @@ async function enterVR() {
       optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking"]
     });
     await renderer.xr.setSession(session);
+    fade.black();
+    fade.to(0, 1.6);
+    ambience.start();
     applyVRProfile(true);
-    renderer.xr.setFoveation(1.0);              // shade the edges of vision at lower rate
+    renderer.xr.setFoveation(0.4);              // three.js defaults to maximum, which smears the periphery on grass
     renderer.xr.setFramebufferScaleFactor(1.0);
     $("start").hidden = true;
     $("hud").classList.add("hidden");
@@ -704,6 +749,7 @@ $("ar").addEventListener("click", enterAR);
 $("startAR").addEventListener("click", enterAR);
 $("startVR").addEventListener("click", enterVR);
 $("startDesktop").addEventListener("click", () => {
+  ambience.start();
   $("start").hidden = true;
   $("hud").classList.remove("hidden");
   grabPointer();
@@ -755,6 +801,23 @@ addEventListener("resize", () => {
 
 applyTime("midday");
 setStage(1);
+
+/* a hook for testing from the console: move the viewer, read the frame
+   cost, drive the dials. Not a user-facing API. */
+window.__garden = {
+  player, camera, renderer, scene,
+  setStage, goToStage, setVariant, applyTime,
+  look(x, y, z, yawDeg, pitchDeg = 0) {
+    player.position.set(x, 0, z);
+    yaw = THREE.MathUtils.degToRad(yawDeg);
+    pitch = THREE.MathUtils.degToRad(pitchDeg);
+    camera.position.y = y;
+  },
+  stats() {
+    const i = renderer.info.render;
+    return { triangles: i.triangles, calls: i.calls, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures };
+  }
+};
 $("meta").textContent = `${STUDIO.w} × ${STUDIO.d} m · ${STUDIO.ridge} m to the ridge · ${tier.label}`;
 
 let lastFrame = performance.now();
@@ -779,6 +842,29 @@ renderer.setAnimationLoop(() => {
     if (uiDirty) drawPanel();
   } else {
     desktopLocomotion(dt);
+  }
+
+  shadowFollow.update(camera);
+  blobs.update(camera, grips, renderer.xr.isPresenting);
+  fade.update(dt);
+
+  // footsteps from actual head travel, so physical walking counts too
+  camera.getWorldPosition(_head);
+  const travelled = Math.hypot(_head.x - _lastHead.x, _head.z - _lastHead.z);
+  _lastHead.copy(_head);
+  if (travelled < 0.5) stepDist += travelled;      // ignore teleport-sized jumps
+  if (stepDist > 0.72) {
+    stepDist = 0;
+    ambience.step();
+    if (renderer.xr.isPresenting) hapticPulse(controllers, 0.22, 35);
+  }
+  updateWind(now / 1000);
+  if (ambience.started) {
+    camera.getWorldPosition(_head);
+    world.anchor.worldToLocal(_local.copy(_head));
+    const walls = stageValue >= 4.99;
+    ambience.setInside(walls && Math.abs(_local.x) < STUDIO.w / 2 && Math.abs(_local.z) < STUDIO.d / 2);
+    ambience.update(dt);
   }
 
   const target = speedNow > 0.05 ? 0.5 : 0;

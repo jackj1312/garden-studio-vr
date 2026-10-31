@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=837d187-0145";
+import { MATERIALS, BUILD } from "./config.js?v=9ebc8b7-0213";
+import { addWind } from "./wind.js?v=9ebc8b7-0213";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -67,8 +68,8 @@ export function boxGeo(w, h, d, tile = 1, offset = [0, 0]) {
   return g;
 }
 
-export function groundGeo(w, d, tile = 1) {
-  const g = new THREE.PlaneGeometry(w, d, 1, 1);
+export function groundGeo(w, d, tile = 1, segX = 1, segY = 1) {
+  const g = new THREE.PlaneGeometry(w, d, segX, segY);
   const uv = g.attributes.uv;
   for (let i = 0; i < uv.count; i++) {
     uv.setXY(i, uv.getX(i) * (w / tile), uv.getY(i) * (d / tile));
@@ -91,13 +92,15 @@ function grassBladeTexture() {
   c.width = 128; c.height = 128;
   const x = c.getContext("2d");
   x.clearRect(0, 0, 128, 128);
-  for (let i = 0; i < 7; i++) {
-    const base = 10 + i * 17 + Math.random() * 6;
+  for (let i = 0; i < 10; i++) {
+    const base = 8 + i * 12 + Math.random() * 6;
     const tipX = base + (Math.random() - 0.5) * 26;
     const topY = 10 + Math.random() * 34;
     const wBlade = 4 + Math.random() * 3;
     const g = x.createLinearGradient(0, topY, 0, 128);
-    g.addColorStop(0, `hsl(${84 + Math.random() * 16}, 46%, ${52 + Math.random() * 12}%)`);
+    const dry = Math.random() < 0.18;
+    g.addColorStop(0, dry ? `hsl(${52 + Math.random() * 10}, 48%, ${56 + Math.random() * 8}%)`
+                          : `hsl(${84 + Math.random() * 16}, 46%, ${52 + Math.random() * 12}%)`);
     g.addColorStop(1, `hsl(${92 + Math.random() * 10}, 40%, 26%)`);
     x.fillStyle = g;
     x.beginPath();
@@ -117,14 +120,11 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
   const blade = new THREE.PlaneGeometry(0.26, 0.2).translate(0, 0.1, 0);
   const crossed = mergeGeometries([blade, blade.clone().rotateY(Math.PI / 2)]);
 
-  const mesh = new THREE.InstancedMesh(
-    crossed,
-    new THREE.MeshStandardMaterial({
-      map: tex, alphaMap: tex, transparent: true, alphaTest: 0.35,
-      side: THREE.DoubleSide, roughness: 1, metalness: 0
-    }),
-    count
-  );
+  const bladeMat = addWind(new THREE.MeshStandardMaterial({
+    map: tex, alphaMap: tex, transparent: true, alphaTest: 0.35,
+    side: THREE.DoubleSide, roughness: 1, metalness: 0
+  }), { strength: 0.035, speed: 1.4, height: 0.2 });
+  const mesh = new THREE.InstancedMesh(crossed, bladeMat, count);
   mesh.castShadow = false;
   mesh.receiveShadow = true;
   mesh.frustumCulled = false;
@@ -133,6 +133,7 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
   const q = new THREE.Quaternion();
   const pos = new THREE.Vector3();
   const scl = new THREE.Vector3();
+  const tint = new THREE.Color();
   let placed = 0;
   let guard = 0;
 
@@ -145,9 +146,13 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI);
     scl.set(s, s * (0.8 + Math.random() * 0.6), s);
     m.compose(pos, q, scl);
-    mesh.setMatrixAt(placed++, m);
+    mesh.setMatrixAt(placed, m);
+    tint.setHSL(0.24 + (Math.random() - 0.5) * 0.04, 0.45 + Math.random() * 0.2, 0.42 + Math.random() * 0.16);
+    mesh.setColorAt(placed, tint);
+    placed++;
   }
   mesh.count = placed;
   mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   return mesh;
 }

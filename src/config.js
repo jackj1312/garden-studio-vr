@@ -1,4 +1,4 @@
-export const BUILD = "837d187-0145";   // stamped by tools/stamp-build.py
+export const BUILD = "9ebc8b7-0213";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -92,13 +92,15 @@ export const VARIANTS = {
 export const TIMES = {
   midday: {
     label: "Midday",
-    hdri: "assets/hdri/kloofendal_43d_clear_puresky.hdr",
+    hdri: "assets/hdri/kloofendal_43d_clear_puresky_2k.exr",
+    sky:  "assets/hdri/sky_midday_4k.jpg",
     sun: { x: -6, y: 14, z: 6 }, colour: 0xfff6e8, intensity: 2.6,
     exposure: 0.95, envIntensity: 1.0, practicals: false
   },
   dusk: {
     label: "Dusk",
-    hdri: "assets/hdri/evening_road_01_puresky.hdr",
+    hdri: "assets/hdri/evening_road_01_puresky_2k.exr",
+    sky:  "assets/hdri/sky_dusk_4k.jpg",
     sun: { x: -13, y: 2.4, z: 2 }, colour: 0xffb070, intensity: 1.1,
     exposure: 1.02, envIntensity: 0.9, practicals: true
   }

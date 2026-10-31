@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { addWind } from "./wind.js?v=355b2bb-0907";
-import { gltf } from "./studio.js?v=355b2bb-0907";
-import { BUILD, SITE } from "./config.js?v=355b2bb-0907";
+import { addWind } from "./wind.js?v=28d436e-0920";
+import { gltf } from "./studio.js?v=28d436e-0920";
+import { BUILD, SITE } from "./config.js?v=28d436e-0920";
 
 /* ------------------------------------------------------------------ *
  *  Scanned vegetation.
@@ -29,30 +29,31 @@ export function leafMaterial(base, { translucency = 0.55, wind } = {}) {
   m.side = THREE.DoubleSide;
   m.transparent = false;
   m.alphaTest = 0.5;
+  m.alphaToCoverage = true;                                // free with MSAA; ends the leaf sparkle
   m.depthWrite = true;
   m.roughness = Math.max(m.roughness, 0.7);
-  m.envMapIntensity = 0.6;
+  m.envMapIntensity = 0.9;
   if (m.map) { m.map.anisotropy = 8; m.map.colorSpace = THREE.SRGBColorSpace; }
-  const prior = m.onBeforeCompile;
   m.onBeforeCompile = shader => {
     shader.uniforms.uTranslucency = { value: translucency };
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform float uTranslucency;")
+      // a back face must keep its bent normal, or every leaf seen from behind flips to speckle
+      .replace("float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;", "float faceDirection = 1.0;")
       .replace("#include <lights_fragment_end>", `#include <lights_fragment_end>
         #if NUM_DIR_LIGHTS > 0
         {
-          // light through the leaf: strongest when the sun is behind it
+          // light through the leaf: strongest when the sun is behind it. directLight
+          // holds the sun after the directional loop, shadow already applied, so leaves
+          // in the shade of the canopy do not glow.
           vec3 ld = directionalLights[0].direction;
           float through = pow(max(0.0, dot(-geometryNormal, ld)), 1.4);
-          float rim = pow(1.0 - max(0.0, dot(geometryNormal, geometryViewDir)), 2.0) * 0.35;
-          reflectedLight.directDiffuse += diffuseColor.rgb * directionalLights[0].color * uTranslucency * (through + rim);
+          reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.0, 1.05, 0.55) * directLight.color * uTranslucency * through;
         }
         #endif`);
-    material_shader_hook(shader);
-    if (prior) prior(shader);
+    m.userData.shader = shader;
   };
-  function material_shader_hook(shader) { m.userData.shader = shader; }
-  m.customProgramCacheKey = () => `leaf-${translucency}-${wind ? wind.strength : 0}`;
+  m.customProgramCacheKey = () => `leaf-${translucency}`;
   if (wind) addWind(m, wind);
   return m;
 }
@@ -70,6 +71,18 @@ export function bendNormals(geometry, amount = 0.6) {
     v.fromBufferAttribute(pos, i).sub(c).normalize();
     n.fromBufferAttribute(nrm, i);
     n.lerp(v, amount).normalize();
+    nrm.setXYZ(i, n.x, n.y, n.z);
+  }
+  nrm.needsUpdate = true;
+}
+
+/* Low plants: lean every normal towards straight up, so a mound shades
+   like a mound and the top catches the sky. */
+export function bendNormalsUp(geometry, amount = 0.4) {
+  const nrm = geometry.attributes.normal;
+  const n = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < nrm.count; i++) {
+    n.fromBufferAttribute(nrm, i).lerp(up, amount).normalize();
     nrm.setXYZ(i, n.x, n.y, n.z);
   }
   nrm.needsUpdate = true;
@@ -109,19 +122,23 @@ export function preparePlant(root, { id, translucency, bend = 0.6, wind = { stre
  *  of the nearest leaves. The headset gets q, desktop gets d, and either
  *  can be swapped in later without reloading the scene.
  * ------------------------------------------------------------------ */
-const TREE_FILES = { q: "assets/models/veg/island_tree_02_q.glb", d: "assets/models/veg/island_tree_02_d.glb" };
+const TREES = {
+  island_tree_02: { scanHeight: 3.41, windHeight: 3.4 },
+  island_tree_01: { scanHeight: 5.03, windHeight: 5.0 }
+};
 const treeCache = new Map();
 let treeGroup = null, treeDetail = null;
 
-function loadTree(detail) {
-  if (treeCache.has(detail)) return treeCache.get(detail);
+function loadTree(species, detail) {
+  const key = `${species}:${detail}`;
+  if (treeCache.has(key)) return treeCache.get(key);
   const p = new Promise((resolve, reject) => {
-    gltf().load(`${TREE_FILES[detail]}?v=${BUILD}`, g => resolve(preparePlant(g.scene, {
-      id: "island_tree_02", translucency: 0.5, bend: 0.55,
-      wind: { strength: 0.025, speed: 0.8, height: 3.4 }
+    gltf().load(`assets/models/veg/${species}_${detail}.glb?v=${BUILD}`, g => resolve(preparePlant(g.scene, {
+      id: species, translucency: 0.5, bend: 0.55,
+      wind: { strength: 0.025, speed: 0.8, height: TREES[species].windHeight }
     })), undefined, reject);
   });
-  treeCache.set(detail, p);
+  treeCache.set(key, p);
   return p;
 }
 
@@ -134,19 +151,22 @@ export function installTrees(parent, detail, onReady) {
 
 export async function setTreeDetail(detail) {
   if (!treeGroup || detail === treeDetail) return;
-  const proto = await loadTree(detail);
+  const [olive, big] = await Promise.all([loadTree("island_tree_02", detail), loadTree("island_tree_01", "q")]);
   if (detail === treeDetail) return;                       // a later call won
   treeDetail = detail;
   treeGroup.clear();
-  const scanHeight = 3.41;                                  // island_tree_02 as scanned
-  SITE.trees.forEach((t, i) => {
+  const place = (proto, species, t, yaw) => {
     const tree = proto.clone(true);
-    const s = t.height / scanHeight;
-    tree.scale.setScalar(s);
+    tree.scale.setScalar(t.height / TREES[species].scanHeight);
     tree.position.set(t.x, -0.02, t.z);
-    tree.rotation.y = i * 2.1 + 0.6;
+    tree.rotation.y = yaw;
     treeGroup.add(tree);
-  });
+  };
+  // one olive as the feature, the bigger scan as the second garden tree, so they are not twins
+  place(olive, "island_tree_02", SITE.trees[1], 0.6);
+  place(big, "island_tree_01", SITE.trees[0], 2.7);
+  // the neighbours' trees: always the Quest version, the haze does the rest
+  SITE.neighbourTrees.forEach((t, i) => place(big, "island_tree_01", t, i * 1.9));
 }
 
 /* ------------------------------------------------------------------ *
@@ -177,7 +197,8 @@ function loadPlants(detail) {
       g.scene.traverse(o => {
         if (!o.isMesh) return;
         o.geometry.computeBoundingBox();
-        o.material = leafMaterial(o.material, { translucency: 0.45, wind: { strength: 0.02, speed: 1.1, height: 0.8 } });
+        bendNormalsUp(o.geometry, 0.4);
+        o.material = leafMaterial(o.material, { translucency: 0.45, wind: { strength: 0.02, speed: 1.1, height: 0.5 } });
         // three.js strips the dot from Blender's ".001" suffix, so match on the prefix
         const key = SPECIES.find(n => o.name.startsWith(n));
         if (key) species[key] = o; else console.warn("unexpected plant mesh", o.name);
@@ -197,11 +218,14 @@ const ROLE = {
   middle: [["fern_02", 0.45, 0.6], ["shrub_03", 0.45, 0.6], ["periwinkle_plant", 0.4, 0.55], ["shrub_04", 0.35, 0.5]],
   front:  [["grass_medium_02", 0.35, 0.5], ["celandine_01", 0.18, 0.26], ["grass_medium_01", 0.3, 0.4], ["shrub_01", 0.3, 0.42]]
 };
+const MAX_RADIUS = { back: 0.75, middle: 0.55, front: 0.45 };   // scans sprawl; keep them in the bed
 function pick(rnd, role) {
   const [name, h0, h1] = ROLE[role][Math.floor(rnd() * ROLE[role].length)];
   const info = plantInfo?.[name];
   const target = h0 + rnd() * (h1 - h0);
-  return { name, scale: info ? target / info.height : 1 };
+  let scale = info ? target / info.height : 1;
+  if (info) scale = Math.min(scale, MAX_RADIUS[role] / info.radius);
+  return { name, scale };
 }
 
 /* One bed is a rectangle; rows run along its long axis. */
@@ -266,6 +290,13 @@ export async function setPlantDetail(detail) {
       mesh.setMatrixAt(i, m);
     });
     mesh.instanceMatrix.needsUpdate = true;
+    // no two plants of a species the same colour: a little hue drift, a little less saturation
+    const col = new THREE.Color();
+    list.forEach((it, i) => {
+      col.setHSL(0.28 + (((it.yaw * 7.3) % 1) - 0.5) * 0.05, 0.42, 0.52 + (((it.yaw * 3.1) % 1) - 0.5) * 0.12);
+      mesh.setColorAt(i, col);
+    });
+    mesh.instanceColor.needsUpdate = true;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.frustumCulled = true;

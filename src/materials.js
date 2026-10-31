@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=355b2bb-0907";
-import { addWind } from "./wind.js?v=355b2bb-0907";
+import { MATERIALS, BUILD } from "./config.js?v=28d436e-0920";
+import { addWind } from "./wind.js?v=28d436e-0920";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -121,7 +121,7 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
   const crossed = mergeGeometries([blade, blade.clone().rotateY(Math.PI / 2)]);
 
   const bladeMat = addWind(new THREE.MeshStandardMaterial({
-    map: tex, alphaMap: tex, transparent: false, alphaTest: 0.4, alphaToCoverage: true,
+    map: tex, transparent: false, alphaTest: 0.4, alphaToCoverage: true,   // alpha from the canvas, not the green
     side: THREE.DoubleSide, roughness: 1, metalness: 0
   }), { strength: 0.035, speed: 1.4, height: 0.2 });
   const mesh = new THREE.InstancedMesh(crossed, bladeMat, count);

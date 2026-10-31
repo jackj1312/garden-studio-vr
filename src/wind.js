@@ -12,7 +12,10 @@
 const swaying = [];
 
 export function addWind(material, { strength = 0.05, speed = 1.2, height = 1.0 } = {}) {
+  const prior = material.onBeforeCompile;                 // keep whatever the material already injects
+  const priorKey = material.customProgramCacheKey;
   material.onBeforeCompile = shader => {
+    if (prior) prior.call(material, shader);
     shader.uniforms.uTime = { value: 0 };
     shader.uniforms.uStrength = { value: strength };
     shader.uniforms.uSpeed = { value: speed };
@@ -36,7 +39,7 @@ export function addWind(material, { strength = 0.05, speed = 1.2, height = 1.0 }
         }`);
     material.userData.shader = shader;
   };
-  material.customProgramCacheKey = () => `wind-${strength}-${speed}-${height}`;
+  material.customProgramCacheKey = () => `${priorKey ? priorKey.call(material) : ""}|wind-${strength}-${speed}-${height}`;
   swaying.push(material);
   return material;
 }

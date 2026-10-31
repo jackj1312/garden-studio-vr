@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=355b2bb-0907";
-import { groundGeo, makeGrass } from "./materials.js?v=355b2bb-0907";
-import { foliageMaterial, cardCluster, boxPoints, spherePoints } from "./foliage.js?v=355b2bb-0907";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=28d436e-0920";
+import { groundGeo, makeGrass } from "./materials.js?v=28d436e-0920";
+import { foliageMaterial, cardCluster, boxPoints, spherePoints } from "./foliage.js?v=28d436e-0920";
 
 /* ------------------------------------------------------------------ *
  *  What stays procedural.
@@ -124,13 +124,7 @@ export function buildWorld(scene, mats, quality) {
     for (const x of [-SITE.garden.width, 0, SITE.garden.width]) {
       house(x + 0.8, REAR - 18, 7.5, 8, 6.2 + (x === 0 ? 0.4 : 0), 1);
     }
-    const far = foliageMaterial({ tint: 0xa9bb90, strength: 0.05, speed: 0.8, height: 7 });
-    const bark = flat(0x4a3a2c, { roughness: 1 });
-    for (const [x, z, r, h] of [[-5.5, REAR - 3.5, 2.4, 5.2], [1.5, REAR - 5, 2.9, 6.2], [7, REAR - 2.5, 2.0, 4.6], [-9, -6, 2.2, 5.0], [9.5, -9, 2.6, 5.6]]) {
-      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, h, z), r, 110), { size: 1.3, material: far, shadow: false }));
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, h, 7), bark);
-      trunk.position.set(x, h / 2, z); existing.add(trunk);
-    }
+    // the neighbours' trees are scanned too — see vegetation.js (SITE.neighbourTrees)
   }
 
   /* planting comes from vegetation.js (scanned species, instanced).
@@ -150,6 +144,36 @@ export function buildWorld(scene, mats, quality) {
   blockBox(HALF - 1.1, -1.2, 0.7, 0.45);
   for (const t of SITE.trees) blockCircle(t.x, t.z, 0.45);
 
+  /* the night lighting plan, as in the benchmark film's 0:57: a warm
+     uplighter on each tree, spike lights in the beds, bollards on the
+     path. All 2700 K. They exist only at dusk and night (hidden
+     otherwise, so the shaders do not pay for them by day). */
+  {
+    const warm = 0xffb46b;
+    for (const t of SITE.trees) {
+      for (const side of [-1, 1]) {
+        const up = new THREE.SpotLight(warm, 0, 7, Math.PI / 7, 0.8, 1.6);
+        up.position.set(t.x + side * 0.9, 0.08, t.z + 0.6);
+        up.target.position.set(t.x, t.height * 0.7, t.z);
+        existing.add(up); existing.add(up.target);
+        practicals.push({ light: up, max: 18 });
+      }
+    }
+    const bedZ = [-5, -8, -11];
+    for (const sx of [-1, 1]) for (const z of bedZ) {
+      const spike = new THREE.PointLight(warm, 0, 2.6, 2);
+      spike.position.set(sx * (HALF - 0.55), 0.35, z);
+      existing.add(spike);
+      practicals.push({ light: spike, max: 1.6 });
+    }
+    for (const z of [-4, -7, -10]) {
+      const bollard = new THREE.PointLight(warm, 0, 2.2, 2);
+      bollard.position.set(-HALF + SITE.path.offsetFromWest + 0.55, 0.45, z);
+      existing.add(bollard);
+      practicals.push({ light: bollard, max: 1.2 });
+    }
+  }
+
   const grass = makeGrass({
     count: quality.grass,
     width: SITE.garden.width - 0.3,
@@ -158,9 +182,11 @@ export function buildWorld(scene, mats, quality) {
     avoid: [
       { x: -HALF + SITE.path.offsetFromWest, hw: SITE.path.width / 2 + 0.15, z: -7, hd: 7 },
       { x: SITE.shed.x, hw: SITE.shed.w / 2 + 0.2, z: SITE.shed.z, hd: SITE.shed.d / 2 + 0.2 },
-      { x: -HALF + 0.27, hw: 0.3, z: -7, hd: 7 },
-      { x:  HALF - 0.27, hw: 0.3, z: -7, hd: 7 },
-      { x: 0, hw: HALF, z: REAR + 0.3, hd: 0.32 }
+      { x: -HALF + SITE.bedDepth / 2, hw: SITE.bedDepth / 2 + 0.05, z: -7, hd: 7 },
+      { x:  HALF - SITE.bedDepth / 2, hw: SITE.bedDepth / 2 + 0.05, z: -7, hd: 7 },
+      { x: 0, hw: HALF, z: REAR + SITE.bedDepth / 2, hd: SITE.bedDepth / 2 + 0.05 },
+      // the studio, its deck and the spur in the "Corner" placement: no blades through boards
+      { x: 1.35, hw: STUDIO.w / 2 + 0.7, z: REAR + 2.45 + 1.2, hd: STUDIO.d / 2 + 2.6 }
     ]
   });
   existing.add(grass);
@@ -197,9 +223,6 @@ export function buildWorld(scene, mats, quality) {
     spur.receiveShadow = true;
     g.add(spur);
 
-    for (const [x, z, r] of [[-2.9, 1.2, 0.55], [-2.4, 2.5, 0.4], [2.9, 1.5, 0.5], [2.4, 2.9, 0.38]]) {
-      g.add(cardCluster(spherePoints(new THREE.Vector3(x, r * 0.75, z + hd), r, 70, 0.8), { size: r * 0.55, material: shrubMat }));
-    }
 
     const lampX = T.openings.door.x - T.openings.door.w / 2 - 0.28;
     const porch = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.08),
@@ -212,7 +235,7 @@ export function buildWorld(scene, mats, quality) {
     const interior = new THREE.PointLight(0xfff0d4, 0, 7, 2);
     interior.position.set(0, fl + 2.0, 0);
     g.add(interior);
-    practicals.push({ light: porchLight, max: 3.5 }, { light: interior, max: 4.5 }, { emissive: porch });
+    practicals.push({ light: porchLight, max: 2.2 }, { light: interior, max: 4.5 }, { emissive: porch });
   }
 
   /* the studio is only solid once it has walls — and it has a door. Four

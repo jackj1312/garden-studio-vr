@@ -5,15 +5,15 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=355b2bb-0907";
-import { buildMaterials } from "./materials.js?v=355b2bb-0907";
-import { buildWorld } from "./world.js?v=355b2bb-0907";
-import { installStudio, installGarden } from "./studio.js?v=355b2bb-0907";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=355b2bb-0907";
-import { installSite } from "./site.js?v=355b2bb-0907";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=355b2bb-0907";
-import { createAmbience } from "./ambience.js?v=355b2bb-0907";
-import { updateWind } from "./wind.js?v=355b2bb-0907";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=28d436e-0920";
+import { buildMaterials } from "./materials.js?v=28d436e-0920";
+import { buildWorld } from "./world.js?v=28d436e-0920";
+import { installStudio, installGarden } from "./studio.js?v=28d436e-0920";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=28d436e-0920";
+import { installSite } from "./site.js?v=28d436e-0920";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=28d436e-0920";
+import { createAmbience } from "./ambience.js?v=28d436e-0920";
+import { updateWind } from "./wind.js?v=28d436e-0920";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -30,13 +30,14 @@ const tierKey = (() => {
 const tier = QUALITY[tierKey];
 /* ?site=<name> walks a scanned real garden instead of the demo one */
 const siteKey = new URLSearchParams(location.search).get("site");
+const FOOTSTEP_HAPTICS = false;        // the hands are not the feet; a tick per step nags
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, tier.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.AgXToneMapping;            // keeps greens green; ACES pushed them olive
 renderer.toneMappingExposure = 0.95;
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType("local-floor");
@@ -53,7 +54,7 @@ scene.add(player);
 const eyeHeight = 1.68;
 camera.position.set(0, eyeHeight, 0);
 
-const hemi = new THREE.HemisphereLight(0xbfd6e6, 0x5c5f4a, 0.25);
+const hemi = new THREE.HemisphereLight(0xbfd6e6, 0x5c5f4a, 0.18);
 scene.add(hemi);
 const haze = new THREE.FogExp2(0xdbe6f0, 0.012);
 const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
@@ -63,6 +64,7 @@ sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
 sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -20;
 sun.shadow.camera.far = 60;
 sun.shadow.normalBias = 0.03;
+sun.shadow.radius = 3.5;                                  // PCF disk; 1 is a hard edge
 scene.add(sun);
 scene.add(sun.target);
 
@@ -132,6 +134,7 @@ function applySky(key) {
     skyTex.set(key, tex);
   }
   sky.material.map = skyTex.get(key);
+  sky.material.color.setHex(t.skyTint ?? 0xffffff);   // night: deep blue, never grey
   sky.material.needsUpdate = true;
 }
 
@@ -158,7 +161,7 @@ function applyTime(key) {
     scene.fog = haze;
   }
   for (const p of practicals) {
-    if (p.light) p.light.intensity = t.practicals ? p.max : 0;
+    if (p.light) { p.light.intensity = t.practicals ? p.max : 0; p.light.visible = !!t.practicals; }
     if (p.emissive) p.emissive.material.emissiveIntensity = t.practicals ? 1.6 : 0.05;
   }
   for (const b of timeButtons) b.setAttribute("aria-pressed", String(b.dataset.time === key));
@@ -197,6 +200,18 @@ function alignSunToSky(tex, key) {
     if (l > best) { best = l; bi = i / 4; }
     sum += l; n++;
   }
+  /* The sun disc is in the EXR. Left in, PMREM bakes it into the
+     environment and the shade gets sunlight a second time (and every
+     glossy surface shows two suns). Clamp it out: the DirectionalLight
+     is the sun. */
+  const cap = (sum / n) * 12;
+  let removed = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const l = data[i] + data[i + 1] + data[i + 2];
+    if (l > cap) { const k = cap / l; removed += l - cap; data[i] *= k; data[i + 1] *= k; data[i + 2] *= k; }
+  }
+  sum -= removed / 3;
+  tex.needsUpdate = true;
   /* Skies differ wildly in absolute level (a sunset EXR can be several
      times brighter overall than a clear noon one), and white cladding
      blows out under the bright ones. Normalise so every sky lights the
@@ -700,7 +715,9 @@ $("variantB").addEventListener("click", () => setVariant("B"));
  *  WebXR renders stereo through its own framebuffer, which the
  *  composer cannot drive, so in the headset we render straight.
  * ------------------------------------------------------------------ */
-const composer = new EffectComposer(renderer);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(
+  window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio(),
+  { type: THREE.HalfFloatType, samples: 4 }));             // without this the desktop path has no anti-aliasing at all
 composer.addPass(new RenderPass(scene, camera));
 
 /* Ambient occlusion is doing the job that bounced light would do if we
@@ -860,6 +877,7 @@ async function enterVR() {
     $("start").hidden = true;
     $("hud").classList.add("hidden");
     session.addEventListener("end", () => {
+      applyVRProfile(false);                 // back to the desktop assets, shadows and grass
       sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
       sun.shadow.map?.dispose();
       sun.shadow.map = null;
@@ -984,6 +1002,7 @@ renderer.setAnimationLoop(() => {
   }
 
   shadowFollow.update(camera);
+  camera.getWorldPosition(sky.position);               // the sky sits at infinity: no parallax between the eyes
   blobs.update(camera, grips, renderer.xr.isPresenting);
   fade.update(dt);
 
@@ -995,7 +1014,7 @@ renderer.setAnimationLoop(() => {
   if (stepDist > 0.72) {
     stepDist = 0;
     ambience.step();
-    if (renderer.xr.isPresenting) hapticPulse(controllers, 0.22, 35);
+    if (renderer.xr.isPresenting && FOOTSTEP_HAPTICS) hapticPulse(controllers, 0.22, 35);
   }
   updateWind(now / 1000);
   if (ambience.started) {

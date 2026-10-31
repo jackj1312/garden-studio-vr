@@ -1,4 +1,4 @@
-export const BUILD = "355b2bb-0907";   // stamped by tools/stamp-build.py
+export const BUILD = "28d436e-0920";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -20,6 +20,11 @@ export const SITE = {
   trees: [
     { x: -2.9, z: -9.4, height: 4.6, crown: 1.6 },
     { x:  3.0, z: -5.6, height: 3.6, crown: 1.3 }
+  ],
+  /* beyond the fences: the neighbours' trees, scanned, hazed by distance */
+  neighbourTrees: [
+    { x: -5.5, z: -17.5, height: 5.6 }, { x: 1.5, z: -19, height: 6.4 }, { x: 7, z: -16.5, height: 5.0 },
+    { x: -9.5, z: -6, height: 5.4 }, { x: 10, z: -9, height: 6.0 }
   ],
   /* Which way is north decides where the good light comes from. Assumed
      for now — confirm on site, because it drives the whole glazing plan. */
@@ -100,7 +105,7 @@ export const TIMES = {
     sky:  "assets/hdri/sky_morning_4k.jpg",
     sun: { x: 10, y: 6, z: 4 }, colour: 0xfff1dc, intensity: 1.2,
     exposure: 1.12, envIntensity: 1.0, practicals: false,
-    hemi: 0.6, haze: { colour: 0xe4eaee, density: 0.013 }
+    hemi: 0.22, haze: { colour: 0xe4eaee, density: 0.013 }
   },
   midday: {
     label: "Midday", short: "Noon",
@@ -108,15 +113,15 @@ export const TIMES = {
     sky:  "assets/hdri/sky_midday_4k.jpg",
     sun: { x: -6, y: 14, z: 6 }, colour: 0xfff6e8, intensity: 2.2,
     exposure: 1.14, envIntensity: 1.0, practicals: false,
-    hemi: 0.7, haze: { colour: 0xdbe6f0, density: 0.012 }
+    hemi: 0.25, haze: { colour: 0xdbe6f0, density: 0.012 }
   },
   golden: {
     label: "Golden hour", short: "Gold",
     hdri: "assets/hdri/qwantani_sunset_puresky_2k.exr",
     sky:  "assets/hdri/sky_golden_4k.jpg",
-    sun: { x: -12, y: 4, z: 3 }, colour: 0xffc48a, intensity: 1.1,
-    exposure: 0.98, envIntensity: 1.0, practicals: false,
-    hemi: 0.4, haze: { colour: 0xe6c9a6, density: 0.011 }
+    sun: { x: -12, y: 6.5, z: 3 }, colour: 0xffc48a, intensity: 1.3,
+    exposure: 1.2, envIntensity: 1.15, practicals: false,
+    hemi: 0.2, haze: { colour: 0xe6c9a6, density: 0.011 }, skyTint: 0xffffff
   },
   dusk: {
     label: "Dusk", short: "Dusk",
@@ -124,7 +129,7 @@ export const TIMES = {
     sky:  "assets/hdri/sky_dusk_4k.jpg",
     sun: { x: -13, y: 2.4, z: 2 }, colour: 0xffb070, intensity: 1.1,
     exposure: 1.05, envIntensity: 0.9, practicals: true,
-    hemi: 0.32, haze: { colour: 0x9aa2b6, density: 0.010 }
+    hemi: 0.08, haze: { colour: 0x9aa2b6, density: 0.010 }
   },
   night: {
     label: "Night", short: "Night",
@@ -132,7 +137,7 @@ export const TIMES = {
     sky:  "assets/hdri/sky_night_4k.jpg",
     sun: { x: 4, y: 9, z: -6 }, colour: 0x8c9ccc, intensity: 0.12,
     exposure: 0.9, envIntensity: 0.8, practicals: true,
-    hemi: 0.12, haze: { colour: 0x0a0e16, density: 0.014 }
+    hemi: 0.08, haze: { colour: 0x0a0e16, density: 0.014 }, skyTint: 0x2c3652
   }
 };
 

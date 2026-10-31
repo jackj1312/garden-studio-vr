@@ -1,0 +1,12 @@
+# Never commit captures. This repository is public, and a scan of
+# someone's home — yours or a client's — must not end up in it.
+*.mov
+*.mp4
+*.MOV
+*.MP4
+*.insv
+scans/
+captures/
+*.ply
+*.splat
+*.ksplat

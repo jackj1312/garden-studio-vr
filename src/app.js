@@ -5,13 +5,13 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=8b040df-0826";
-import { buildMaterials } from "./materials.js?v=8b040df-0826";
-import { buildWorld } from "./world.js?v=8b040df-0826";
-import { installStudio, installGarden } from "./studio.js?v=8b040df-0826";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=8b040df-0826";
-import { createAmbience } from "./ambience.js?v=8b040df-0826";
-import { updateWind } from "./wind.js?v=8b040df-0826";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=bfdad1a-0843";
+import { buildMaterials } from "./materials.js?v=bfdad1a-0843";
+import { buildWorld } from "./world.js?v=bfdad1a-0843";
+import { installStudio, installGarden } from "./studio.js?v=bfdad1a-0843";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=bfdad1a-0843";
+import { createAmbience } from "./ambience.js?v=bfdad1a-0843";
+import { updateWind } from "./wind.js?v=bfdad1a-0843";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -51,6 +51,7 @@ camera.position.set(0, eyeHeight, 0);
 
 const hemi = new THREE.HemisphereLight(0xbfd6e6, 0x5c5f4a, 0.25);
 scene.add(hemi);
+const haze = new THREE.FogExp2(0xdbe6f0, 0.012);
 const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
@@ -135,7 +136,13 @@ function applyTime(key) {
   else sun.position.set(t.sun.x, t.sun.y, t.sun.z);
   sun.color.setHex(t.colour);
   sun.intensity = t.intensity;
+  hemi.intensity = t.hemi;
   renderer.toneMappingExposure = t.exposure;
+  if (!arMode) {
+    haze.color.setHex(t.haze.colour);
+    haze.density = t.haze.density;
+    scene.fog = haze;
+  }
   for (const p of practicals) {
     if (p.light) p.light.intensity = t.practicals ? p.max : 0;
     if (p.emissive) p.emissive.material.emissiveIntensity = t.practicals ? 1.6 : 0.05;
@@ -146,6 +153,7 @@ function applyTime(key) {
   applySky(key);
   if (hdrCache.has(key)) {
     scene.environment = hdrCache.get(key);
+    scene.environmentIntensity = t.envIntensity * (envScale.get(key) ?? 1);
     return;
   }
   new EXRLoader().setDataType(THREE.FloatType).load(`${t.hdri}?v=${BUILD}`, tex => {
@@ -154,7 +162,10 @@ function applyTime(key) {
     const env = pmrem.fromEquirectangular(tex).texture;
     tex.dispose();
     hdrCache.set(key, env);
-    if (timeKey === key) scene.environment = env;
+    if (timeKey === key) {
+      scene.environment = env;
+      scene.environmentIntensity = t.envIntensity * (envScale.get(key) ?? 1);
+    }
   });
 }
 
@@ -162,14 +173,24 @@ function applyTime(key) {
    guess a direction per HDRI, find its brightest texel and point the
    sun from there. Works for any sky we ever load. */
 const sunDirs = new Map();
+const envScale = new Map();
 function alignSunToSky(tex, key) {
   const { data, width, height } = tex.image;
-  let best = -1, bi = 0;
+  let best = -1, bi = 0, sum = 0, n = 0;
   const step = 4 * 3;                                   // every third pixel is plenty
   for (let i = 0; i < data.length; i += step) {
     const l = data[i] + data[i + 1] + data[i + 2];
     if (l > best) { best = l; bi = i / 4; }
+    sum += l; n++;
   }
+  /* Skies differ wildly in absolute level (a sunset EXR can be several
+     times brighter overall than a clear noon one), and white cladding
+     blows out under the bright ones. Normalise so every sky lights the
+     scene to the same mean; the time-of-day `envIntensity` then means
+     what it says. */
+  const mean = sum / (3 * n);
+  envScale.set(key, Math.min(3, Math.max(0.15, 0.28 / Math.max(1e-4, mean))));
+  console.info(`sky ${key}: mean ${mean.toFixed(3)} -> env x${envScale.get(key).toFixed(2)}`);
   const px = bi % width, py = Math.floor(bi / width);
   const u = (px + 0.5) / width, v = (py + 0.5) / height;
   const phi = (u - 0.5) * Math.PI * 2;
@@ -689,7 +710,7 @@ if (tier.ao) {
 let bloom = null;
 if (tier.bloom) {
   bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight), 0.11, 0.6, 1.05);
+    new THREE.Vector2(window.innerWidth, window.innerHeight), 0.18, 0.7, 1.0);
   composer.addPass(bloom);
 }
 composer.addPass(new OutputPass());
@@ -737,6 +758,7 @@ function setARMode(on) {
     shadowCatcher.visible = true;
     sun.intensity = 1.1;                  // real light is doing most of the work
     hemi.intensity = 0.35;
+    scene.fog = null;                     // no haze over a real room
     /* drop the studio a few metres ahead, roughly where someone would
        stand to look at it; the trigger moves it after that */
     world.anchor.position.set(0, 0, -4.5);
@@ -746,7 +768,6 @@ function setARMode(on) {
     sky.visible = true;
     world.existing.visible = true;
     shadowCatcher.visible = false;
-    hemi.intensity = 0.25;
     applyTime(timeKey);
     setVariant(variant);
   }

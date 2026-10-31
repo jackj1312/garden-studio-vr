@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { addWind } from "./wind.js?v=8b040df-0826";
+import { addWind } from "./wind.js?v=bfdad1a-0843";
 
 /* ------------------------------------------------------------------ *
  *  Foliage as leaf cards.
@@ -29,14 +29,14 @@ export function leafTexture() {
     const cy = 128 + Math.sin(a) * r * 0.8;
     const len = 34 + Math.random() * 40;
     const wid = 13 + Math.random() * 11;
-    const hue = 84 + Math.random() * 26;
-    const light = 36 + Math.random() * 24;
+    const hue = 78 + Math.random() * 40;                               // yellow-green to blue-green
+    const light = 22 + Math.random() * 22;                             // real leaves are dark; the sun lifts them
     x.save();
     x.translate(cx, cy);
     x.rotate(a + (Math.random() - 0.5) * 0.6);
     const g = x.createLinearGradient(-len / 2, 0, len / 2, 0);
-    g.addColorStop(0, `hsl(${hue}, 42%, ${light - 8}%)`);
-    g.addColorStop(1, `hsl(${hue + 6}, 48%, ${light + 10}%)`);
+    g.addColorStop(0, `hsl(${hue}, 38%, ${light - 6}%)`);
+    g.addColorStop(1, `hsl(${hue + 8}, 44%, ${light + 12}%)`);
     x.fillStyle = g;
     x.beginPath();
     x.ellipse(0, 0, len / 2, wid / 2, 0, 0, Math.PI * 2);
@@ -55,7 +55,7 @@ export function leafTexture() {
 export function foliageMaterial({ tint = 0xffffff, strength = 0.05, speed = 1.0, height = 4 } = {}) {
   const tex = leafTexture();
   return addWind(new THREE.MeshStandardMaterial({
-    map: tex, alphaMap: tex, color: tint,
+    map: tex, color: tint,                                             // alpha comes from the canvas; an alphaMap would read the (dark) green
     transparent: false, alphaTest: 0.42, side: THREE.DoubleSide,
     roughness: 0.82, metalness: 0
   }), { strength, speed, height });
@@ -83,7 +83,7 @@ export function cardCluster(points, { size = 0.5, sizeJitter = 0.5, material, ti
     s.set(k, k, k);
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
-    col.setHSL(0.25 + (Math.random() - 0.5) * tintJitter, 0.45, 0.58 + (Math.random() - 0.5) * 0.2);
+    col.setHSL(0.26 + (Math.random() - 0.5) * tintJitter, 0.38, 0.46 + (Math.random() - 0.5) * 0.22);
     mesh.setColorAt(i, col);
   });
   mesh.instanceMatrix.needsUpdate = true;

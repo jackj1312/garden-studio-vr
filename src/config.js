@@ -1,4 +1,4 @@
-export const BUILD = "8b040df-0826";   // stamped by tools/stamp-build.py
+export const BUILD = "bfdad1a-0843";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -89,41 +89,49 @@ export const VARIANTS = {
 
 /* Times of day. Baked sky plus a matching sun — a moving sun would cost
    more than it is worth, and five good ones read better than a slider. */
+/* Per time of day. `hemi` is the sky-fill light; `haze` is exponential fog
+   that gives distance its aerial perspective — the single cheapest thing
+   that separates a render from a model (see BENCHMARKS.md). */
 export const TIMES = {
   morning: {
     label: "Morning", short: "Morn",
     hdri: "assets/hdri/kloofendal_misty_morning_puresky_2k.exr",
     sky:  "assets/hdri/sky_morning_4k.jpg",
-    sun: { x: 10, y: 6, z: 4 }, colour: 0xfff1dc, intensity: 1.15,
-    exposure: 1.0, envIntensity: 1.0, practicals: false
+    sun: { x: 10, y: 6, z: 4 }, colour: 0xfff1dc, intensity: 1.2,
+    exposure: 1.12, envIntensity: 1.0, practicals: false,
+    hemi: 0.6, haze: { colour: 0xe4eaee, density: 0.013 }
   },
   midday: {
     label: "Midday", short: "Noon",
     hdri: "assets/hdri/kloofendal_43d_clear_puresky_2k.exr",
     sky:  "assets/hdri/sky_midday_4k.jpg",
-    sun: { x: -6, y: 14, z: 6 }, colour: 0xfff6e8, intensity: 2.6,
-    exposure: 0.95, envIntensity: 1.0, practicals: false
+    sun: { x: -6, y: 14, z: 6 }, colour: 0xfff6e8, intensity: 2.2,
+    exposure: 1.14, envIntensity: 1.0, practicals: false,
+    hemi: 0.7, haze: { colour: 0xdbe6f0, density: 0.012 }
   },
   golden: {
     label: "Golden hour", short: "Gold",
-    hdri: "assets/hdri/belfast_sunset_puresky_2k.exr",
+    hdri: "assets/hdri/qwantani_sunset_puresky_2k.exr",
     sky:  "assets/hdri/sky_golden_4k.jpg",
-    sun: { x: -12, y: 4, z: 3 }, colour: 0xffc48a, intensity: 1.35,
-    exposure: 1.05, envIntensity: 1.0, practicals: false
+    sun: { x: -12, y: 4, z: 3 }, colour: 0xffc48a, intensity: 1.1,
+    exposure: 0.98, envIntensity: 1.0, practicals: false,
+    hemi: 0.4, haze: { colour: 0xe6c9a6, density: 0.011 }
   },
   dusk: {
     label: "Dusk", short: "Dusk",
     hdri: "assets/hdri/evening_road_01_puresky_2k.exr",
     sky:  "assets/hdri/sky_dusk_4k.jpg",
     sun: { x: -13, y: 2.4, z: 2 }, colour: 0xffb070, intensity: 1.1,
-    exposure: 1.02, envIntensity: 0.9, practicals: true
+    exposure: 1.05, envIntensity: 0.9, practicals: true,
+    hemi: 0.32, haze: { colour: 0x9aa2b6, density: 0.010 }
   },
   night: {
     label: "Night", short: "Night",
     hdri: "assets/hdri/dikhololo_night_2k.exr",
     sky:  "assets/hdri/sky_night_4k.jpg",
     sun: { x: 4, y: 9, z: -6 }, colour: 0x8c9ccc, intensity: 0.12,
-    exposure: 0.85, envIntensity: 0.8, practicals: true
+    exposure: 0.9, envIntensity: 0.8, practicals: true,
+    hemi: 0.12, haze: { colour: 0x0a0e16, density: 0.014 }
   }
 };
 

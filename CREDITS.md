@@ -9,7 +9,7 @@ safe to sell. Check this file before adding any dependency or asset.
 |------|--------|---------|----------------|
 | three.js r185 | mrdoob/three.js | MIT | Yes, attribution in source only |
 | Textures (7 sets) | Poly Haven | CC0 | Yes, no attribution required |
-| HDRI skies (2) | Poly Haven | CC0 | Yes, no attribution required |
+| HDRI skies (5) | Poly Haven | CC0 | Yes, no attribution required |
 | Typefaces | System stack | n/a | Yes |
 
 Poly Haven assets are CC0, which is a genuine public-domain dedication rather than a
@@ -18,7 +18,7 @@ record rather than an obligation.
 
 Texture sets: exterior_wall_cladding_03, wood_floor_deck, brushed_concrete, grass_ground,
 red_brick, square_brick_paving, weathered_plank_siding.
-Skies: kloofendal_43d_clear_puresky, evening_road_01_puresky.
+Skies: kloofendal_misty_morning_puresky (morning), kloofendal_43d_clear_puresky (midday), qwantani_sunset_puresky (golden hour), evening_road_01_puresky (dusk), dikhololo_night (night). Each is served as a 2k EXR for light and a 4k tone-mapped JPEG for the eye.
 
 ## Cleared for later use
 

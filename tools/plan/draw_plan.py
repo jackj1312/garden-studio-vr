@@ -86,7 +86,11 @@ poly([tuple(p) for p in plan["bed"]["edge"]], SOIL, PH, 3)
 if "hedge" in plan:
     (hx0, hx1), (hy0, hy1) = plan["hedge"]["xy_range"]
     poly([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], HEDGE); dash([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], EST, 2, True)
-    T(-8.6, (hy0 + hy1) / 2, f"hedge {plan['hedge'].get('accuracy', '')}", EST, FS)
+    T(-8.6, (hy0 + hy1) / 2, f"{plan['hedge'].get('kind', 'hedge')} {plan['hedge'].get('accuracy', '')}", PH if "walk" in plan["hedge"].get("source", "") else EST, FS)
+if "street_hedge" in plan:
+    (hx0, hx1), (hy0, hy1) = plan["street_hedge"]["xy_range"]
+    poly([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], HEDGE); dash([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], EST, 2, True)
+    T(hx0 + 0.2, hy0 - 0.7, f"street hedge {plan['street_hedge'].get('height_m', '')} m tall (west end ±0.5 m)", PH, FS)
 # house
 poly([(-6.6, h["left_wing_face_y"]), (pz[0], h["left_wing_face_y"]), (pz[0], pz[2]), (pz[1], pz[2]), (pz[1], h["right_wing_face_y"]),
       (h["right_wing_x"][1], h["right_wing_face_y"]), (h["right_wing_x"][1], 5.5), (-6.6, 5.5)], HOUSE, SC, 4)

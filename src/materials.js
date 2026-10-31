@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=a3c7fc9-1326";
-import { addWind } from "./wind.js?v=a3c7fc9-1326";
+import { MATERIALS, BUILD } from "./config.js?v=6854cb0-1526";
+import { addWind } from "./wind.js?v=6854cb0-1526";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -117,7 +117,7 @@ function grassBladeTexture() {
 
 export function makeGrass({ count, width, length, centreZ, centreX = 0, avoid = [], accept = null }) {
   const tex = grassBladeTexture();
-  const blade = new THREE.PlaneGeometry(0.22, 0.11).translate(0, 0.055, 0);   // a mown lawn, not a meadow
+  const blade = new THREE.PlaneGeometry(0.13, 0.08).translate(0, 0.04, 0);    // a mown lawn: short, fine tufts (judges, 31 Oct)
   const crossed = mergeGeometries([blade, blade.clone().rotateY(Math.PI / 2)]);
 
   const bladeMat = addWind(new THREE.MeshStandardMaterial({
@@ -142,13 +142,14 @@ export function makeGrass({ count, width, length, centreZ, centreX = 0, avoid = 
     const z = centreZ + (Math.random() - 0.5) * length;
     if (avoid.some(a => Math.abs(x - a.x) < a.hw && Math.abs(z - a.z) < a.hd)) continue;
     if (accept && !accept(x, z)) continue;
-    const s = 0.75 + Math.random() * 0.75;
+    const s = 0.8 + Math.random() * 0.4;
     pos.set(x, 0, z);
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI);
-    scl.set(s, s * (0.7 + Math.random() * 0.4), s);
+    scl.set(s, s * (0.5 + Math.random() * 0.3), s);               // mown: 3–5 cm, as in Jack's walk frames
     m.compose(pos, q, scl);
     mesh.setMatrixAt(placed, m);
-    tint.setHSL(0.24 + (Math.random() - 0.5) * 0.04, 0.45 + Math.random() * 0.2, 0.42 + Math.random() * 0.16);
+    tint.setHSL(0.215 + (Math.random() - 0.5) * 0.04, 0.55 + Math.random() * 0.15, 0.5 + Math.random() * 0.14);   // sunlit yellow-green
+    tint.offsetHSL(0, 0, 0.04 * Math.tanh(Math.sin(x * Math.PI / 0.45) * 4));                                   // 45 cm mowing stripes, as the lawn texture
     mesh.setColorAt(placed, tint);
     placed++;
   }

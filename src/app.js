@@ -5,15 +5,15 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=a3c7fc9-1326";
-import { buildMaterials } from "./materials.js?v=a3c7fc9-1326";
-import { buildWorld } from "./world.js?v=a3c7fc9-1326";
-import { installStudio, installGarden } from "./studio.js?v=a3c7fc9-1326";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=a3c7fc9-1326";
-import { installSite } from "./site.js?v=a3c7fc9-1326";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=a3c7fc9-1326";
-import { createAmbience } from "./ambience.js?v=a3c7fc9-1326";
-import { updateWind } from "./wind.js?v=a3c7fc9-1326";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=6854cb0-1526";
+import { buildMaterials } from "./materials.js?v=6854cb0-1526";
+import { buildWorld } from "./world.js?v=6854cb0-1526";
+import { installStudio, installGarden } from "./studio.js?v=6854cb0-1526";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=6854cb0-1526";
+import { installSite } from "./site.js?v=6854cb0-1526";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=6854cb0-1526";
+import { createAmbience } from "./ambience.js?v=6854cb0-1526";
+import { updateWind } from "./wind.js?v=6854cb0-1526";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -38,6 +38,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.AgXToneMapping;            // keeps greens green; ACES pushed them olive
+if (new URLSearchParams(location.search).get("site")) renderer.toneMapping = THREE.NeutralToneMapping;   // a real garden in sun: AgX washed it grey next to the owner's photos (31 Oct)
 renderer.toneMappingExposure = 0.95;
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType("local-floor");
@@ -106,6 +107,13 @@ if (siteKey) {
   installSite(scene, world, player, siteKey).then(r => {
     site = r; siteBounds = r.meta.bounds || null;
     if (r.meta.name) { document.querySelector("#start h1").textContent = r.meta.name.split(" — ")[0]; document.title = r.meta.name; }
+    if (r.meta.sun) {
+      siteSun = { ...r.meta.sun, time: r.meta.time };
+      const reach = siteSun.reach ?? 16;
+      Object.assign(sun.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach });
+      sun.shadow.camera.updateProjectionMatrix();
+    }
+    applyTime(r.meta.time && TIMES[r.meta.time] ? r.meta.time : timeKey);
   })
     .catch(err => {
       console.error("site failed:", err);
@@ -142,7 +150,8 @@ function applySky(key) {
   const t = TIMES[key];
   if (!t?.sky) return;
   if (!skyTex.has(key)) {
-    const tex = new THREE.TextureLoader().load(`${t.sky}?v=${BUILD}`);
+    const skyFile = /OculusBrowser|Quest/i.test(navigator.userAgent) ? t.sky.replace("_4k", "_2k") : t.sky;   // Quest: 2k sky saves ~40 MB
+    const tex = new THREE.TextureLoader().load(`${skyFile}?v=${BUILD}`);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.repeat.x = -1;             // inside-out sphere; mirror about the centre keeps +X at +X
@@ -159,22 +168,45 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 pmrem.compileEquirectangularShader();
 const hdrCache = new Map();
 let timeKey = "midday";
+/* A real site is lit as it was filmed: site.json "sun": {"azimuthDeg", "centre": [x, z], "reach"}.
+   Each sky is turned about the vertical so its sun disc (and the light) comes from that compass
+   direction; the shadow box is centred on the garden instead of the demo studio. */
+let siteSun = null;
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+function skyYawFor(key) {
+  const raw = sunDirs.get(key);
+  if (!siteSun || !raw) return 0;
+  return THREE.MathUtils.degToRad(siteSun.azimuthDeg) - Math.atan2(-raw.z, raw.x);
+}
+function sunDirFor(key) {
+  const raw = sunDirs.get(key);
+  if (!raw) return null;
+  if (siteSun && key === siteSun.time && siteSun.elevationDeg != null) {   // the filmed sun, exactly
+    const az = THREE.MathUtils.degToRad(siteSun.azimuthDeg), el = THREE.MathUtils.degToRad(siteSun.elevationDeg);
+    return new THREE.Vector3(Math.cos(el) * Math.cos(az), Math.sin(el), -Math.cos(el) * Math.sin(az));
+  }
+  return raw.clone().applyAxisAngle(Y_AXIS, skyYawFor(key));
+}
 
 function applyTime(key) {
   const t = TIMES[key];
   if (!t) return;
   timeKey = key;
   ambience.setTime(key);
-  sun.target.position.set(0, 0, REAR / 2);
-  if (sunDirs.has(key)) placeSun(sunDirs.get(key));
+  if (siteSun?.centre) sun.target.position.set(siteSun.centre[0], 0, siteSun.centre[1]);
+  else sun.target.position.set(0, 0, REAR / 2);
+  sky.rotation.y = skyYawFor(key);
+  if (scene.environmentRotation) scene.environmentRotation.set(0, skyYawFor(key), 0);
+  if (sunDirs.has(key)) placeSun(sunDirFor(key));
   else sun.position.set(t.sun.x, t.sun.y, t.sun.z);
-  sun.color.setHex(t.colour);
-  sun.intensity = t.intensity;
+  const filmed = siteSun && key === siteSun.time;
+  sun.color.setHex(filmed && siteSun.colour ? parseInt(siteSun.colour, 16) : t.colour);
+  sun.intensity = filmed && siteSun.intensity ? siteSun.intensity : t.intensity;
   hemi.intensity = t.hemi;
   renderer.toneMappingExposure = t.exposure;
   if (!arMode) {
     haze.color.setHex(t.haze.colour);
-    haze.density = t.haze.density;
+    haze.density = t.haze.density * (siteSun ? 0.35 : 1);    // real sites: crisp distance, as filmed
     scene.fog = haze;
   }
   for (const p of practicals) {
@@ -245,7 +277,7 @@ function alignSunToSky(tex, key) {
   if (dir.y < 0.05) dir.y = Math.abs(dir.y) + 0.05;    // whichever way the rows ran, the sun is up
   dir.normalize();
   sunDirs.set(key, dir);
-  if (timeKey === key) placeSun(dir);
+  if (timeKey === key) { placeSun(sunDirFor(key)); sky.rotation.y = skyYawFor(key); if (scene.environmentRotation) scene.environmentRotation.set(0, skyYawFor(key), 0); }
 }
 function placeSun(dir) {
   const target = sun.target.position;

@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { gltf, mergeByMaterial } from "./studio.js?v=a3c7fc9-1326";
-import { makeGrass } from "./materials.js?v=a3c7fc9-1326";
-import { BUILD } from "./config.js?v=a3c7fc9-1326";
+import { gltf, mergeByMaterial } from "./studio.js?v=6854cb0-1526";
+import { makeGrass } from "./materials.js?v=6854cb0-1526";
+import { BUILD } from "./config.js?v=6854cb0-1526";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a
@@ -116,8 +116,36 @@ export async function installSite(scene, world, player, name) {
       scene.add(grass);
       console.info(`site lawn ${area.toFixed(1)} m², ${grass.count} grass tufts`);
     }
+    // baked light (site.json "lightmaps"): Cycles' sun, sky, bounce and shadows, read from a second UV set.
+    // Those surfaces are drawn unlit, which is also the cheapest material the Quest has.
+    const baked = new Set();
+    for (const lm of meta.lightmaps || []) {
+      const tex = await new THREE.TextureLoader().loadAsync(`${base}/${lm.file}?v=${BUILD}`);
+      tex.colorSpace = THREE.SRGBColorSpace; tex.channel = 1; tex.flipY = lm.flipY ?? false;
+      tex.anisotropy = isQuest ? 2 : 4;
+      const names = new Set(lm.materials);
+      const swapped = new Map();
+      root.traverse(o => {
+        if (!o.isMesh || !names.has(o.material.name) || !o.geometry.attributes.uv1) return;
+        let m = swapped.get(o.material);
+        if (!m) {
+          const src = o.material;
+          m = new THREE.MeshBasicMaterial({ name: src.name, map: src.map || null, color: src.color, lightMap: tex,
+                                            lightMapIntensity: (lm.scale ?? 1) * Math.PI * (lm.gain ?? 1) });
+          swapped.set(src, m);
+        }
+        o.material = m; baked.add(m);
+      });
+      console.info(`site light map ${lm.file}: ${swapped.size} materials baked`);
+    }
     mergeByMaterial([root], holder);
-    holder.traverse(o => { if (o.isMesh) { o.castShadow = !o.material.transparent; o.receiveShadow = true; } });
+    holder.traverse(o => {
+      if (!o.isMesh) return;
+      const b = baked.has(o.material);           // baked light already holds every shadow
+      const plant = /VertexPlant/i.test(o.material.name);
+      o.castShadow = !b && !o.material.transparent && !(isQuest && plant);   // Quest: plants skip the shadow pass (~146 k triangles)
+      o.receiveShadow = !b;
+    });
     scene.add(holder);
     if (meta.start) {
       player.position.set(meta.start.x ?? 0, 0, meta.start.z ?? 0);

@@ -61,6 +61,20 @@ the studio, new planting, fencing, lighting and the film itself. What makes it w
   lights, house and glasshouse lit from inside, sky deep blue-black, haze catches the light.
 - Camera grammar: slow dollies, slow drone arcs, one crane-down, one day→night cut; music.
 
+## 3. kogu's AI-built bedroom (Codex + Blender, rendered) — added 31 Oct 2026
+https://x.com/koguGameDev/status/2116450061853057368 — "Codex GPT 6.1 Terra + Blender", 30 s,
+1080×1920 vertical. Jack: "hard to distinguish from reality". Stepped through 31 Oct.
+- An AI agent modelled and rendered it in Blender, unattended; iteration 8 (the author says the
+  quality was starting to plateau and he will distil what was learned).
+- **Offline path-traced render (Cycles), not real-time and not VR.**
+- Why it reads as real: soft overcast window light with bounce everywhere and no dark
+  corners; dense believable imperfection (rumpled duvet, phone and cable on the bed, tissue
+  box, laundry drying in the window, cluttered shelves, photos pinned to the wall); true scale
+  of a small Japanese flat; a handheld phone camera (wide vertical lens, slight wobble,
+  neutral grade).
+- For us: the bar for the **rendered film** tier, and proof that Blender path tracing gets
+  there. The headset gets the same light baked into light maps.
+
 ## How to use these
 - Before any judge pass, open both and look at them again. Then look at ours.
 - "Does it feel like the SE Landscapes garden?" is the question for planting and light.

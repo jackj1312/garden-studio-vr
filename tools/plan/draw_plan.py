@@ -14,12 +14,19 @@ import sys, json, math
 from PIL import Image, ImageDraw, ImageFont
 
 plan = json.load(open(sys.argv[1])); out = sys.argv[2]
-title = sys.argv[3] if len(sys.argv) > 3 else "Plan"
+OVER = "--overlay" in sys.argv
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+title = args[2] if len(args) > 2 else "Plan"
 X0, X1, Y0, Y1 = plan.get("view", [-9.0, 15.0, -15.0, 6.0])
 ppm = 1200.0 / (X1 - X0)
 W, H = int((X1 - X0) * ppm), int((Y1 - Y0) * ppm)
 img = Image.new("RGB", (W, H + 300), (255, 255, 252)); d = ImageDraw.Draw(img)
 P = lambda x, y: ((x - X0) * ppm, (Y1 - y) * ppm + 60)
+if OVER and "underlay" in plan:   # the top-down photo under the lines, so every line can be checked by eye
+    u = plan["underlay"]; ux0, ux1, uy0, uy1 = u["extent"]; ui = Image.open(u["png"]).convert("RGB")
+    ui = ui.resize((int((ux1 - ux0) * ppm), int((uy1 - uy0) * ppm)))
+    ui = Image.blend(ui, Image.new("RGB", ui.size, (255, 255, 255)), 0.15)
+    img.paste(ui, tuple(int(v) for v in P(ux0, uy1)))
 def font(n):
     try: return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", n)
     except Exception: return ImageFont.load_default()
@@ -34,7 +41,7 @@ for gy in range(int(Y0), int(Y1) + 1):
 
 def poly(pts, fill=None, outline=None, w=2):
     q = [P(*p) for p in pts]
-    if fill: d.polygon(q, fill=fill)
+    if fill and not OVER: d.polygon(q, fill=fill)
     if outline: d.line(q + [q[0]], fill=outline, width=w)
 def dash(pts, col, w=3, close=False):
     q = [P(*p) for p in pts] + ([P(*pts[0])] if close else [])
@@ -50,20 +57,26 @@ def dim(a, b, s, off=(0, 0)):
     d.text(((pa[0] + pb[0]) / 2 + off[0], (pa[1] + pb[1]) / 2 + off[1]), s, fill=PH, font=FS)
 
 street_y = plan.get("street", {}).get("pavement_back_y", -13.0) if isinstance(plan.get("street", {}).get("pavement_back_y"), (int, float)) else -13.0
-fence_x = max((p[0] for p in plan.get("fence_drive_side", {}).get("points", [[12, 0]])), default=12)
+_fp = plan.get("fence_drive_side", {}).get("points", [[12, 0], [12, -1]])
+def fence_x(y):   # the fence as a straight line through its first and last points (it needn't be parallel to the house)
+    (xa, ya), (xb, yb) = _fp[0], _fp[-1]
+    return xa if ya == yb else xa + (xb - xa) * (y - ya) / (yb - ya)
 lawn = [tuple(p) for p in plan["lawn"]["edge"]]
 px0, px1 = plan["path_900"]["x"]
 apron = [tuple(p) for p in plan.get("paving_apron", {}).get("poly", [])]
 apron_x = max((p[0] for p in apron), default=4.4)
 # ground fills: gravel everywhere first, then paving, lawn, bed on top
-poly([(px1, street_y), (fence_x, street_y), (fence_x, 1.5), (px1, 1.5)], GRAV)
+poly([(px1, street_y), (fence_x(street_y), street_y), (fence_x(1.5), 1.5), (px1, 1.5)], GRAV)
 if "lawn_west" in plan: poly([tuple(p) for p in plan["lawn_west"]["poly"]], GRASS)
-if "vehicle" in plan: poly([tuple(p) for p in plan["vehicle"]["poly"]], (150, 150, 155)); T(plan["vehicle"]["poly"][0][0] + 0.2, plan["vehicle"]["poly"][0][1] - 0.6, "van (parked)", (255, 255, 255), FS)
+if "vehicle" in plan: poly([tuple(p) for p in plan["vehicle"]["poly"]], (150, 150, 155)); T(plan["vehicle"]["poly"][0][0] + 0.2, plan["vehicle"]["poly"][0][1] - 0.6, "van (parked, rough)", (255, 255, 255), FS)
 poly([(px0, street_y), (px1, street_y), (px1, -1.0), (px0, -1.0)], PAVE)
 h = plan["house"]; pz = h["porch"]
 poly([(px0, -1.0), (h["right_wing_x"][1], -1.0), (h["right_wing_x"][1], h["right_wing_face_y"]), (pz[1], h["right_wing_face_y"]),
       (pz[1], pz[2]), (pz[0], pz[2]), (pz[0], h["left_wing_face_y"]), (px0, h["left_wing_face_y"])], PAVE)
 if apron: poly(apron, PAVE, PH, 2)
+if "paving_side" in plan:
+    ps = [tuple(p) for p in plan["paving_side"]["poly"]]; poly(ps, PAVE); dash(ps, EST, 2, True)
+    T(4.55, -2.3, "paving (rough)", EST, FS)
 poly(lawn, GRASS, PH, 3)
 poly([tuple(p) for p in plan["bed"]["edge"]], SOIL, PH, 3)
 if "hedge" in plan:
@@ -85,13 +98,13 @@ for x, y in plan["pergola_posts"]["front"] + plan["pergola_posts"]["rear"]:
 T(-0.6, -0.55, "pergola posts (scan + photo agree ±12 cm)", SC, FS)
 if "bins" in plan:
     (bx0, bx1), (by0, by1) = plan["bins"]["xy_range"]
-    d.rectangle([*P(bx0, by1), *P(bx1, by0)], outline=EST, width=2); T(bx0, by1 + 0.45, f"bins {plan['bins'].get('accuracy', '')}", EST, FS)
+    d.rectangle([*P(bx0, by1), *P(bx1, by0)], outline=EST, width=2); T(bx0, by0 - 0.1, f"bins {plan['bins'].get('accuracy', '')}", EST, FS)
 if "fence_drive_side" in plan:
     fd = plan["fence_drive_side"]; dash([tuple(p) for p in fd["points"]], PH if "walk" in fd.get("source", "") else EST, 3)
-    fx, fy = fd["points"][0]; T(fx - 3.0, fy + 0.5, f"slatted fence {fd.get('accuracy', '')}", PH if "walk" in fd.get("source", "") else EST, FS)
+    fx, fy = fd["points"][0]; T(fx - 2.4, -7.0, f"slatted fence {fd.get('accuracy', '')}", PH if "walk" in fd.get("source", "") else EST, FS)
 st = plan.get("street", {}); dash([(X0, street_y), (X1, street_y)], PH if "walk" in st.get("source", "") else EST, 3)
 T(X0 + 0.3, street_y - 0.6, f"back of pavement y {street_y}  {st.get('accuracy', '(NOT measured)')}", PH if "walk" in st.get("source", "") else EST)
-T(-3.0, -5.0, "LAWN", (40, 90, 30), FB); T(4.2, -12.0, "GRAVEL", (120, 100, 60), FB)
+T(-3.0, -4.2, "LAWN", (40, 90, 30), FB); T(4.2, -12.0, "GRAVEL", (120, 100, 60), FB)
 bed = plan["bed"]["edge"]; T(sum(p[0] for p in bed) / len(bed) - 0.4, sum(p[1] for p in bed) / len(bed), "bed", (255, 255, 255), FS)
 # dimensions
 dim((px0, -3.0), (px1, -3.0), f"{px1 - px0:.2f} m", (-50, -16))

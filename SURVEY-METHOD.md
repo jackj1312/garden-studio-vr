@@ -46,8 +46,14 @@ wrong. The same will happen at every customer's house unless the plan is measure
    shape-fitting alone: on this site that drifted by 40% while looking plausible.
 4. Checks before trusting it: camera heights ≈ 1.4–1.7 m; a known width (the 900 mm path)
    measures right; posts or furniture land on the scan; two separate solves agree.
-5. The walk's ground points, in true colour from above, give lawn, gravel and paving edges and
-   the boundaries; photos give point features (tree trunks, posts) by sight-lines from 2+ views.
+5. `tools/photogrammetry/ortho.py` builds a true-scale **top-down photo** of the ground from every
+   solved frame (2 cm per pixel). Lawn edges are traced from it by colour
+   (`trace_lawn.py`); kerbs are read off 1 cm enlargements; `tools/plan/smooth.py` turns them
+   into smooth curves (a point every 8 cm), so curves are drawn and modelled as curves.
+   Fences and walls come from the triangulated 3D points on their faces, never from the
+   top-down photo (anything tall smears outward in it). Never measure ground points from a
+   single far photo: at 8 m, a 1 degree tilt error moves a point by about 0.7 m.
+   Photos give point features (tree trunks, posts) by sight-lines from 2+ views.
 6. `tools/plan/draw_plan.py` draws the plan, every line marked by how it was measured.
 Result on Jack's garden: path 0.87 m against a 0.90 m tape; posts within 5–12 cm of the scan;
 two independent solves within 10 cm.

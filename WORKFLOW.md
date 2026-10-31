@@ -73,7 +73,10 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 - Re-check every line of DETAIL-CHECKLIST.md against the matched views.
 - Export checks: no white or missing materials (11, 12).
 - Three judges (Sonnet) against the benchmarks and the matched views; act on all, but photos win (18).
-- **No cloud spend until this gate passes and Jack signs off the matched views (26).**
+- **Cheap mockup first (Jack, 31 Oct):** a low-quality Blender render of the full scene on the Mac, headless
+  (Eevee or Workbench, grass hair off, ~1000 px, one at a time), from the matched cameras and a short walk path.
+  Iterate on that until it is right. Only then rent a cloud GPU for the real light bake, film or streaming.
+- **No cloud spend until this gate passes and Jack signs off the matched views and the mockup (26).**
 
 ## G7 · Viewer
 - Site mode: the site's own name, no demo controls (13); bounds, start point, collisions from the plan.
@@ -85,4 +88,8 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 ## G9 · Deliver
 - Quest in the browser: baked light (fallback).
 - Full-quality VR: Unreal on a cloud GPU streamed to the Quest (CloudXR.js / Pixel Streaming) — being set up.
+- **In-headset marking tool (Jack, 31 Oct; to build):** point the controller at the ground and draw, the way you
+  draw the Quest's Guardian boundary. Two uses: mark corrections on the model ("this kerb is wrong here") and lay out
+  proposed changes (new beds, paths, a studio footprint). Drawings are saved in plan coordinates and come straight
+  back into the plan JSON, so a correction made in the headset updates the plan and the next build.
 - Film: Cycles or Unreal on the cloud.

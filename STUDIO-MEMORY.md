@@ -27,6 +27,9 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · "It's the details that matter most": kerb runs, junctions, upstands, steps, paving
   bonds, full-length boundaries. All now in DETAIL-CHECKLIST.md.
 
+- 2026-10-31 · front garden · Jack wants a cheap Blender mockup before any cloud rental, and an in-headset
+  drawing tool (Guardian-style) to mark corrections and lay out proposals, saved back into the plan.
+
 ## Capture (G1)
 - 2026-10-31 · front garden · A 2-min 4K walk video + stills solves well (121 of 145 frames); frames ~1 per metre.
 - 2026-10-31 · front garden · Ask for close-ups of every surface and object early (12-item list in the chat of

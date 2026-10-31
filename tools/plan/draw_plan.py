@@ -81,11 +81,9 @@ if "shed" in plan:   # front face measured; the depth is drawn dashed until it i
     sh = plan["shed"]; (sx0, sy), (sx1, _) = sh["front"]; sd = sh.get("depth_m", 1.5)
     poly([(sx0, sy), (sx1, sy), (sx1, sy + sd), (sx0, sy + sd)], (150, 62, 52)); dash([(sx1, sy), (sx1, sy + sd), (sx0, sy + sd)], EST, 2)
     d.line([P(sx0, sy), P(sx1, sy)], fill=PH, width=4); T(sx0 + 0.1, sy + 1.0, "SHED", (255, 255, 255), FS)
+poly([(px1, -2.6), (-1.8, -2.6), (-1.8, -1.0), (px1, -1.0)], PAVE)   # paving runs to the lawn's curved corner
 poly(lawn, GRASS, PH, 3)
 poly([tuple(p) for p in plan["bed"]["edge"]], SOIL, PH, 3)
-for e in plan.get("edgings", []):     # every edging run as its own laid line, full length
-    (ax, ay), (bx, by) = e["line"]; L = math.hypot(bx - ax, by - ay); nx, ny = -(by - ay) / L * e["width"] / 2, (bx - ax) / L * e["width"] / 2
-    poly([(ax + nx, ay + ny), (bx + nx, by + ny), (bx - nx, by - ny), (ax - nx, ay - ny)], (150, 150, 146), (90, 90, 90), 1)
 if "hedge" in plan:
     (hx0, hx1), (hy0, hy1) = plan["hedge"]["xy_range"]
     poly([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], HEDGE); dash([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], EST, 2, True)
@@ -94,6 +92,13 @@ if "street_hedge" in plan:
     (hx0, hx1), (hy0, hy1) = plan["street_hedge"]["xy_range"]
     poly([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], HEDGE); dash([(hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)], EST, 2, True)
     T(hx0 + 0.2, hy0 - 0.7, f"street hedge {plan['street_hedge'].get('height_m', '')} m tall (west end ±0.5 m)", PH, FS)
+# edging runs, on top of the ground
+for e in plan.get("edgings", []):
+    pts = e["line"]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        L = math.hypot(bx - ax, by - ay) or 1e-6; nx, ny = -(by - ay) / L * e["width"] / 2, (bx - ax) / L * e["width"] / 2
+        poly([(ax + nx, ay + ny), (bx + nx, by + ny), (bx - nx, by - ny), (ax - nx, ay - ny)], (150, 150, 146))
+    d.line([P(*q) for q in pts], fill=(90, 90, 90), width=1)
 # house
 poly([(-6.6, h["left_wing_face_y"]), (pz[0], h["left_wing_face_y"]), (pz[0], pz[2]), (pz[1], pz[2]), (pz[1], h["right_wing_face_y"]),
       (h["right_wing_x"][1], h["right_wing_face_y"]), (h["right_wing_x"][1], 5.5), (-6.6, 5.5)], HOUSE, SC, 4)

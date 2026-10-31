@@ -15,6 +15,10 @@ detail is found.
 - **Every edging run is its own item, drawn full length** from where it starts to where it really stops (path
   edging to the street; a paving border on to the fence), even across stretches hidden by a car (48).
 
+- **Trace the whole perimeter of every paved area**: what border it has (colour, rows), where it turns, and that a
+  kerb shared with a lawn is the same run (50). Runs that continue are one straight or one curve, never a kink (49).
+- Fence and wall lines: is there an edging or gravel board along their whole length (50)?
+
 ## Levels
 - Every step and threshold, with riser height and nosing (44).
 - Upstands, raised beds, edges proud of the lawn or gravel (43).

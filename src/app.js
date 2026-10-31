@@ -5,15 +5,15 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=26508f9-1150";
-import { buildMaterials } from "./materials.js?v=26508f9-1150";
-import { buildWorld } from "./world.js?v=26508f9-1150";
-import { installStudio, installGarden } from "./studio.js?v=26508f9-1150";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=26508f9-1150";
-import { installSite } from "./site.js?v=26508f9-1150";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=26508f9-1150";
-import { createAmbience } from "./ambience.js?v=26508f9-1150";
-import { updateWind } from "./wind.js?v=26508f9-1150";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=a3c7fc9-1326";
+import { buildMaterials } from "./materials.js?v=a3c7fc9-1326";
+import { buildWorld } from "./world.js?v=a3c7fc9-1326";
+import { installStudio, installGarden } from "./studio.js?v=a3c7fc9-1326";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=a3c7fc9-1326";
+import { installSite } from "./site.js?v=a3c7fc9-1326";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=a3c7fc9-1326";
+import { createAmbience } from "./ambience.js?v=a3c7fc9-1326";
+import { updateWind } from "./wind.js?v=a3c7fc9-1326";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -98,7 +98,15 @@ if (siteKey) {
   // a real garden: the demo studio has no business appearing in it until a
   // proposal for this site exists
   world.anchor.visible = false;
-  installSite(scene, world, player, siteKey).then(r => { site = r; siteBounds = r.meta.bounds || null; })
+  // the demo's words and studio-only controls don't belong on a real garden
+  document.querySelector("#start h1").textContent = "Your garden";
+  document.querySelector("#start h1 + p").textContent = "Your garden as it is today, modelled at true scale from its measured plan.";
+  for (const id of ["scrub", "ticks", "play", "variantA", "variantB"]) { const el = $(id); if (el) el.style.display = "none"; }
+  $("stageName").textContent = "As it is today"; $("stageNote").textContent = "Built from the measured plan. Nothing proposed yet."; $("meta").textContent = "";
+  installSite(scene, world, player, siteKey).then(r => {
+    site = r; siteBounds = r.meta.bounds || null;
+    if (r.meta.name) { document.querySelector("#start h1").textContent = r.meta.name.split(" — ")[0]; document.title = r.meta.name; }
+  })
     .catch(err => {
       console.error("site failed:", err);
       $("xrNote").textContent = `This garden failed to load (${err.message || err}). Reload to try again.`;
@@ -991,7 +999,7 @@ window.__garden = {
     return { triangles: i.triangles, calls: i.calls, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures };
   }
 };
-$("meta").textContent = `${STUDIO.w} × ${STUDIO.d} m · ${STUDIO.ridge} m to the ridge · ${tier.label}`;
+$("meta").textContent = siteKey ? tier.label : `${STUDIO.w} × ${STUDIO.d} m · ${STUDIO.ridge} m to the ridge · ${tier.label}`;
 
 let lastFrame = performance.now();
 renderer.setAnimationLoop(() => {

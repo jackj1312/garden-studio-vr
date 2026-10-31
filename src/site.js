@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { gltf, mergeByMaterial } from "./studio.js?v=740c2fa-1035";
-import { makeGrass } from "./materials.js?v=740c2fa-1035";
-import { BUILD } from "./config.js?v=740c2fa-1035";
+import { gltf, mergeByMaterial } from "./studio.js?v=26508f9-1150";
+import { makeGrass } from "./materials.js?v=26508f9-1150";
+import { BUILD } from "./config.js?v=26508f9-1150";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a
@@ -42,10 +42,17 @@ export async function installSite(scene, world, player, name) {
     if (meta.lit) {
       /* a modelled site: keep its materials, light it like everything else */
       const m = o.material;
+      if (m.map) { m.map.anisotropy = isQuest ? 2 : 8; }
+      if (m.alphaTest > 0 || /leaves|leaf/i.test(m.name)) {
+        // cut-out leaves: sorted by depth like solids, so a merged canopy never flickers
+        m.alphaTest = Math.max(m.alphaTest, 0.5);
+        m.transparent = false; m.depthWrite = true; m.alphaToCoverage = true;
+        m.side = THREE.DoubleSide;
+      } else if (!/VertexPlant|glass/i.test(m.name) && !m.transparent) {
+        m.side = THREE.FrontSide;                  // Blender exports everything double-sided
+      }
       o.castShadow = !m.transparent;
       o.receiveShadow = true;
-      if (m.map) { m.map.anisotropy = 8; }
-      if (m.alphaTest > 0 || /leaves|leaf/i.test(m.name)) { m.alphaTest = Math.max(m.alphaTest, 0.5); m.side = THREE.DoubleSide; }
       m.envMapIntensity = 0.9;
       return;
     }
@@ -60,6 +67,11 @@ export async function installSite(scene, world, player, name) {
   });
   if (meta.lit) {
     // hundreds of small parts: one draw call per material instead
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(160, 48).rotateX(-Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0x4b4a3c, roughness: 1 }));
+    ground.position.y = -0.08;
+    ground.receiveShadow = true;
+    scene.add(ground);
     const holder = new THREE.Group();
     holder.name = root.name;
     // grass on the lawn's real shape: rasterise the lawn triangles to a 10 cm grid

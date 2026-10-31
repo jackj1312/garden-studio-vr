@@ -5,15 +5,15 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=740c2fa-1035";
-import { buildMaterials } from "./materials.js?v=740c2fa-1035";
-import { buildWorld } from "./world.js?v=740c2fa-1035";
-import { installStudio, installGarden } from "./studio.js?v=740c2fa-1035";
-import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=740c2fa-1035";
-import { installSite } from "./site.js?v=740c2fa-1035";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=740c2fa-1035";
-import { createAmbience } from "./ambience.js?v=740c2fa-1035";
-import { updateWind } from "./wind.js?v=740c2fa-1035";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=26508f9-1150";
+import { buildMaterials } from "./materials.js?v=26508f9-1150";
+import { buildWorld } from "./world.js?v=26508f9-1150";
+import { installStudio, installGarden } from "./studio.js?v=26508f9-1150";
+import { installTrees, setTreeDetail, installPlanting, setPlantDetail } from "./vegetation.js?v=26508f9-1150";
+import { installSite } from "./site.js?v=26508f9-1150";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=26508f9-1150";
+import { createAmbience } from "./ambience.js?v=26508f9-1150";
+import { updateWind } from "./wind.js?v=26508f9-1150";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -86,17 +86,23 @@ const world = buildWorld(scene, mats, tier);
 const { stageGroups, obstacles, removals, practicals } = world;
 
 let studioParts = 0, gardenParts = 0;
-installStudio(stageGroups, mats, n => { studioParts = n; });
-installGarden(world.existing, mats, n => { gardenParts = n; });
+if (!siteKey) {                                  // a real site never shows the demo; don't fetch it
+  installStudio(stageGroups, mats, n => { studioParts = n; });
+  installGarden(world.existing, mats, n => { gardenParts = n; });
+}
 /* scanned trees: the headset and the basic tier get the collapsed
    version, everything else the full one */
 let treeParts = 0;
-let site = null;
+let site = null, siteBounds = null;
 if (siteKey) {
   // a real garden: the demo studio has no business appearing in it until a
   // proposal for this site exists
   world.anchor.visible = false;
-  installSite(scene, world, player, siteKey).then(r => { site = r; }).catch(err => console.error("site failed:", err));
+  installSite(scene, world, player, siteKey).then(r => { site = r; siteBounds = r.meta.bounds || null; })
+    .catch(err => {
+      console.error("site failed:", err);
+      $("xrNote").textContent = `This garden failed to load (${err.message || err}). Reload to try again.`;
+    });
 } else {
   installTrees(world.existing, tierKey === "basic" ? "q" : "d", n => { treeParts = n; });
   installPlanting(world.existing, tierKey === "basic" ? "q" : "d", n => { treeParts += n; });
@@ -324,6 +330,11 @@ function resolve(x, z, fromX = x, fromZ = z) {
       x = o.cx + (lx * c2 - lz * s2);
       z = o.cz + (lx * s2 + lz * c2);
     }
+  }
+  if (siteBounds) {                                // a real site walks to its own edges
+    x = Math.min(siteBounds.x1, Math.max(siteBounds.x0, x));
+    z = Math.min(siteBounds.z1, Math.max(siteBounds.z0, z));
+    return [x, z];
   }
   x = Math.min(HALF - PLAYER_R, Math.max(-HALF + PLAYER_R, x));
   z = Math.min(SITE.house.depth + 12, Math.max(REAR + PLAYER_R, z));
@@ -572,9 +583,11 @@ const btnWas = { a: false, b: false, x: false, y: false };
 function faceButtons() {
   const r = hands.right?.userData.source?.gamepad?.buttons, l = hands.left?.userData.source?.gamepad?.buttons;
   const a = !!r?.[4]?.pressed, b = !!r?.[5]?.pressed, x = !!l?.[4]?.pressed, y = !!l?.[5]?.pressed;
-  if (a && !btnWas.a) { goToStage(Math.min(6, Math.round(stageValue) + 1)); hapticPulse([hands.right], 0.5, 30); }
-  if (b && !btnWas.b) { goToStage(Math.max(1, Math.round(stageValue) - 1)); hapticPulse([hands.right], 0.5, 30); }
-  if (y && !btnWas.y) { togglePlay(); hapticPulse([hands.left], 0.5, 30); }
+  if (!siteKey) {                                 // stages belong to the demo studio
+    if (a && !btnWas.a) { goToStage(Math.min(6, Math.round(stageValue) + 1)); hapticPulse([hands.right], 0.5, 30); }
+    if (b && !btnWas.b) { goToStage(Math.max(1, Math.round(stageValue) - 1)); hapticPulse([hands.right], 0.5, 30); }
+    if (y && !btnWas.y) { togglePlay(); hapticPulse([hands.left], 0.5, 30); }
+  }
   if (x && !btnWas.x) { panelPinned = !panelPinned; hapticPulse([hands.left], 0.3, 20); }
   btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y;
 }
@@ -802,7 +815,7 @@ function setARMode(on) {
   } else {
     scene.background = savedBackground;
     sky.visible = true;
-    world.existing.visible = true;
+    world.existing.visible = !siteKey;
     shadowCatcher.visible = false;
     applyTime(timeKey);
     setVariant(variant);
@@ -1031,7 +1044,7 @@ renderer.setAnimationLoop(() => {
   {
     camera.getWorldPosition(_head);
     world.anchor.worldToLocal(_local.copy(_head));
-    const onSlab = stageValue >= 2.99 && Math.abs(_local.x) < STUDIO.w / 2 + 0.3
+    const onSlab = !siteKey && stageValue >= 2.99 && Math.abs(_local.x) < STUDIO.w / 2 + 0.3
       && _local.z > -STUDIO.d / 2 && _local.z < STUDIO.d / 2 + 1.8;
     const floorY = onSlab ? STUDIO.floorLevel - 0.02 : 0;
     player.position.y += (floorY - player.position.y) * Math.min(1, dt * 5);

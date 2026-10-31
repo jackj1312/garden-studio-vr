@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=c02621c-0049";
+import { MATERIALS, BUILD } from "./config.js?v=2406b4f-0116";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading

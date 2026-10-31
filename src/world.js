@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=c02621c-0049";
-import { groundGeo, makeGrass } from "./materials.js?v=c02621c-0049";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=2406b4f-0116";
+import { groundGeo, makeGrass } from "./materials.js?v=2406b4f-0116";
 
 /* ------------------------------------------------------------------ *
  *  What stays procedural.

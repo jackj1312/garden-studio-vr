@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { COLOURS, BUILD } from "./config.js?v=2406b4f-0116";
+import { COLOURS, BUILD } from "./config.js?v=837d187-0145";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -22,6 +22,28 @@ const STAGE_NODES = {
 
 /* Draco cuts the garden from 7.9 MB to 1.2 MB, which matters a great
    deal when the client is a headset on someone's home wifi. */
+/* The baked lightmap. It carries bounced light and contact shadow that
+   real-time lighting cannot afford on a headset, and it costs nothing
+   at runtime. Only the built surfaces were baked — ground, trees and
+   shrubs were excluded, so they must not receive it or they will show
+   another object's patch of the atlas. */
+let lightmap = null;
+function bakedLight() {
+  if (!lightmap) {
+    lightmap = new THREE.TextureLoader().load(`assets/models/lightmap.jpg?v=${BUILD}`);
+    lightmap.flipY = false;                       // glTF UV convention
+    lightmap.channel = 1;                         // read uv1, not uv0
+    lightmap.colorSpace = THREE.SRGBColorSpace;
+  }
+  return lightmap;
+}
+
+function applyBakedLight(mat, intensity = 1.0) {
+  mat.lightMap = bakedLight();
+  mat.lightMapIntensity = intensity;
+  return mat;
+}
+
 let loader = null;
 function gltf() {
   if (!loader) {
@@ -52,6 +74,11 @@ export function installStudio(stageGroups, mats, onReady) {
                 side: THREE.DoubleSide
               })
   };
+
+  for (const m of Object.values(M)) applyBakedLight(m, 1.0);
+  for (const key of ["concrete", "deck", "paving", "brick", "fence"]) {
+    if (mats[key]) applyBakedLight(mats[key], 1.0);
+  }
 
   /* Longest match wins, so Fit_worktop beats Fit_. */
   const RULES = [
@@ -123,6 +150,11 @@ export function installGarden(parent, mats, onReady) {
                transparent: true, opacity: 0.5, envMapIntensity: 2.2
              })
   };
+
+  for (const [k, m] of Object.entries(G)) {
+    if (k === "leaf" || k === "bark") continue;   // excluded from the bake
+    applyBakedLight(m, 1.0);
+  }
 
   const RULES = [
     ["_leaves", G.leaf], ["Shrub_", G.leaf],

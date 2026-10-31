@@ -37,6 +37,21 @@ wrong. The same will happen at every customer's house unless the plan is measure
    Operator ID for camera drones from 100 g; commercial work needs insurance and may need
    an A2 CofC; neighbours' privacy applies. Check the CAA before the first paid job.
 
+## Measuring from photos and a walk video (no device) — proven on Jack's garden, 31 Oct
+1. A slow walk-round video (2 min, 4K, normal lens, house → street → round every edge → back)
+   plus any stills. Frames at 1 per ~1 m of walking.
+2. `tools/photogrammetry/sfm_walk.py` solves where every frame and photo was taken.
+3. Lock it to real size through **known points** seen in two photos: window corners, a door,
+   the arch, a measured path (`tools/photogrammetry/measure.py` + the anchor step). Never by
+   shape-fitting alone: on this site that drifted by 40% while looking plausible.
+4. Checks before trusting it: camera heights ≈ 1.4–1.7 m; a known width (the 900 mm path)
+   measures right; posts or furniture land on the scan; two separate solves agree.
+5. The walk's ground points, in true colour from above, give lawn, gravel and paving edges and
+   the boundaries; photos give point features (tree trunks, posts) by sight-lines from 2+ views.
+6. `tools/plan/draw_plan.py` draws the plan, every line marked by how it was measured.
+Result on Jack's garden: path 0.87 m against a 0.90 m tape; posts within 5–12 cm of the scan;
+two independent solves within 10 cm.
+
 ## Back at the desk
 1. DXF + scan + targets → **plan drawing** (as plan v0, but every line measured).
 2. You (and later the customer) sign it off. Corrections go on the plan, not the model.

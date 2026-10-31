@@ -75,8 +75,12 @@ poly([(px0, -1.0), (h["right_wing_x"][1], -1.0), (h["right_wing_x"][1], h["right
       (pz[1], pz[2]), (pz[0], pz[2]), (pz[0], h["left_wing_face_y"]), (px0, h["left_wing_face_y"])], PAVE)
 if apron: poly(apron, PAVE, PH, 2)
 if "paving_side" in plan:
-    ps = [tuple(p) for p in plan["paving_side"]["poly"]]; poly(ps, PAVE); dash(ps, EST, 2, True)
-    T(4.55, -2.3, "paving (rough)", EST, FS)
+    ps = [tuple(p) for p in plan["paving_side"]["poly"]]; poly(ps, PAVE); dash(ps, PH if "walk" in plan["paving_side"].get("source", "") else EST, 2, True)
+    T(4.55, -2.3, "block paving", PH, FS)
+if "shed" in plan:   # front face measured; the depth is drawn dashed until it is seen
+    sh = plan["shed"]; (sx0, sy), (sx1, _) = sh["front"]; sd = sh.get("depth_m", 1.5)
+    poly([(sx0, sy), (sx1, sy), (sx1, sy + sd), (sx0, sy + sd)], (150, 62, 52)); dash([(sx1, sy), (sx1, sy + sd), (sx0, sy + sd)], EST, 2)
+    d.line([P(sx0, sy), P(sx1, sy)], fill=PH, width=4); T(sx0 + 0.1, sy + 1.0, "SHED", (255, 255, 255), FS)
 poly(lawn, GRASS, PH, 3)
 poly([tuple(p) for p in plan["bed"]["edge"]], SOIL, PH, 3)
 if "hedge" in plan:

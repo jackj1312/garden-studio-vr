@@ -106,3 +106,20 @@ Gaussian splatting handles well.
 
 Local splat training on this Mac is possible with Brush, which runs on Apple Silicon via
 Metal. Not set up yet.
+
+## First real test — 31 Oct 2026
+
+Lounge, 91 s of 4K60, lamp-lit, portrait, one pass through four rooms, tape measure down.
+
+- 60 frames spread across the whole clip: **failed at registration in 31 s.** One frame every
+  1.5 s is too big a jump between views to match. That was the test design, not the capture.
+- 120 frames from one continuous 36 s stretch of the lounge: **reconstructed in 30 s**, 6,200
+  triangles, a textured lump the size of half the room. Carpet, sofa and radiator are
+  recognisable in the texture; the shape is not a room.
+
+So: the pipeline works end to end — phone to Mac over wifi, frames out, reconstruction, USDZ
+into Blender — and Apple's engine does what it was built for. It was built for walking around
+an object. Pointed at the inside of a room it produces a blob, as expected.
+
+**Decision:** local photogrammetry for gardens, buildings and exteriors. Gaussian splatting for
+interiors. Feed it 300+ frames, never 60.

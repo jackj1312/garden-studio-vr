@@ -5,10 +5,10 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=d82d67b-0020";
-import { buildMaterials } from "./materials.js?v=d82d67b-0020";
-import { buildWorld } from "./world.js?v=d82d67b-0020";
-import { installStudio, installGarden } from "./studio.js?v=d82d67b-0020";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=c02621c-0049";
+import { buildMaterials } from "./materials.js?v=c02621c-0049";
+import { buildWorld } from "./world.js?v=c02621c-0049";
+import { installStudio, installGarden } from "./studio.js?v=c02621c-0049";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -376,7 +376,9 @@ function updatePointer() {
 
   if (!hit) {
     if (cursorUV) uiDirty = true;
-    cursorUV = null; triggerWasDown = trigger; dragging = false;
+    cursorUV = null;
+    if (arMode && trigger && !triggerWasDown) placeFromController(right);
+    triggerWasDown = trigger; dragging = false;
     return;
   }
   cursorUV = { x: hit.uv.x, y: 1 - hit.uv.y };
@@ -595,6 +597,86 @@ function applyVRProfile(on) {
   if (grassMesh) grassMesh.count = on ? Math.floor(grassFull * VR_PROFILE.grassScale) : grassFull;
 }
 
+/* ------------------------------------------------------------------ *
+ *  Passthrough
+ *
+ *  The hardest thing to make convincing is the existing garden. In
+ *  passthrough we do not have to: the garden is the real one, seen
+ *  through the headset, and only the proposed building is drawn. That
+ *  removes the realism problem rather than solving it.
+ * ------------------------------------------------------------------ */
+const shadowCatcher = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 40).rotateX(-Math.PI / 2),
+  new THREE.ShadowMaterial({ opacity: 0.32 })
+);
+shadowCatcher.receiveShadow = true;
+shadowCatcher.visible = false;
+scene.add(shadowCatcher);
+
+let arMode = false;
+let arSupported = false;
+let savedBackground = null;
+
+function setARMode(on) {
+  arMode = on;
+  if (on) {
+    savedBackground = scene.background;
+    scene.background = null;              // let the cameras through
+    world.existing.visible = false;       // the real garden replaces ours
+    shadowCatcher.visible = true;
+    sun.intensity = 1.1;                  // real light is doing most of the work
+    hemi.intensity = 0.35;
+    /* drop the studio a few metres ahead, roughly where someone would
+       stand to look at it; the trigger moves it after that */
+    world.anchor.position.set(0, 0, -4.5);
+    world.anchor.rotation.y = 0;
+  } else {
+    scene.background = savedBackground;
+    world.existing.visible = true;
+    shadowCatcher.visible = false;
+    hemi.intensity = 0.85;
+    applyTime(timeKey);
+    setVariant(variant);
+  }
+}
+
+/* place the studio where the right controller points at the floor */
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitPoint = new THREE.Vector3();
+function placeFromController(controller) {
+  const origin = new THREE.Vector3(), dir = new THREE.Vector3(0, 0, -1);
+  controller.getWorldPosition(origin);
+  dir.applyQuaternion(controller.getWorldQuaternion(new THREE.Quaternion()));
+  raycaster.set(origin, dir);
+  if (!raycaster.ray.intersectPlane(floorPlane, hitPoint)) return false;
+  if (hitPoint.distanceTo(origin) > 25) return false;
+  world.anchor.position.set(hitPoint.x, 0, hitPoint.z);
+  return true;
+}
+
+async function enterAR() {
+  if (!navigator.xr) return;
+  try {
+    const session = await navigator.xr.requestSession("immersive-ar", {
+      requiredFeatures: ["local-floor"],
+      optionalFeatures: ["hit-test", "anchors", "plane-detection", "depth-sensing"]
+    });
+    await renderer.xr.setSession(session);
+    applyVRProfile(true);
+    renderer.xr.setFoveation(1.0);
+    setARMode(true);
+    $("start").hidden = true;
+    $("hud").classList.add("hidden");
+    session.addEventListener("end", () => {
+      applyVRProfile(false);
+      setARMode(false);
+      $("hud").classList.remove("hidden");
+    });
+  } catch (err) {
+    $("xrNote").textContent = `Could not start passthrough: ${err.message}`;
+  }
+}
+
 async function enterVR() {
   if (!navigator.xr) return;
   try {
@@ -618,6 +700,8 @@ async function enterVR() {
   }
 }
 $("vr").addEventListener("click", enterVR);
+$("ar").addEventListener("click", enterAR);
+$("startAR").addEventListener("click", enterAR);
 $("startVR").addEventListener("click", enterVR);
 $("startDesktop").addEventListener("click", () => {
   $("start").hidden = true;
@@ -629,6 +713,10 @@ if (navigator.xr) {
   navigator.xr.isSessionSupported("immersive-vr").then(ok => {
     if (!ok) $("xrNote").textContent =
       "This browser has WebXR but no headset session available. Open the same link in the Quest browser.";
+  }).catch(() => {});
+  navigator.xr.isSessionSupported("immersive-ar").then(ok => {
+    arSupported = ok;
+    if (!ok) { $("ar").disabled = true; $("startAR").disabled = true; }
   }).catch(() => {});
 } else {
   $("xrNote").textContent = "No WebXR here. Open this link in the Quest browser to walk it in VR.";
@@ -655,6 +743,7 @@ THREE.DefaultLoadingManager.onLoad = () => {
   $("loading").hidden = true;
   $("startDesktop").disabled = false;
   $("startVR").disabled = false;
+  $("startAR").disabled = !arSupported;
 };
 
 addEventListener("resize", () => {

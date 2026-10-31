@@ -56,6 +56,16 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · Roof heights: from 3D points on the tiles, not from wall elevations.
 - 2026-10-31 · front garden · UK semis are not always symmetrical: the neighbour's windows were not a mirror of ours.
 
+- 2026-10-31 · front garden house audit · probe.py: draw candidate 3D lines (two wall positions, three fascia
+  heights) on 4K frames from 3+ cameras; the right one sits on the real edge in every view. Settled the porch wall,
+  ridge, fascia, dish and step in minutes each.
+- 2026-10-31 · front garden house audit · Wall faces: histogram the solve's 3D points by x (or y) at the wall; the
+  peak is the face (porch: −1.67 vs the −1.85 in the plan). Fixtures: measure.py ray onto the plane at the
+  fixture's OWN depth (the dish stands 0.24 m off its wall); two-view triangulation for things off any wall
+  (alarm box: 1.4 cm spread).
+- 2026-10-31 · front garden house audit · Roof: tiles end over the gutter at the fascia top (4.86), 0.40 m out from
+  the wall; with the probed ridge (7.52 at y 5.45) that gives the pitch (44°). Mid-slope point fits alone drift ±3°.
+
 ## Textures and modelling (G4, G5)
 - 2026-10-31 · front garden · Restarted the 3D build (v2) from the measured facts: the first build was patched from
   pre-survey code and could not reach the Airbnb bar. Keep the survey, data and tools; rebuild the model.
@@ -79,6 +89,13 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   flipped copies doubling the library, mortar/joint plane recessed behind. tools/blender/unit_surfaces.py. Patch test
   (1 m wall + 1.4 m paving, Cycles 96 spp, Mac GPU): 62 s, 3.7 GB peak. Traps: a mirrored axis turns bmesh cubes
   inside out; assign UVs after bevel, by position.
+
+- 2026-10-31 · front garden house audit · G6 for a house: house_audit_render.py (Eevee + flat-colour ids, cropped to
+  the house, plus a wall clash check) then house_pairs.py (photo undistorted with its solved lens | model | photo
+  with the model's outlines). 37 views in ~90 s, 1.2 GB peak. The outline panel finds 0.1 m errors at 15 m.
+- 2026-10-31 · front garden house audit · Where roofs meet is its own element: a wing hipped at the front has its
+  outer slope in one plane with the main hip and its inner slope meets the main slope in a valley; lean-tos get
+  stepped flashing up the wall and an apron at the top.
 
 ## Lighting and look (G5, G7)
 - 2026-10-31 · front garden · Sun direction and height from the client's own frames (shadows, sun in shot); for

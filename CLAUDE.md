@@ -16,6 +16,11 @@ create a studio software so every build follows the same flow."
 - The workflow and the tools are written so they can become the studio software: each gate a step with clear
   inputs, outputs and checks; scripts parameterised by site, never hard-coded to Jack's garden.
 
+## STUDIO-MEMORY.md — read it often, add to it always (Jack, 31 Oct 2026)
+- Read it at the start of every session, again before every gate (its section for that gate), and before any
+  decision that costs money or Jack's time. Not once: regularly.
+- Add a dated line the moment something worth keeping is learned. Every project builds from the last.
+
 ## Standing rules
 - Plan first: measured plan and elevations signed off before any modelling (SURVEY-METHOD.md).
 - The client's own photos are the truth; they outrank judges and assumptions.

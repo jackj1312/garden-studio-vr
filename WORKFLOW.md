@@ -2,6 +2,8 @@
 
 Each stage ends in a gate. A gate is a check that must pass (or a sign-off) before the next stage starts.
 The numbers in brackets are rows of CORRECTIONS-LOG.md that the gate exists to prevent.
+**At every gate: re-read STUDIO-MEMORY.md (its section for the gate) and the log rows for the gate; at the end of
+every gate, add what was learned to STUDIO-MEMORY.md and any mistake to CORRECTIONS-LOG.md.**
 This is a draft built on Jack's own garden (Oct 2026); it becomes final when Jack is happy with that output.
 
 ## G0 · References and brief

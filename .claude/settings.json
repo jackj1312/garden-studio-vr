@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "echo 'Garden Studio VR: read CLAUDE.md, STUDIO-MEMORY.md and the CORRECTIONS-LOG.md rows for the current WORKFLOW.md gate before working.'" } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "echo 'Reminder (project rule): re-read STUDIO-MEMORY.md for the current gate before acting; log any new mistake in CORRECTIONS-LOG.md first; add anything learned to STUDIO-MEMORY.md.'" } ] }
+    ]
+  }
+}

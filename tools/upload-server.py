@@ -98,6 +98,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # the viewer on another port can post stills here (judges, captures)
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "PUT, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_PUT(self):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         name = os.path.basename(q.get("name", ["upload.mov"])[0]) or "upload.mov"
@@ -124,6 +133,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
               f"{got/1048576:.0f} MB in {secs:.0f}s ({got/1048576/secs:.1f} MB/s)", flush=True)
         reply = (os.path.basename(path) if ok else "incomplete").encode()
         self.send_response(200 if ok else 500)
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(reply)))
         self.end_headers()

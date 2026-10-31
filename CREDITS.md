@@ -52,3 +52,10 @@ is exported from it: geometry only, with the bevel and array modifiers applied a
 unwrapped. glTF cannot carry Blender's procedural materials, so the master supplies the
 shapes and `src/studio.js` supplies the surfaces. The UV set is already in place for the
 lightmap bake, which will arrive as a texture on these same meshes.
+
+## Scanned vegetation (Poly Haven, CC0)
+island_tree_01, island_tree_02 (Rob Tuytel, Rico Cilliers), shrub_01–04, fern_02,
+grass_medium_01, grass_medium_02, periwinkle_plant, celandine_01, moss_01. Photogrammetry
+models, CC0, no attribution required; credited here anyway. Sources are refetched with
+`tools/fetch-polyhaven.py` and are not committed; the Quest/desktop GLBs under
+assets/models/veg are derived from them. Nothing CC-BY appears in any render.

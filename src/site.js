@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { gltf, mergeByMaterial } from "./studio.js?v=99232af-1031";
-import { makeGrass } from "./materials.js?v=99232af-1031";
-import { BUILD } from "./config.js?v=99232af-1031";
+import { gltf, mergeByMaterial } from "./studio.js?v=314bca9-1032";
+import { makeGrass } from "./materials.js?v=314bca9-1032";
+import { BUILD } from "./config.js?v=314bca9-1032";
 
 /* ------------------------------------------------------------------ *
  *  A real site. `?site=<name>` loads assets/sites/<name>/site.glb — a
@@ -24,7 +24,11 @@ export async function installSite(scene, world, player, name) {
   world.existing.visible = false;            // the fictional garden steps aside
   world.obstacles.length = 0;                // the scan has no collision yet; walk freely
 
-  const g = await new Promise((res, rej) => gltf().load(`${base}/${meta.glb || "site.glb"}?v=${BUILD}`, res, undefined, rej));
+  // the headset gets the lighter cut when the site has one
+  const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);
+  const file = (isQuest && meta.glbQuest) || meta.glb || "site.glb";
+  if (isQuest && meta.grassPerM2Quest) meta.grassPerM2 = meta.grassPerM2Quest;
+  const g = await new Promise((res, rej) => gltf().load(`${base}/${file}?v=${BUILD}`, res, undefined, rej));
   const root = g.scene;
   root.name = `Site:${name}`;
   let tris = 0;

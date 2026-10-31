@@ -4,14 +4,28 @@ Jack, 31 Oct 2026: "The Airbnb quality is still worth start but this video gives
 example of the quality too." Both are standing references. Every judge pass compares
 against them; nothing ships that is obviously below either in its own area.
 
-## 1. The Airbnb walkthrough (real place, captured)
-https://x.com/CodeByPoonam/status/2115425204289827065
-Listing photos → a photoreal 3D space (Gaussian splat) you can walk through.
-**This is the bar for the real garden**: the existing house, fences, lawn and
-neighbours should look like the actual place, not a model of it. Judged on:
-- Does it look like a photograph from every angle you can stand at?
-- No visible facets, no repeating textures, real wear and dirt.
-- Scale feels right from eye height.
+## 1. The Airbnb walkthrough (modelled, lit in Unreal Engine 5)
+Repost: https://x.com/CodeByPoonam/status/2115425204289827065
+Original: https://x.com/SimbasJungles/status/2109095401273938072 (Simba, 11 Oct 2026)
+Author's write-up: https://x.com/SimbasJungles/status/2109295930021208144
+
+**It is not a scan.** Read from the author's own article (31 Oct):
+- Inputs: the builder's floor plan, two phone photos of the empty flat, a few reference
+  images (ChatGPT concepts, Pinterest) and a shopping list of real furniture.
+- Claude Code (Opus 5.5) wrote Python that modelled every object in Blender 5.2 and
+  exported it to Unreal Engine 5.8. No external 3D models; textures Poly Haven CC0 or
+  generated in Python.
+- Quality came from lighting, not geometry: Lumen global illumination, sunbeams through
+  local fog volumes, dust that glows only in the beams, motion blur, depth of field,
+  dynamic vignette. "Leveraging UE's lighting and shadows to compensate for the lack of
+  polygons."
+- Iterated "ultrarealistic" 4–5 times; Claude took 849 screenshots over about two days
+  to check its own work. About 3 hours of the author's time.
+- Runs as a desktop game on an RTX 4090 at 5120×1440, 64 fps after Claude optimised it.
+  Four times of day, every lamp switchable. Not VR.
+
+Judge the real garden against it on: soft bounced light everywhere, warm grade, clean
+crisp materials (no smeared photo texture), believable scale, film-camera effects.
 
 ## 2. SE Landscapes garden design walkthrough (designed garden, rendered)
 https://youtu.be/eJ3wgs7NJkU — "Garden Design Essex 3D Walkthrough Video", 1:22.

@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { COLOURS, BUILD } from "./config.js?v=a6c6ab9-0950";
-import { addWind } from "./wind.js?v=a6c6ab9-0950";
-import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=a6c6ab9-0950";
+import { COLOURS, BUILD } from "./config.js?v=99232af-1031";
+import { addWind } from "./wind.js?v=99232af-1031";
+import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=99232af-1031";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -66,7 +66,7 @@ function litCopy(mat) {
  *  moves with its anchor.
  * ------------------------------------------------------------------ */
 const _inv = new THREE.Matrix4();
-function mergeByMaterial(roots, target) {
+export function mergeByMaterial(roots, target) {
   target.updateWorldMatrix(true, false);
   _inv.copy(target.matrixWorld).invert();
   const buckets = new Map();
@@ -80,7 +80,7 @@ function mergeByMaterial(roots, target) {
       if (!g.attributes.uv) g.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
       if (!g.attributes.uv1) g.setAttribute("uv1", g.attributes.uv);
       for (const name of Object.keys(g.attributes)) {
-        if (!["position", "normal", "uv", "uv1"].includes(name)) g.deleteAttribute(name);
+        if (!["position", "normal", "uv", "uv1", "color"].includes(name)) g.deleteAttribute(name);   // colour: the built plants
       }
       if (!buckets.has(o.material)) buckets.set(o.material, []);
       buckets.get(o.material).push(g);
@@ -88,6 +88,13 @@ function mergeByMaterial(roots, target) {
   }
   let made = 0;
   for (const [mat, geos] of buckets) {
+    // a bucket mixing coloured and plain parts: give the plain ones white
+    if (geos.some(g => g.attributes.color) && !geos.every(g => g.attributes.color)) {
+      for (const g of geos) if (!g.attributes.color) {
+        const n = g.attributes.position.count;
+        g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 4).fill(1), 4));
+      }
+    }
     const allIndexed = geos.every(g => g.index);
     const parts = allIndexed ? geos : geos.map(g => g.index ? g.toNonIndexed() : g);
     const merged = mergeGeometries(parts, false);

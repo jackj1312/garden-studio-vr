@@ -1,4 +1,4 @@
-export const BUILD = "a6c6ab9-0950";   // stamped by tools/stamp-build.py
+export const BUILD = "99232af-1031";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,

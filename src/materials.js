@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=a6c6ab9-0950";
-import { addWind } from "./wind.js?v=a6c6ab9-0950";
+import { MATERIALS, BUILD } from "./config.js?v=99232af-1031";
+import { addWind } from "./wind.js?v=99232af-1031";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -115,7 +115,7 @@ function grassBladeTexture() {
   return t;
 }
 
-export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
+export function makeGrass({ count, width, length, centreZ, centreX = 0, avoid = [], accept = null }) {
   const tex = grassBladeTexture();
   const blade = new THREE.PlaneGeometry(0.22, 0.11).translate(0, 0.055, 0);   // a mown lawn, not a meadow
   const crossed = mergeGeometries([blade, blade.clone().rotateY(Math.PI / 2)]);
@@ -138,9 +138,10 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
   let guard = 0;
 
   while (placed < count && guard++ < count * 6) {
-    const x = (Math.random() - 0.5) * width;
+    const x = centreX + (Math.random() - 0.5) * width;
     const z = centreZ + (Math.random() - 0.5) * length;
     if (avoid.some(a => Math.abs(x - a.x) < a.hw && Math.abs(z - a.z) < a.hd)) continue;
+    if (accept && !accept(x, z)) continue;
     const s = 0.75 + Math.random() * 0.75;
     pos.set(x, 0, z);
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI);

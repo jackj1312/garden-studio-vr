@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { COLOURS, BUILD } from "./config.js?v=4d52a60-0926";
-import { addWind } from "./wind.js?v=4d52a60-0926";
-import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=4d52a60-0926";
+import { COLOURS, BUILD } from "./config.js?v=a6c6ab9-0950";
+import { addWind } from "./wind.js?v=a6c6ab9-0950";
+import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=a6c6ab9-0950";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.

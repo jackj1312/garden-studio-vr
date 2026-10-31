@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { MATERIALS, BUILD } from "./config.js?v=4d52a60-0926";
-import { addWind } from "./wind.js?v=4d52a60-0926";
+import { MATERIALS, BUILD } from "./config.js?v=a6c6ab9-0950";
+import { addWind } from "./wind.js?v=a6c6ab9-0950";
 
 /* ------------------------------------------------------------------ *
  *  Texture loading
@@ -117,7 +117,7 @@ function grassBladeTexture() {
 
 export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
   const tex = grassBladeTexture();
-  const blade = new THREE.PlaneGeometry(0.26, 0.2).translate(0, 0.1, 0);
+  const blade = new THREE.PlaneGeometry(0.22, 0.11).translate(0, 0.055, 0);   // a mown lawn, not a meadow
   const crossed = mergeGeometries([blade, blade.clone().rotateY(Math.PI / 2)]);
 
   const bladeMat = addWind(new THREE.MeshStandardMaterial({
@@ -144,7 +144,7 @@ export function makeGrass({ count, width, length, centreZ, avoid = [] }) {
     const s = 0.75 + Math.random() * 0.75;
     pos.set(x, 0, z);
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI);
-    scl.set(s, s * (0.8 + Math.random() * 0.6), s);
+    scl.set(s, s * (0.7 + Math.random() * 0.4), s);
     m.compose(pos, q, scl);
     mesh.setMatrixAt(placed, m);
     tint.setHSL(0.24 + (Math.random() - 0.5) * 0.04, 0.45 + Math.random() * 0.2, 0.42 + Math.random() * 0.16);

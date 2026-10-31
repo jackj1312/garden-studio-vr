@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { addWind } from "./wind.js?v=4d52a60-0926";
-import { gltf } from "./studio.js?v=4d52a60-0926";
-import { BUILD, SITE } from "./config.js?v=4d52a60-0926";
+import { addWind } from "./wind.js?v=a6c6ab9-0950";
+import { gltf } from "./studio.js?v=a6c6ab9-0950";
+import { BUILD, SITE } from "./config.js?v=a6c6ab9-0950";
 
 /* ------------------------------------------------------------------ *
  *  Scanned vegetation.
@@ -207,7 +207,9 @@ function loadPlants(detail) {
         const bb = o.geometry.boundingBox;
         const height = bb.max.y - bb.min.y, radius = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2;
         bendNormalsUp(o.geometry, 0.4);
-        o.material = leafMaterial(o.material, { translucency: 0.45, wind: { strength: 0.02, speed: 1.1, height: Math.max(0.2, height) } });
+        const built = !o.material.map;                         // the vertex-coloured perennials: no texture, pale in full sun
+        o.material = leafMaterial(o.material, { translucency: built ? 0.22 : 0.45, wind: { strength: 0.02, speed: 1.1, height: Math.max(0.2, height) } });
+        if (built) { o.material.color.setScalar(0.72); o.material.roughness = 0.85; o.material.envMapIntensity = 0.5; }
         // three.js strips the dot from Blender's ".001" suffix, so match on the prefix
         const key = SPECIES.find(n => o.name.startsWith(n));
         if (!key) { console.warn("unexpected plant mesh", o.name); return; }

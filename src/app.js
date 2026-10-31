@@ -5,13 +5,13 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=9ebc8b7-0213";
-import { buildMaterials } from "./materials.js?v=9ebc8b7-0213";
-import { buildWorld } from "./world.js?v=9ebc8b7-0213";
-import { installStudio, installGarden } from "./studio.js?v=9ebc8b7-0213";
-import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=9ebc8b7-0213";
-import { createAmbience } from "./ambience.js?v=9ebc8b7-0213";
-import { updateWind } from "./wind.js?v=9ebc8b7-0213";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=8b040df-0826";
+import { buildMaterials } from "./materials.js?v=8b040df-0826";
+import { buildWorld } from "./world.js?v=8b040df-0826";
+import { installStudio, installGarden } from "./studio.js?v=8b040df-0826";
+import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=8b040df-0826";
+import { createAmbience } from "./ambience.js?v=8b040df-0826";
+import { updateWind } from "./wind.js?v=8b040df-0826";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
@@ -49,7 +49,9 @@ scene.add(player);
 const eyeHeight = 1.68;
 camera.position.set(0, eyeHeight, 0);
 
-const sun = new THREE.DirectionalLight(0xfff4e0, 2.4);
+const hemi = new THREE.HemisphereLight(0xbfd6e6, 0x5c5f4a, 0.25);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(tier.shadowMap, tier.shadowMap);
 sun.shadow.camera.left = -14; sun.shadow.camera.right = 14;
@@ -128,8 +130,9 @@ function applyTime(key) {
   if (!t) return;
   timeKey = key;
   ambience.setTime(key);
-  sun.position.set(t.sun.x, t.sun.y, t.sun.z);
   sun.target.position.set(0, 0, REAR / 2);
+  if (sunDirs.has(key)) placeSun(sunDirs.get(key));
+  else sun.position.set(t.sun.x, t.sun.y, t.sun.z);
   sun.color.setHex(t.colour);
   sun.intensity = t.intensity;
   renderer.toneMappingExposure = t.exposure;
@@ -145,13 +148,41 @@ function applyTime(key) {
     scene.environment = hdrCache.get(key);
     return;
   }
-  new EXRLoader().load(`${t.hdri}?v=${BUILD}`, tex => {
+  new EXRLoader().setDataType(THREE.FloatType).load(`${t.hdri}?v=${BUILD}`, tex => {
     tex.mapping = THREE.EquirectangularReflectionMapping;
+    alignSunToSky(tex, key);
     const env = pmrem.fromEquirectangular(tex).texture;
     tex.dispose();
     hdrCache.set(key, env);
     if (timeKey === key) scene.environment = env;
   });
+}
+
+/* The shadow should fall where the sky says the sun is. Rather than
+   guess a direction per HDRI, find its brightest texel and point the
+   sun from there. Works for any sky we ever load. */
+const sunDirs = new Map();
+function alignSunToSky(tex, key) {
+  const { data, width, height } = tex.image;
+  let best = -1, bi = 0;
+  const step = 4 * 3;                                   // every third pixel is plenty
+  for (let i = 0; i < data.length; i += step) {
+    const l = data[i] + data[i + 1] + data[i + 2];
+    if (l > best) { best = l; bi = i / 4; }
+  }
+  const px = bi % width, py = Math.floor(bi / width);
+  const u = (px + 0.5) / width, v = (py + 0.5) / height;
+  const phi = (u - 0.5) * Math.PI * 2;
+  let theta = (v - 0.5) * Math.PI;
+  const dir = new THREE.Vector3(Math.cos(theta) * Math.cos(phi), Math.sin(theta), Math.cos(theta) * Math.sin(phi));
+  if (dir.y < 0.05) dir.y = Math.abs(dir.y) + 0.05;    // whichever way the rows ran, the sun is up
+  dir.normalize();
+  sunDirs.set(key, dir);
+  if (timeKey === key) placeSun(dir);
+}
+function placeSun(dir) {
+  const target = sun.target.position;
+  sun.position.copy(target).addScaledVector(dir, 22);
 }
 
 /* ------------------------------------------------------------------ *
@@ -217,7 +248,7 @@ function applyStage(v) {
  *  Collision
  * ------------------------------------------------------------------ */
 const PLAYER_R = 0.32;
-function resolve(x, z) {
+function resolve(x, z, fromX = x, fromZ = z) {
   for (const o of obstacles) {
     if (stageValue + 0.001 < o.from) continue;
     if (o.kind === "circle") {
@@ -230,6 +261,9 @@ function resolve(x, z) {
     const px = x - o.cx, pz = z - o.cz;
     let lx = px * c - pz * s, lz = px * s + pz * c;
     const ex = o.hw + PLAYER_R, ez = o.hd + PLAYER_R;
+    const fx = fromX - o.cx, fz = fromZ - o.cz;
+    const flx = fx * c - fz * s, flz = fx * s + fz * c;
+    if (Math.abs(flx) < ex && Math.abs(flz) < ez) continue;      // already inside: never eject
     if (Math.abs(lx) < ex && Math.abs(lz) < ez) {
       const ox = ex - Math.abs(lx), oz = ez - Math.abs(lz);
       if (ox < oz) lx = Math.sign(lx || 1) * ex; else lz = Math.sign(lz || 1) * ez;
@@ -264,7 +298,8 @@ const vignette = new THREE.Mesh(
     depthTest: false, depthWrite: false, toneMapped: false
   })
 );
-vignette.position.z = -0.32;
+vignette.position.z = -1.0;
+vignette.scale.setScalar(3.2);
 vignette.renderOrder = 999;
 camera.add(vignette);
 
@@ -279,8 +314,9 @@ const panelTex = new THREE.CanvasTexture(panelCanvas);
 panelTex.colorSpace = THREE.SRGBColorSpace;
 const panel = new THREE.Mesh(
   new THREE.PlaneGeometry(0.26, 0.189),
-  new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, toneMapped: false })
+  new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, toneMapped: false, depthTest: false, opacity: 0 })
 );
+panel.renderOrder = 900;
 panel.position.set(0.02, 0.05, -0.08);
 panel.rotation.set(-Math.PI / 3.1, 0, 0);
 panel.visible = false;
@@ -290,9 +326,9 @@ const HIT = {
   play:  { x: 24, y: 242, w: 150, h: 48 },
   varA:  { x: 190, y: 242, w: 142, h: 48 },
   varB:  { x: 346, y: 242, w: 142, h: 48 },
-  t0:    { x: 24, y: 300, w: 230, h: 48 },
-  t1:    { x: 266, y: 300, w: 222, h: 48 }
 };
+const timeKeys = Object.keys(TIMES);
+const timeHit = timeKeys.map((_, i) => ({ x: 24 + i * 94, y: 300, w: 86, h: 48 }));
 const tickHit = [];
 for (let i = 0; i < 6; i++) tickHit.push({ x: 24 + i * 78, y: 182, w: 68, h: 44 });
 
@@ -358,8 +394,7 @@ function drawPanel() {
   btn(HIT.play, playing ? "Pause" : "Play build", playing);
   btn(HIT.varA, VARIANTS.A.label, variant === "A");
   btn(HIT.varB, VARIANTS.B.label, variant === "B");
-  btn(HIT.t0, TIMES.midday.label, timeKey === "midday");
-  btn(HIT.t1, TIMES.dusk.label, timeKey === "dusk");
+  timeKeys.forEach((k, i) => btn(timeHit[i], TIMES[k].short || TIMES[k].label, timeKey === k));
 
   if (cursorUV) {
     pctx.beginPath();
@@ -374,6 +409,7 @@ function drawPanel() {
  *  Controllers
  * ------------------------------------------------------------------ */
 const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
+let rayLine = null;
 const hands = { left: null, right: null };
 const rayGeom = new THREE.BufferGeometry()
   .setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]);
@@ -385,12 +421,13 @@ controllers.forEach(c => {
     c.userData.hand = h;
     c.userData.source = e.data;
     hands[h] = c;
-    if (h === "left") { c.add(panel); panel.visible = true; }
+    if (h === "left") { c.add(panel); }
     if (h === "right") {
-      const line = new THREE.Line(rayGeom,
+      rayLine = new THREE.Line(rayGeom,
         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 }));
-      line.scale.z = 1.3;
-      c.add(line);
+      rayLine.scale.z = 1.3;
+      rayLine.visible = false;
+      c.add(rayLine);
     }
   });
   c.addEventListener("disconnected", () => {
@@ -402,14 +439,30 @@ controllers.forEach(c => {
 const raycaster = new THREE.Raycaster();
 let triggerWasDown = false, dragging = false;
 
+const _pn = new THREE.Vector3(), _ph = new THREE.Vector3(), _pp = new THREE.Vector3(), _pq = new THREE.Quaternion();
+let panelWanted = false, panelPinned = false;
+function updatePanelVisibility() {
+  if (!hands.left) return;
+  panel.getWorldPosition(_pp);
+  camera.getWorldPosition(_ph);
+  _pn.set(0, 0, 1).applyQuaternion(panel.getWorldQuaternion(_pq));
+  const facing = _pn.dot(_ph.sub(_pp).normalize()) > 0.45;   // wrist turned to you, like checking a watch
+  panelWanted = facing || panelPinned;
+  panel.material.opacity += ((panelWanted ? 1 : 0) - panel.material.opacity) * 0.25;
+  panel.visible = panel.material.opacity > 0.03;
+}
+
 function updatePointer() {
+  updatePanelVisibility();
   const right = hands.right;
-  if (!right || !panel.visible) { cursorUV = null; return; }
+  if (rayLine) rayLine.visible = false;
+  if (!right || !panel.visible || !panelWanted) { cursorUV = null; return; }
   const origin = new THREE.Vector3(), dir = new THREE.Vector3(0, 0, -1);
   right.getWorldPosition(origin);
   dir.applyQuaternion(right.getWorldQuaternion(new THREE.Quaternion()));
   raycaster.set(origin, dir);
   const hit = raycaster.intersectObject(panel, false)[0];
+  if (rayLine) rayLine.visible = !!hit;
   const gp = right.userData.source?.gamepad;
   const trigger = !!gp?.buttons?.[0]?.pressed;
 
@@ -435,9 +488,11 @@ function updatePointer() {
     if (inHit(uv, HIT.play)) togglePlay();
     else if (inHit(uv, HIT.varA)) setVariant("A");
     else if (inHit(uv, HIT.varB)) setVariant("B");
-    else if (inHit(uv, HIT.t0)) applyTime("midday");
-    else if (inHit(uv, HIT.t1)) applyTime("dusk");
-    else for (let i = 0; i < 6; i++) if (inHit(uv, tickHit[i])) { goToStage(i + 1); break; }
+    else {
+      let done = false;
+      timeKeys.forEach((k, i) => { if (!done && inHit(uv, timeHit[i])) { applyTime(k); done = true; } });
+      if (!done) for (let i = 0; i < 6; i++) if (inHit(uv, tickHit[i])) { goToStage(i + 1); break; }
+    }
   }
   triggerWasDown = trigger;
 }
@@ -458,6 +513,19 @@ const axesOf = c => {
 };
 const dead = v => Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86;
 
+/* Nobody should have to aim a laser at a 2 cm handle. A = next stage,
+   B = previous, Y = play/pause, X = pin the panel open. */
+const btnWas = { a: false, b: false, x: false, y: false };
+function faceButtons() {
+  const r = hands.right?.userData.source?.gamepad?.buttons, l = hands.left?.userData.source?.gamepad?.buttons;
+  const a = !!r?.[4]?.pressed, b = !!r?.[5]?.pressed, x = !!l?.[4]?.pressed, y = !!l?.[5]?.pressed;
+  if (a && !btnWas.a) { goToStage(Math.min(6, Math.round(stageValue) + 1)); hapticPulse([hands.right], 0.5, 30); }
+  if (b && !btnWas.b) { goToStage(Math.max(1, Math.round(stageValue) - 1)); hapticPulse([hands.right], 0.5, 30); }
+  if (y && !btnWas.y) { togglePlay(); hapticPulse([hands.left], 0.5, 30); }
+  if (x && !btnWas.x) { panelPinned = !panelPinned; hapticPulse([hands.left], 0.3, 20); }
+  btnWas.a = a; btnWas.b = b; btnWas.x = x; btnWas.y = y;
+}
+
 function rotateAroundHead(angle) {
   const head = new THREE.Vector3();
   camera.getWorldPosition(head);
@@ -471,8 +539,9 @@ function xrLocomotion(dt) {
   const [rx] = axesOf(hands.right).map(dead);
 
   if (Math.abs(rx) > 0.65) {
-    if (!snapLatch) { rotateAroundHead(-Math.sign(rx) * SNAP); snapLatch = true; }
+    if (!snapLatch) { rotateAroundHead(-Math.sign(rx) * SNAP); snapLatch = true; hapticPulse([hands.right], 0.3, 15); }
   } else if (Math.abs(rx) < 0.3) snapLatch = false;
+  faceButtons();
 
   if (lx === 0 && ly === 0) { speedNow = 0; return; }
   camera.getWorldDirection(forward);
@@ -486,7 +555,7 @@ function xrLocomotion(dt) {
 
   const head = new THREE.Vector3();
   camera.getWorldPosition(head);
-  const [cx, cz] = resolve(head.x + moveVec.x * SPEED * dt, head.z + moveVec.z * SPEED * dt);
+  const [cx, cz] = resolve(head.x + moveVec.x * SPEED * dt, head.z + moveVec.z * SPEED * dt, head.x, head.z);
   player.position.x += cx - head.x;
   player.position.z += cz - head.z;
 }
@@ -523,7 +592,8 @@ function desktopLocomotion(dt) {
   speedNow = moveVec.length();
   const [cx, cz] = resolve(
     player.position.x + moveVec.x * SPEED * dt,
-    player.position.z + moveVec.z * SPEED * dt
+    player.position.z + moveVec.z * SPEED * dt,
+    player.position.x, player.position.z
   );
   player.position.x = cx;
   player.position.z = cz;
@@ -676,7 +746,7 @@ function setARMode(on) {
     sky.visible = true;
     world.existing.visible = true;
     shadowCatcher.visible = false;
-    hemi.intensity = 0.85;
+    hemi.intensity = 0.25;
     applyTime(timeKey);
     setVariant(variant);
   }
@@ -694,6 +764,24 @@ function placeFromController(controller) {
   if (hitPoint.distanceTo(origin) > 25) return false;
   world.anchor.position.set(hitPoint.x, 0, hitPoint.z);
   return true;
+}
+
+/* In passthrough the sticks adjust the proposal, never the viewer: the
+   real garden must not move. Right stick turns the building in 15°
+   steps, left stick nudges it. */
+let arSnapLatch = false;
+function arPlacementControls(dt) {
+  const [lx, ly] = axesOf(hands.left).map(dead);
+  const [rx] = axesOf(hands.right).map(dead);
+  if (Math.abs(rx) > 0.65) {
+    if (!arSnapLatch) { world.anchor.rotation.y -= Math.sign(rx) * Math.PI / 12; arSnapLatch = true; hapticPulse(controllers, 0.25, 15); }
+  } else if (Math.abs(rx) < 0.3) arSnapLatch = false;
+  if (lx || ly) {
+    camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
+    rightVec.set(forward.z, 0, -forward.x);
+    world.anchor.position.addScaledVector(forward, -ly * 0.8 * dt).addScaledVector(rightVec, -lx * 0.8 * dt);
+  }
+  speedNow = 0;
 }
 
 async function enterAR() {
@@ -800,13 +888,27 @@ addEventListener("resize", () => {
 });
 
 applyTime("midday");
+for (const k of ["dusk"]) {                       // the rest load on first use; five EXRs up front is a Quest hitch
+  const t = TIMES[k];
+  new EXRLoader().setDataType(THREE.FloatType).load(`${t.hdri}?v=${BUILD}`, tex => {
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    alignSunToSky(tex, k);
+    hdrCache.set(k, pmrem.fromEquirectangular(tex).texture);
+    tex.dispose();
+  });
+}
 setStage(1);
 
 /* a hook for testing from the console: move the viewer, read the frame
    cost, drive the dials. Not a user-facing API. */
 window.__garden = {
-  player, camera, renderer, scene,
+  player, camera, renderer, scene, composer,
   setStage, goToStage, setVariant, applyTime,
+  get yaw() { return yaw; }, set yaw(v) { yaw = v; },
+  get pitch() { return pitch; }, set pitch(v) { pitch = v; },
+  get stage() { return stageValue; },
+  get variant() { return variant; },
+  get time() { return timeKey; },
   look(x, y, z, yawDeg, pitchDeg = 0) {
     player.position.set(x, 0, z);
     yaw = THREE.MathUtils.degToRad(yawDeg);
@@ -837,7 +939,7 @@ renderer.setAnimationLoop(() => {
   }
 
   if (renderer.xr.isPresenting) {
-    xrLocomotion(dt);
+    if (arMode) arPlacementControls(dt); else xrLocomotion(dt);
     updatePointer();
     if (uiDirty) drawPanel();
   } else {
@@ -866,8 +968,17 @@ renderer.setAnimationLoop(() => {
     ambience.setInside(walls && Math.abs(_local.x) < STUDIO.w / 2 && Math.abs(_local.z) < STUDIO.d / 2);
     ambience.update(dt);
   }
+  // the slab is a 120 mm step up; stand on it, and on the deck in front
+  {
+    camera.getWorldPosition(_head);
+    world.anchor.worldToLocal(_local.copy(_head));
+    const onSlab = stageValue >= 2.99 && Math.abs(_local.x) < STUDIO.w / 2 + 0.3
+      && _local.z > -STUDIO.d / 2 && _local.z < STUDIO.d / 2 + 1.8;
+    const floorY = onSlab ? STUDIO.floorLevel - 0.02 : 0;
+    player.position.y += (floorY - player.position.y) * Math.min(1, dt * 5);
+  }
 
-  const target = speedNow > 0.05 ? 0.5 : 0;
+  const target = renderer.xr.isPresenting && !arMode && speedNow > 0.05 ? 0.5 : 0;
   vignette.material.opacity += (target - vignette.material.opacity) * Math.min(1, dt * 8);
   vignette.visible = vignette.material.opacity > 0.01;
 

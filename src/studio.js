@@ -2,8 +2,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { COLOURS, BUILD } from "./config.js?v=9ebc8b7-0213";
-import { addWind } from "./wind.js?v=9ebc8b7-0213";
+import { COLOURS, BUILD } from "./config.js?v=8b040df-0826";
+import { addWind } from "./wind.js?v=8b040df-0826";
+import { foliageMaterial, cardCluster, samplePoints } from "./foliage.js?v=8b040df-0826";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.
@@ -43,7 +44,15 @@ function bakedLight() {
 function applyBakedLight(mat, intensity = 1.0) {
   mat.lightMap = bakedLight();
   mat.lightMapIntensity = intensity;
+  mat.envMapIntensity = 0.45;        // the bake already carries the sky; do not count it twice
   return mat;
+}
+/* textured materials are shared with procedural meshes whose uv1 is not
+   in the atlas, so the GLB gets its own lit copies */
+const litCopies = new Map();
+function litCopy(mat) {
+  if (!litCopies.has(mat)) litCopies.set(mat, applyBakedLight(mat.clone(), 1.0));
+  return litCopies.get(mat);
 }
 
 
@@ -112,6 +121,7 @@ export function installStudio(stageGroups, mats, onReady) {
     clad:     flat(0xc9c5bb, { roughness: 0.52 }),
     trim:     flat(0xdedacf, { roughness: 0.45 }),
     inner:    flat(0xe9e6de, { roughness: 0.7 }),
+    ceiling:  flat(0xf2efe8, { roughness: 0.8, envMapIntensity: 0.9 }),
     timber:   flat(COLOURS.timber, { roughness: 0.82 }),
     metal:    flat(0x33363b, { roughness: 0.34, metalness: 0.55 }),
     frameDark:flat(0x26292d, { roughness: 0.3, metalness: 0.8 }),
@@ -119,31 +129,32 @@ export function installStudio(stageGroups, mats, onReady) {
     fitout:   flat(0xe4e0d6, { roughness: 0.55 }),
     steel:    flat(0xb9bcc0, { roughness: 0.22, metalness: 0.9 }),
     glass:    new THREE.MeshStandardMaterial({
-                color: 0xaecad6, roughness: 0.05, metalness: 0.1,
-                transparent: true, opacity: 0.28, envMapIntensity: 2.6,
+                color: 0x0a0d10, roughness: 0.03, metalness: 0.05,
+                transparent: true, opacity: 0.5, envMapIntensity: 1.2,
                 side: THREE.DoubleSide
               })
   };
+  for (const k of ["inner", "fitout", "worktop"]) { M[k].envMapIntensity = 0.7; M[k].lightMapIntensity = 1.35; }
 
-  for (const m of Object.values(M)) applyBakedLight(m, 1.0);
-  for (const key of ["concrete", "deck", "paving", "brick", "fence"]) {
-    if (mats[key]) applyBakedLight(mats[key], 1.0);
-  }
+  for (const [k, m] of Object.entries(M)) if (k !== "glass" && k !== "ceiling") applyBakedLight(m, 1.0);
+  for (const k of ["inner", "fitout", "worktop"]) { M[k].envMapIntensity = 0.7; M[k].lightMapIntensity = 1.35; }
 
   /* Longest match wins, so Fit_worktop beats Fit_. */
   const RULES = [
     ["_glass", M.glass],
     ["Fit_worktop", M.worktop], ["Fit_splashback", M.trim],
     ["Fit_sink", M.steel], ["Fit_tap", M.steel],
-    ["Fit_floor", () => mats.concrete], ["Fit_", M.fitout],
-    ["Deck_", () => mats.deck],
-    ["Slab", () => mats.concrete],
+    ["Fit_floor", () => litCopy(mats.concrete)], ["Fit_", M.fitout],
+    ["Deck_", () => litCopy(mats.deck)],
+    ["Slab", () => litCopy(mats.concrete)],
     ["Frame_", M.timber],
     ["Clad_", M.clad],
     ["Trim_", M.trim], ["Fascia_", M.trim],
     ["Roof", M.metal], ["Gutter", M.metal], ["Downpipe", M.metal],
     ["_head", M.frameDark], ["_sill", M.frameDark], ["_jamb", M.frameDark],
     ["_handle", M.steel],
+    ["Ceiling", M.ceiling],            // added after the bake; lit by sky until the next one
+    ["Frame_header", M.timber], ["Frame_trimmer", M.timber],
     ["Wall_", M.inner]
   ].sort((a, b) => b[0].length - a[0].length);
 
@@ -202,13 +213,15 @@ export function installGarden(parent, mats, onReady) {
     dark:    flat(0x26292d, { roughness: 0.3, metalness: 0.8 }),
     roof:    flat(0x33363b, { roughness: 0.35, metalness: 0.5 }),
     glass:   new THREE.MeshStandardMaterial({
-               color: 0x1d2a33, roughness: 0.06, metalness: 0.1,
-               transparent: true, opacity: 0.5, envMapIntensity: 2.2
+               color: 0x0a0d10, roughness: 0.04, metalness: 0.05,
+               transparent: true, opacity: 0.55, envMapIntensity: 1.2
              })
   };
+  const treeLeaf = foliageMaterial({ tint: 0xe2ecd0, strength: 0.06, speed: 0.9, height: 5.5 });
+  const shrubLeaf = foliageMaterial({ tint: 0xd6e2c2, strength: 0.03, speed: 1.1, height: 1.4 });
 
   for (const [k, m] of Object.entries(G)) {
-    if (k === "leaf" || k === "bark") continue;   // excluded from the bake
+    if (k === "leaf" || k === "bark" || k === "glass") continue;
     applyBakedLight(m, 1.0);
   }
 
@@ -216,14 +229,14 @@ export function installGarden(parent, mats, onReady) {
     ["_leaves", G.leaf], ["Shrub_", G.leaf],
     ["Tree_", G.bark],
     ["_glass", G.glass],
-    ["House_mass", () => mats.brick],
+    ["House_mass", () => litCopy(mats.brick)],
     ["House_roof", G.roof], ["House_gutter", G.roof], ["House_downpipe", G.roof],
     ["House_fascia", G.trim],
-    ["House_bin", () => mats.fence],
+    ["House_bin", () => litCopy(mats.fence)],
     ["House_door", G.dark],
     ["_reveal", G.trim], ["_sill", G.trim], ["_mullion", G.dark], ["_frame", G.dark],
-    ["Patio_", () => mats.paving], ["Path_", () => mats.paving],
-    ["Fence_", () => mats.fence], ["Shed_", () => mats.fence]
+    ["Patio_", () => litCopy(mats.paving)], ["Path_", () => litCopy(mats.paving)],
+    ["Fence_", () => litCopy(mats.fence)], ["Shed_", () => litCopy(mats.fence)]
   ].sort((a, b) => b[0].length - a[0].length);
 
   const materialFor = name => {
@@ -235,7 +248,14 @@ export function installGarden(parent, mats, onReady) {
 
   gltf().load(`assets/models/garden.glb?v=${BUILD}`, g => {
     let n = 0;
+    const treePts = [], shrubPts = [];
     for (const child of [...g.scene.children]) {
+      const nm = child.name || "";
+      if (nm.includes("_leaves") || nm.startsWith("Shrub_")) {
+        const every = nm.includes("_leaves") ? 11 : 6;
+        (nm.includes("_leaves") ? treePts : shrubPts).push(...samplePoints(child, every, parent));
+        continue;
+      }
       child.traverse(o => {
         if (!o.isMesh) return;
         o.material = materialFor(o.name);
@@ -251,6 +271,8 @@ export function installGarden(parent, mats, onReady) {
     }
     const imported = parent.children.filter(c => c.userData.fromGLB);
     if (imported.length) mergeByMaterial(imported, parent);
-    onReady(n);
+    if (treePts.length) parent.add(cardCluster(treePts, { size: 1.0, material: treeLeaf }));
+    if (shrubPts.length) parent.add(cardCluster(shrubPts, { size: 0.42, material: shrubLeaf }));
+    onReady(n + treePts.length + shrubPts.length);
   });
 }

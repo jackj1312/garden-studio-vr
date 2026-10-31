@@ -160,7 +160,7 @@ export function createAmbience() {
     birdTimer -= dt;
     if (birdTimer <= 0) {
       chirp();
-      birdTimer = (timeKey === "dusk" ? 7 : 2.5) + Math.random() * 6;
+      birdTimer = (timeKey === "night" ? 16 : timeKey === "dusk" ? 7 : timeKey === "golden" ? 4 : 2.5) + Math.random() * 6;
     }
 
     // inside the studio everything goes dull and quiet, which is how a

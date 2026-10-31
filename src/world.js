@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=9ebc8b7-0213";
-import { groundGeo, makeGrass } from "./materials.js?v=9ebc8b7-0213";
+import { SITE, STUDIO, HALF, REAR, VARIANTS, COLOURS } from "./config.js?v=8b040df-0826";
+import { groundGeo, makeGrass } from "./materials.js?v=8b040df-0826";
+import { foliageMaterial, cardCluster, boxPoints, spherePoints } from "./foliage.js?v=8b040df-0826";
 
 /* ------------------------------------------------------------------ *
  *  What stays procedural.
@@ -77,17 +78,102 @@ export function buildWorld(scene, mats, quality) {
   /* the hedge is the thing stage 2 takes away */
   const hedge = new THREE.Group();
   existing.add(hedge);
-  for (let i = 0; i < 3; i++) {
-    const w = (SITE.garden.width - 0.3) / 3;
-    const h = SITE.hedge.height - (i % 2) * 0.12;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, h, SITE.hedge.depth), M.hedge);
-    m.position.set(-SITE.garden.width / 2 + 0.15 + w * (i + 0.5), h / 2, REAR + SITE.hedge.depth / 2 + 0.1);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    hedge.add(m);
+  const shrubMat = foliageMaterial({ tint: 0xd6e2c2, strength: 0.025, speed: 1.1, height: 1.6 });
+  {
+    const centre = new THREE.Vector3(0, SITE.hedge.height * 0.52, REAR + SITE.hedge.depth / 2 + 0.12);
+    const size = new THREE.Vector3(SITE.garden.width - 0.4, SITE.hedge.height * 0.9, SITE.hedge.depth * 0.9);
+    const core = new THREE.Mesh(new THREE.BoxGeometry(size.x - 0.2, size.y - 0.2, size.z - 0.3), M.hedge);
+    core.position.copy(centre);
+    core.receiveShadow = true;
+    hedge.add(core);
+    hedge.add(cardCluster(boxPoints(centre, size, 300), { size: 0.5, material: shrubMat, shadow: false }));
   }
   hedge.userData.removeAt = 2;
   removals.push(hedge);
+
+  /* a dark plane just under the slabs turns the bright joint lines into shadow lines */
+  const joint = flat(0x2a2622, { roughness: 1 });
+  const patioJoint = new THREE.Mesh(groundGeo(SITE.garden.width - SITE.patio.inset * 2, SITE.patio.depth, 1), joint);
+  patioJoint.position.set(0, 0.004, -SITE.patio.depth / 2);
+  existing.add(patioJoint);
+  const pathJoint = new THREE.Mesh(groundGeo(SITE.path.width + 0.04, SITE.garden.length - SITE.patio.depth, 1), joint);
+  pathJoint.position.set(-HALF + SITE.path.offsetFromWest, 0.004, -SITE.patio.depth - (SITE.garden.length - SITE.patio.depth) / 2);
+  existing.add(pathJoint);
+
+  /* neighbours: the fence is not the edge of the world. Rear elevations
+     either side and across the back, plus trees over the fence, are what
+     a real terrace garden sees, and what privacy questions are about. */
+  {
+    const roof = flat(0x3a3d42, { roughness: 0.6 });
+    const farBrick = mats.brick.clone(); farBrick.color.setHex(0x7d6a60); farBrick.envMapIntensity = 0.6;
+    const win = flat(0x141a20, { roughness: 0.15, metalness: 0.3 });
+    const house = (x, z, w, d, h, facing) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), farBrick);
+      b.position.set(x, h / 2, z); b.castShadow = b.receiveShadow = true; existing.add(b);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.35, d + 0.4), roof);
+      r.position.set(x, h + 0.17, z); r.castShadow = true; existing.add(r);
+      for (const [wx, wy] of [[-w / 4, 1.1], [w / 4, 1.1], [-w / 4, 3.7], [w / 4, 3.7]]) {
+        const g = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), win);
+        g.position.set(x + wx, wy + 0.6, z + facing * (d / 2 + 0.02));
+        g.rotation.y = facing > 0 ? 0 : Math.PI;
+        existing.add(g);
+      }
+    };
+    house(-SITE.garden.width, SITE.house.depth / 2, SITE.garden.width, SITE.house.depth, SITE.house.height - 0.3, -1);
+    house( SITE.garden.width, SITE.house.depth / 2, SITE.garden.width, SITE.house.depth, SITE.house.height + 0.2, -1);
+    for (const x of [-SITE.garden.width, 0, SITE.garden.width]) {
+      house(x + 0.8, REAR - 18, 7.5, 8, 6.2 + (x === 0 ? 0.4 : 0), 1);
+    }
+    const far = foliageMaterial({ tint: 0xa9bb90, strength: 0.05, speed: 0.8, height: 7 });
+    const bark = flat(0x4a3a2c, { roughness: 1 });
+    for (const [x, z, r, h] of [[-5.5, REAR - 3.5, 2.4, 5.2], [1.5, REAR - 5, 2.9, 6.2], [7, REAR - 2.5, 2.0, 4.6], [-9, -6, 2.2, 5.0], [9.5, -9, 2.6, 5.6]]) {
+      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, h, z), r, 110), { size: 1.3, material: far, shadow: false }));
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, h, 7), bark);
+      trunk.position.set(x, h / 2, z); existing.add(trunk);
+    }
+  }
+
+  /* planting. A garden-design service cannot show bare soil borders:
+     three species along each bed at staggered sizes, pots on the patio,
+     and a taller specimen or two. All leaf cards, all swaying. */
+  {
+    const species = [
+      foliageMaterial({ tint: 0xd6e2c2, strength: 0.03, speed: 1.1, height: 1.4 }),   // mid green
+      foliageMaterial({ tint: 0xe6edb8, strength: 0.035, speed: 1.3, height: 1.2 }),  // lime
+      foliageMaterial({ tint: 0xb79ab0, strength: 0.025, speed: 1.0, height: 1.0 })   // plum
+    ];
+    const bedZ0 = -SITE.patio.depth - 0.6, bedZ1 = REAR + 0.9;
+    let i = 0;
+    for (const sx of [-1, 1]) {
+      for (let z = bedZ0; z > bedZ1; z -= 1.15) {
+        const r = 0.32 + ((i * 7) % 5) * 0.07;
+        const x = sx * (HALF - 0.3 - (i % 2) * 0.12);
+        const mat = species[i % 3];
+        const tall = i % 4 === 3;
+        existing.add(cardCluster(
+          spherePoints(new THREE.Vector3(x, r * (tall ? 1.4 : 0.8), z), r, tall ? 90 : 60, tall ? 1.6 : 0.8),
+          { size: r * 0.6, material: mat, shadow: i % 2 === 0 }));
+        blockCircle(x, z, r * 0.8);
+        i++;
+      }
+    }
+    // the rear bed, in front of the hedge line
+    for (let x = -HALF + 1.0; x < HALF - 0.8; x += 1.3) {
+      const r = 0.38 + ((i * 3) % 4) * 0.06;
+      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, r * 0.8, REAR + 1.45), r, 60, 0.8),
+        { size: r * 0.6, material: species[i % 3], shadow: false }));
+      i++;
+    }
+    // terracotta pots on the patio, with something in them
+    const terracotta = flat(0xa65d3f, { roughness: 0.85 });
+    for (const [x, z, pr] of [[-3.2, -0.6, 0.26], [-2.5, -0.5, 0.2], [3.3, -2.6, 0.3]]) {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(pr, pr * 0.78, pr * 1.6, 14), terracotta);
+      pot.position.set(x, pr * 0.8 + 0.02, z); pot.castShadow = pot.receiveShadow = true; existing.add(pot);
+      existing.add(cardCluster(spherePoints(new THREE.Vector3(x, pr * 1.6 + pr * 0.9, z), pr * 1.3, 45, 0.9),
+        { size: pr * 0.8, material: species[(i++) % 3], shadow: false }));
+      blockCircle(x, z, pr + 0.1);
+    }
+  }
 
   /* collision, matching the geometry that arrives in garden.glb */
   blockBox(0, SITE.house.depth / 2, SITE.garden.width / 2, SITE.house.depth / 2);
@@ -146,10 +232,7 @@ export function buildWorld(scene, mats, quality) {
     g.add(spur);
 
     for (const [x, z, r] of [[-2.9, 1.2, 0.55], [-2.4, 2.5, 0.4], [2.9, 1.5, 0.5], [2.4, 2.9, 0.38]]) {
-      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), Math.random() > 0.5 ? M.foliage : M.foliage2);
-      b.position.set(x, r * 0.8, z + hd);
-      b.castShadow = true;
-      g.add(b);
+      g.add(cardCluster(spherePoints(new THREE.Vector3(x, r * 0.75, z + hd), r, 70, 0.8), { size: r * 0.55, material: shrubMat }));
     }
 
     const lampX = T.openings.door.x - T.openings.door.w / 2 - 0.28;
@@ -166,16 +249,29 @@ export function buildWorld(scene, mats, quality) {
     practicals.push({ light: porchLight, max: 3.5 }, { light: interior, max: 4.5 }, { emissive: porch });
   }
 
-  blockBox(0, 0, T.w / 2 + 0.1, T.d / 2 + 0.1, 0, 5);
-  const studioObstacle = obstacles[obstacles.length - 1];
+  /* the studio is only solid once it has walls — and it has a door. Four
+     wall segments in anchor space, re-placed whenever the variant moves. */
+  const hw = T.w / 2, dr = T.openings.door;
+  const leftEnd = dr.x - dr.w / 2 - 0.08, rightStart = dr.x + dr.w / 2 + 0.08;
+  const wallLocal = [
+    { lx: 0, lz: -hd + 0.06, hw: hw, hd: 0.1 },
+    { lx: -hw + 0.06, lz: 0, hw: 0.1, hd: hd },
+    { lx:  hw - 0.06, lz: 0, hw: 0.1, hd: hd },
+    { lx: (-hw + leftEnd) / 2, lz: hd - 0.06, hw: (leftEnd + hw) / 2, hd: 0.1 },
+    { lx: (rightStart + hw) / 2, lz: hd - 0.06, hw: (hw - rightStart) / 2, hd: 0.1 }
+  ];
+  const wallObs = wallLocal.map(() => { blockBox(0, 0, 1, 1, 0, 5); return obstacles[obstacles.length - 1]; });
+  const _p = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
   function applyVariant(key) {
     const v = VARIANTS[key];
     anchor.position.set(v.x, 0, v.z);
     anchor.rotation.y = v.ry;
-    studioObstacle.cx = v.x;
-    studioObstacle.cz = v.z;
-    studioObstacle.rot = v.ry;
+    wallLocal.forEach((w, i) => {
+      _p.set(w.lx, 0, w.lz).applyAxisAngle(_up, v.ry);
+      const o = wallObs[i];
+      o.cx = v.x + _p.x; o.cz = v.z + _p.z; o.hw = w.hw; o.hd = w.hd; o.rot = v.ry;
+    });
   }
 
   return { existing, anchor, stageGroups, obstacles, removals, practicals, applyVariant };

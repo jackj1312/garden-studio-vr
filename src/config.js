@@ -1,4 +1,4 @@
-export const BUILD = "9ebc8b7-0213";   // stamped by tools/stamp-build.py
+export const BUILD = "8b040df-0826";   // stamped by tools/stamp-build.py
 
 /* ------------------------------------------------------------------ *
  *  Everything site-specific lives here. When the survey scan lands,
@@ -90,19 +90,40 @@ export const VARIANTS = {
 /* Times of day. Baked sky plus a matching sun — a moving sun would cost
    more than it is worth, and five good ones read better than a slider. */
 export const TIMES = {
+  morning: {
+    label: "Morning", short: "Morn",
+    hdri: "assets/hdri/kloofendal_misty_morning_puresky_2k.exr",
+    sky:  "assets/hdri/sky_morning_4k.jpg",
+    sun: { x: 10, y: 6, z: 4 }, colour: 0xfff1dc, intensity: 1.15,
+    exposure: 1.0, envIntensity: 1.0, practicals: false
+  },
   midday: {
-    label: "Midday",
+    label: "Midday", short: "Noon",
     hdri: "assets/hdri/kloofendal_43d_clear_puresky_2k.exr",
     sky:  "assets/hdri/sky_midday_4k.jpg",
     sun: { x: -6, y: 14, z: 6 }, colour: 0xfff6e8, intensity: 2.6,
     exposure: 0.95, envIntensity: 1.0, practicals: false
   },
+  golden: {
+    label: "Golden hour", short: "Gold",
+    hdri: "assets/hdri/belfast_sunset_puresky_2k.exr",
+    sky:  "assets/hdri/sky_golden_4k.jpg",
+    sun: { x: -12, y: 4, z: 3 }, colour: 0xffc48a, intensity: 1.35,
+    exposure: 1.05, envIntensity: 1.0, practicals: false
+  },
   dusk: {
-    label: "Dusk",
+    label: "Dusk", short: "Dusk",
     hdri: "assets/hdri/evening_road_01_puresky_2k.exr",
     sky:  "assets/hdri/sky_dusk_4k.jpg",
     sun: { x: -13, y: 2.4, z: 2 }, colour: 0xffb070, intensity: 1.1,
     exposure: 1.02, envIntensity: 0.9, practicals: true
+  },
+  night: {
+    label: "Night", short: "Night",
+    hdri: "assets/hdri/dikhololo_night_2k.exr",
+    sky:  "assets/hdri/sky_night_4k.jpg",
+    sun: { x: 4, y: 9, z: -6 }, colour: 0x8c9ccc, intensity: 0.12,
+    exposure: 0.85, envIntensity: 0.8, practicals: true
   }
 };
 
@@ -112,7 +133,7 @@ export const TIMES = {
  * ------------------------------------------------------------------ */
 export const MATERIALS = {
   cladding: { dir: "exterior_wall_cladding_03", tile: 1.4, roughness: 0.85 },
-  deck:     { dir: "wood_floor_deck",           tile: 1.6, roughness: 0.7 },
+  deck:     { dir: "wood_floor_deck",           tile: 1.6, roughness: 0.7, tint: 0xa89a86 },   // the scan is orange; real decking greys
   concrete: { dir: "brushed_concrete",          tile: 2.0, roughness: 0.9 },
   grass:    { dir: "grass_ground",              tile: 1.6, roughness: 1.0, tint: 0x8fae63 },
   brick:    { dir: "red_brick",                 tile: 1.8, roughness: 0.95 },

@@ -5,10 +5,10 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=edb8f7f-2353";
-import { buildMaterials } from "./materials.js?v=edb8f7f-2353";
-import { buildWorld } from "./world.js?v=edb8f7f-2353";
-import { installStudio } from "./studio.js?v=edb8f7f-2353";
+import { SITE, STUDIO, STAGES, VARIANTS, TIMES, HALF, REAR, QUALITY, VR_PROFILE, BUILD } from "./config.js?v=7eb8edb-0012";
+import { buildMaterials } from "./materials.js?v=7eb8edb-0012";
+import { buildWorld } from "./world.js?v=7eb8edb-0012";
+import { installStudio } from "./studio.js?v=7eb8edb-0012";
 
 const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { COLOURS, BUILD } from "./config.js?v=edb8f7f-2353";
+import { COLOURS, BUILD } from "./config.js?v=7eb8edb-0012";
 
 /* ------------------------------------------------------------------ *
  *  The studio comes from the Blender master model.

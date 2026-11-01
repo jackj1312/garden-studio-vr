@@ -86,6 +86,15 @@ https://x.com/rosemoni18/status/2116486864471527912 — 70 s screen recording, 1
   camera solve; ~/splat has the msplat trainer). Measured modelling stays for the clean base, proposals and edits; the
   proposed changes are placed into the splat scene. Viewer: our three.js viewer can load splats (or PlayCanvas/SuperSplat).
 
+## 5. "Architecture & Design" (Steam Early Access): plan-to-3D design tool (Jack, 1 Nov 2026)
+https://x.com/luqman_talks/status/2115382375899447678 — post text read 1 Nov; the product is on Steam ("Architecture & Design").
+- An architect's tool: draw accurate 2D plans, the 3D building appears instantly; walk it in first person or VR; multi-storey,
+  stairs, custom roofs, doors/windows, furniture and kitchens, materials, terrain sculpting, landscaping, ponds, time of day,
+  weather, growing ivy; PDF vector plan export; import own models; Steam Workshop.
+- What it means for us: the reference for the DESIGN side of the studio software — plan-first editing that stays accurate in
+  3D, live first-person/VR, landscaping tools. Our plan JSON + build script already work this way; the gap is an interactive
+  editor. Not verified hands-on (Windows game; not run here).
+
 ## How to use these
 - Before any judge pass, open both and look at them again. Then look at ours.
 - "Does it feel like the SE Landscapes garden?" is the question for planting and light.

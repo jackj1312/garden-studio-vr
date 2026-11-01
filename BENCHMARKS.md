@@ -95,6 +95,14 @@ https://x.com/luqman_talks/status/2115382375899447678 — post text read 1 Nov; 
   3D, live first-person/VR, landscaping tools. Our plan JSON + build script already work this way; the gap is an interactive
   editor. Not verified hands-on (Windows game; not run here).
 
+## 6. Build-sequence cutaway (future addition; Jack, 1 Nov 2026)
+https://x.com/Solvaix/status/2116239616025968832 — post text read 1 Nov: Claude modelled a whole house in code, cut it in half to
+show the services (every pipe and wire), animated it with sound, all running in the browser.
+- Jack's addition: for PROPOSED changes, show the whole build from start to finished so clients see exactly what goes in,
+  including groundworks: setting out, dig, footings, concrete, sub-base, membranes, walls, roof, landscaping, planting.
+- How: each proposal is built as ordered construction stages (the viewer already has a 6-stage build slider from the demo
+  studio, src/app.js STAGES); add cross-section/cutaway views and per-stage labels, quantities and costs.
+
 ## How to use these
 - Before any judge pass, open both and look at them again. Then look at ours.
 - "Does it feel like the SE Landscapes garden?" is the question for planting and light.

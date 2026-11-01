@@ -75,6 +75,17 @@ https://x.com/koguGameDev/status/2116450061853057368 — "Codex GPT 6.1 Terra + 
 - For us: the bar for the **rendered film** tier, and proof that Blender path tracing gets
   there. The headset gets the same light baked into light maps.
 
+## 4. THE TARGET: a real house as a Gaussian splat in the browser (Jack, 1 Nov 2026: "this is the actual thing im trying to eventually produce")
+https://x.com/rosemoni18/status/2116486864471527912 — 70 s screen recording, 1110×720. Post text and frames read 1 Nov.
+- What it is: one person walked through a real house with a phone; the footage became a **3D Gaussian Splat**, viewed in a
+  normal browser tab (built on **PlayCanvas**, open source). Photoreal because it IS the captured house, not a model.
+- Frames: a modern house exterior (timber cladding, render, large windows, planting) and interiors (bathroom with tiles,
+  vanity, shower); free walk-through with smooth camera motion; every surface and shadow is real.
+- Claims in the post (unverified): ~$200 per scan, freelancers charge $300–800, file size small, loads on a phone.
+- What it means for us: "as it is today" = capture and splat the real garden (we already have the walk video and a
+  camera solve; ~/splat has the msplat trainer). Measured modelling stays for the clean base, proposals and edits; the
+  proposed changes are placed into the splat scene. Viewer: our three.js viewer can load splats (or PlayCanvas/SuperSplat).
+
 ## How to use these
 - Before any judge pass, open both and look at them again. Then look at ours.
 - "Does it feel like the SE Landscapes garden?" is the question for planting and light.

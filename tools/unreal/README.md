@@ -31,3 +31,11 @@ Airbnb walkthrough was made (Blender -> Unreal 5.8). Runs on a rented Linux GPU 
 - A fictional character, correctly scaled (1.75-1.80 m) in the world, as a scale cue.
 - Switch between first person and third person while walking (a key / controller button), same in the streamed VR build.
 - Everything marked in the headset (marks.json) fixed and the matched-view audit passed BEFORE the first Unreal render.
+
+## Changing things in Unreal without full re-renders (Jack, 1 Nov 2026)
+- Unreal is real-time: moving a bed, swapping a plant, changing paving or the time of day shows instantly in the editor and
+  in the streamed walkthrough. Only final films/stills are "rendered", and each re-render is minutes, not a rebuild.
+- Keep the scene in layers: the measured base (house, ground) imported once; proposals as separate swappable sub-levels
+  ("today", "clean", "option A", "option B"), switched live.
+- Edits flow both ways: the headset marking tool's proposal shapes (marks.json, plan coordinates) can be read straight into
+  Unreal as new beds/paths, so a change drawn in VR appears in the Unreal scene without going back through Blender.

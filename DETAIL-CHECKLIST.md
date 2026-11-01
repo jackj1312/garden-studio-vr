@@ -51,3 +51,15 @@ detail is found.
 - Every object to its real shape: bins (wheels, lids, handles, number), benches, pots, planters, ornaments (37).
 - Trees to the real tree: trunk height and splits, limb count, holes and scars, crown spread and shape (36).
 - Movable items tagged for the clean build.
+
+## From Jack's headset marks, 1 Nov 2026 (check on every project)
+- Hedges and shrubs run all the way to the walls they meet (no gap between a bush and the house).
+- No surface overlaps another: soil or mulch must never poke through paving or edging (z-fighting, overlaps).
+- Every structure has its roof (sheds, porches, outbuildings) and its trims: bargeboards, soffits, fascias.
+- Every bed exists, including small ones beside paving; nothing planted is missing.
+- Neighbouring brick matches what is really there (if it is the same brick as the client's, use the client's).
+- No clipping: timber, posts and beams never pass through each other or through walls.
+- Edging blocks match the paving they border (same family, different colour where real) and are laid coherently.
+- Upstands match the border they continue (same unit), raised.
+- Photo-textured objects (doors, shed fronts) need real geometry under the photo, so they hold up in Unreal light.
+- Loose clutter in photos (a broom handle) belongs to the "today" build only, modelled, not painted into a texture.

@@ -25,3 +25,9 @@ Airbnb walkthrough was made (Blender -> Unreal 5.8). Runs on a rented Linux GPU 
   1 hour on an L40/4090 = £0.55-£0.75. Capped at £5.
 - Each later look-dev round (stills + a 30 s walk): ~20-30 min = £0.30-£0.40.
 - Full-quality VR streaming (Unreal + CloudXR to the Quest): ~£0.55-£0.75 per hour of use.
+
+## Jack's requirements for the Unreal render (1 Nov 2026)
+- Reflections: Lumen reflections at high quality, hardware ray tracing on (glass, the porch mirror, wet/glossy surfaces, gutters).
+- A fictional character, correctly scaled (1.75-1.80 m) in the world, as a scale cue.
+- Switch between first person and third person while walking (a key / controller button), same in the streamed VR build.
+- Everything marked in the headset (marks.json) fixed and the matched-view audit passed BEFORE the first Unreal render.

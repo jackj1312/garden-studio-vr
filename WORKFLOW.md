@@ -73,6 +73,13 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 - Re-check every line of DETAIL-CHECKLIST.md against the matched views.
 - Export checks: no white or missing materials (11, 12).
 - Three judges (Sonnet) against the benchmarks and the matched views; act on all, but photos win (18).
+- **Matched-view audit before anything is shown to Jack (PERMANENT, Jack 1 Nov 2026: "save this step as a permanent step before
+  presenting it to me").** A dedicated agent renders the model through EVERY solved camera that sees each part, pairs real |
+  model | model-outline-on-photo (tools/blender/house_audit_render.py, house_pairs.py), goes element by element through the
+  inventory and DETAIL-CHECKLIST.md, writes every discrepancy with evidence to an AUDIT.md, fixes each from measurements,
+  runs the clash check (0 overlapping parts), and repeats until outlines sit on the real edges. Covers house, ground, kerbs,
+  junctions, beds, boundaries, objects. Also checks the headset marks list (marks.json notes) so Jack's notes become checks.
+  First run (house, 1 Nov): 52 faults found and fixed. Then the three judges (quality vs benchmarks), then Jack.
 - **Cheap mockup first (Jack, 31 Oct):** a low-quality Blender render of the full scene on the Mac, headless
   (Eevee or Workbench, grass hair off, ~1000 px, one at a time), from the matched cameras and a short walk path.
   Iterate on that until it is right. Only then rent a cloud GPU for the real light bake, film or streaming.
@@ -80,6 +87,10 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 
 ## G7 · Viewer
 - Site mode: the site's own name, no demo controls (13); bounds, start point, collisions from the plan.
+
+- **Reference view in the headset (Jack, 31 Oct):** the client's own photos surround the viewer, ranked by where they
+  stand and look (tools/photogrammetry/export_refs.py makes refs.json from the camera solve); the grip cycles tabs.
+  The model is judged against the evidence from inside it.
 
 ## G8 · Cloud (RunPod, cost approved per run)
 - tools/cloud/cloud_blender.py garden-bake: build, bake light maps, export, proof stills; hard money cap (15, 16).

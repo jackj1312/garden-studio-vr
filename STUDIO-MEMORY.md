@@ -33,6 +33,17 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-10-31 · front garden · Jack wants his reference photos around him in the headset, ranked by where he
   stands, cycled with the grip (export_refs.py + the viewer's reference view).
 
+- 2026-11-01 · all gates · Jack: wherever a process is unsure, research deeply before building. Search X for relevant
+  posts, find the most popular and best work, study it frame by frame, read the threads, blogs and scene notes that explain
+  the method, and trace each one to its maker (reposts lie). Desktop/23 Battle Road is the benchmark folder for comparing agents.
+
+- 2026-11-01 · all gates · Two benchmarks for two products, sharing methods both ways: Desktop/23 Battle Road (garden and
+  home recreation) and Desktop/23 Battle Road - Build Sequence Benchmark (walkable, editable, regs-checked build sequence for
+  architects and builders, from the drawings). Methods from one are used in the other wherever they help.
+- 2026-11-01 · Unreal look (Jack): "i want this to look incredible not just a uprated version of ours". Rebuild the look in
+  Unreal on the measured layout: positions, sizes and levels exact; surfaces from pre-scanned textures and objects from
+  ready-made assets that look good and are close (the side shed's timber, the bench), not exact recreations.
+
 ## Capture (G1)
 - 2026-10-31 · front garden · A 2-min 4K walk video + stills solves well (121 of 145 frames); frames ~1 per metre.
 - 2026-10-31 · front garden · Ask for close-ups of every surface and object early (12-item list in the chat of
@@ -42,6 +53,25 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 
 - 2026-10-31 · front garden · Most of Jack's 13 quality faults traced back to photos we never asked for: use the
   standard capture list in SURVEY-METHOD.md on the first visit.
+
+- 2026-11-01 · benchmark 4 · The splat house that went viral was NOT a phone scan: Cameron Cone (broadcast DP, Austin)
+  shot it on a Canon 5D Mk IV with 14 mm + 35 mm lenses plus a DJI Pocket gimbal, captured each area separately,
+  aligned in RealityCapture, trained in Postshot, cleaned objects in C4D, compressed and merged in SuperSplat, over
+  months and several versions. Realism comes from sharp, dense, overlapping stills per room, not from the app.
+- 2026-11-01 · benchmark 4 · White walls do not align (no features): the 360 route (Tony Rose, Insta360 X5, ~1000
+  interval photos every ~1 m, Spirula Studio with depth + normal priors) is how others filled plain walls.
+
+- 2026-11-01 · front garden · Splat test: re-solving the walk video at 4 fps solved all 488 sharp frames (0.54 px
+  reprojection) against the old solve's 107. Extract densely for splats. The RunPod image lacks libSM (pycolmap needs it):
+  install it in the pod script. A global solve of 488 frames took 30 min on the pod's CPU.
+
+- 2026-11-01 · front garden splat test · For a Gaussian splat the same 2-min walk is enough to look real at walking
+  distance: at 4 fps all 488 sharp frames solved (the old 2 fps solve kept 107). Held-out frames scored 19.1 dB PSNR
+  on average (porch 24, shed 23, path and tree 18-19). What it lacks: the ground within ~2 m of the feet (smeared), tree
+  crowns and far trees (soft), and big floaters as soon as you turn away from the line walked. A capture for splats
+  needs: a slow walk (~0.5 m/s) with the phone at chest height AND a second pass pointing down at the ground; a slow
+  360° turn at 5-6 spots (path end, porch, lawn centre, tree, drive, shed); each tree circled at 2 m; locked exposure
+  and no zoom; no people or own shadow (low sun drags a shadow through the drive); overcast light is best.
 
 ## Measuring (G1)
 - 2026-10-31 · front garden · kerb_fit.py: lawn kerb found at 175/351 points, fit median 2 cm, curvature step
@@ -65,6 +95,45 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   (alarm box: 1.4 cm spread).
 - 2026-10-31 · front garden house audit · Roof: tiles end over the gutter at the fascia top (4.86), 0.40 m out from
   the wall; with the probed ridge (7.52 at y 5.45) that gives the pitch (44°). Mid-slope point fits alone drift ±3°.
+
+- 2026-11-01 · front garden · Architect's drawings (BDS, in Jack's Gmail) are a measuring source. Where the drawings
+  and the photo solve disagree, ASK Jack each time (his rule); do not pick a winner. Drawings may be proposals, not
+  as-built: the porch was built slightly differently from BDS's proposal, so the porch stays as the walk video shows it.
+
+- 2026-11-01 · front garden · Ask every client for the architect's drawing set first: BDS's PDFs are true vector A1 at
+  1:50 / 1:100 (plans, elevations, 5 sections, roof plan), so every wall, opening, ceiling and roof is read exactly with
+  tools/plan/read_drawing.py. Get the newest revision of each sheet (here 4915.2B/3A/4A, 27 Oct 2022; 4915.1 = before).
+  The PDF pages are stored rotated 270: draw overlays on the rendered image, transform vector paths by rotation_matrix.
+- 2026-11-01 · tooling · The Gmail connector reads mail but cannot save attachments; script/blob downloads are blocked
+  after the first. What works: Claude in Chrome, click Gmail's own "Download all attachments" button (zip to Downloads).
+
+- 2026-11-01 · front garden audit-2 · Locate every headset note from marks.json first: points3d are three.js (x, up, −plan y),
+  normals too; the hit surface + normal says WHAT was marked (the "barge board" strokes faced down = the verge underside).
+- 2026-11-01 · front garden audit-2 · Timber sections: probe two candidate squares (90 vs 150 mm) on 4+ close frames; the
+  real silhouette matches one at a glance. Heights of anything (fence, shed front, beams): candidate lines at 2-3 heights.
+- 2026-11-01 · front garden audit-2 · Check structures beside the house against its eaves: the pergola's rear post had to
+  be in front of the porch gutter (photos), which fixed its line better than the ±10 cm probe.
+- 2026-11-01 · front garden audit-2 · A dated photo can mislead an audit: the April stills show no main bed or pergola
+  (built later); use the walk (Sept/Oct) for "today" and say which date a view shows.
+
+- 2026-11-01 · front garden audit-3 · A hedge's footprint: draw candidate ground lines (x and y) on 3 frames; the bed's own
+  edging is the clearest line. Jack's garden: the hedge stands on OUR side of the path line (x -4.95..-4.20) in its own
+  bed (x -4.84..-4.02), not on the neighbour's side as the stroke-based plan had it. Height: candidate tops along the length.
+- 2026-11-01 · front garden audit-3 · Objects' sizes: triangulate the two ends from two frames (measure.triangulate: the
+  bench seat ends agreed to 7 mm); ground rays alone gave positions but not sizes. Ground rays need the ground's REAL height:
+  the porch court sits ~7 cm above z 0 (3D points), which threw rays 0.2 m back at grazing angles.
+- 2026-11-01 · front garden audit-3 · Colour sampling helper (scratch: sample.py): project a 3D quad into the 4K frame, mean
+  the pixels inside, optional luminance/saturation filter (mortar = bright low-saturation pixels; lawn = green-only pixels;
+  bins = dark pixels). ALWAYS save the crop and look: half the first boxes hit the wrong surface (log 52 again).
+
+- 2026-11-01 · front garden audit-4 · Registering the architect's drawing to the photo frame: anchor on two walls the photos fix
+  well (porch side wall x, main front wall face y) and the paving datum (photo z = drawn z + 0.231). Then probe each drawn line
+  against the photo line on 3+ frames (arris lines, silhouettes against sky or a pale wall behind) and take the 3D-point face
+  peaks: the drawing won where they agreed (bay sides 0.705/4.325, party line -4.63); upstairs heights, eaves, bay projection
+  and chimney differ 8-33 cm and stay as photographed, listed for Jack. Existing-house surveys can be ~0.2 m out in height.
+- 2026-11-01 · front garden audit-4 · Garbled voice notes: decode with imageio-ffmpeg and re-run faster-whisper with beam 5, no
+  VAD and an initial_prompt of the likely trade words (bargeboard, fascia, soffit, soldier course): "Podge both" decoded as
+  "Bargeboard", "surgical" as soldier course, "engine" as edging. The mark's own surface and normal say what was pointed at.
 
 ## Textures and modelling (G4, G5)
 - 2026-10-31 · front garden · Restarted the 3D build (v2) from the measured facts: the first build was patched from
@@ -97,14 +166,121 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   outer slope in one plane with the main hip and its inner slope meets the main slope in a valley; lean-tos get
   stepped flashing up the wall and an apron at the top.
 
+- 2026-11-01 · front garden audit-2 · Edgings that read right: lay_units() in front-garden-v2.py — the client's own paving
+  faces turned to the border colour (luminance kept), 100 mm rows, 140/210 mm lengths, wedge-cut between the inner and
+  outer lines on curves, rounded edges, runs laid in order with butt joints (a footprint index stops later runs at
+  earlier ones, posts and walls). ~1,400 units build in ~2 s.
+- 2026-11-01 · front garden audit-2 · Ground surfaces: one laid area per material, cut round everything that sits in it
+  (cut_surface: prism + exact boolean, keep the top faces). Soil sits just under its edging tops (0.005 vs 0.014).
+- 2026-11-01 · front garden audit-2 · Full-scene clash check (tools/blender/clash_check.py via house_audit_render.py
+  --passes clash): solid inside-volume test + coplanar duplicates + 1 cm ground raster + setts within runs + open parts.
+  559 objects in ~10 s. Before: 46 / 10 / 6 / 18; after 0 / 0 / 0 / 0. Things standing ON the ground are solids, not
+  ground units (else wheels and pots read as "soil over block").
+- 2026-11-01 · front garden audit-2 · Real doors for Unreal: build the leaf round its glazed openings, recess the glass,
+  add beads, handle, letter plate; map the photo only on outward faces (two material slots) so edges stay clean.
+
+- 2026-11-01 · front garden audit-3 · Seamless sheets: lay rows cyclically (the unit crossing the edge is repeated on the
+  other side) and check by tiling 2x2 (bake_unit_sheets.py seam_check). The old paving sheet drew a dark broken line every
+  4 m, mistaken for shadows in audit-2.
+- 2026-11-01 · front garden audit-3 · Foliage and stone from the client's own frames: make_tile.py on a tight crop of the
+  hedge face (walk_0043), the conifers (20504/20505), the lava-glaze pot, the bench, then match_colour.py to a sunlit walk
+  box; box-projected at the crop's true width (hedge 0.56 m, conifer 0.17-0.35 m, pot/bench 0.2 m).
+- 2026-11-01 · front garden audit-3 · Printed faces (plaque, bin numbers) as decal images drawn with PIL from what the
+  close-up says (tools/phototex/make_decals.py); check the decal is not mirrored in the matched view (u runs to the
+  viewer's right).
+- 2026-11-01 · front garden audit-3 · A mirror in a real-time viewer: render the garden from the viewer's reflection
+  behind the mirror plane (hide everything behind the plane), flip, dim to 85 %, use as the mirror's face
+  (front-garden-v2.py --mirror). Reads as a garden mirror in Eevee and three.js.
+- 2026-11-01 · front garden audit-3 · cyl() had all faces inside out ((u, w, d) left-handed); the viewer's FrontSide hid
+  their outsides. Every build now ends with an outward-normals pass over all closed parts and an inside-out check.
+- 2026-11-01 · front garden audit-3 · Lawn tile: take the fallen leaves out (tools/phototex/remove_leaves.py) or the same
+  leaves repeat every tile; sample the lawn green from green-only pixels (116, 131, 42 sunlit), not the whole patch.
+
+- 2026-11-01 · front garden audit-4 · Soldier courses from their own close-up: tools/phototex/soldier_units.py straightens the
+  band (4-corner homography), finds the joints by 'mortarness', cuts each brick and matches the set to the wall sheet keeping
+  the soldier/stretcher colour ratio seen in the same photo; the build puts one atlas cell on each 65 mm unit, 4 mm proud.
+- 2026-11-01 · front garden audit-4 · Lean-to porch verges end in a BOX END (here 0.30 m bargeboard, box from the fascia back to
+  the wall, bottom 1.92): build it as one closed prism; the level front soffit starts at the wall line, the verge soffit behind
+  the box. Without it a hole shows the brick above the soffit.
+- 2026-11-01 · front garden audit-4 · Edging corners: cut legs at the middle of the angle plateau, run the leg ending at a corner
+  past it by the band's lip and cut the last unit to fit; inside borders sit 8 mm over the paving edge.
+- 2026-11-01 · front garden audit-4 · New G6 checks in tools/blender/clash_check.py: must_touch (the site's MUST_TOUCH rules,
+  min mesh distance) and 'soil past its border' in the ground raster (clusters >= 5 cells, posts allow-listed).
+- 2026-11-01 · house build · Drawings -> staged model: tools/house/generate_house.py (Blender headless, ~15 s a version on the Mac) reads the trace (house_drawn.json) plus a version spec; a proposal is the DIFF of its base state and its own state (walls by footprint overlap, rafters by collinear intervals, roof tiles by plane pieces), so demolition, kept and new parts fall out without hand-listing. Version specs live beside the client's drawings (private).
+- 2026-11-01 · house build · Pitched roofs as unions of convex 'wings' (lowest of a wing's planes, highest of the wings) give hips, valleys, catslides and verges exactly; rafters are laid at the drawn positions and clipped to each plane's visible pieces. Check the planes against a drawn section's bearing before trusting plan-scaled hip points.
+- 2026-11-01 · house build · Real-looking construction materials without downloads: tools/house/make_textures.py (true-scale PBR: client brick sheets, sampled roof colour (156,138,120) with moss, 440x215 block, foil PIR 1200x450 with print, C24 with grain and grade stamp, membrane, DPM, A393 mesh as alpha mask, plus local CC0 Poly Haven concrete/gravel/soil). 43 sets in 13 s; WebP in the GLB (approved scheme 14 MB, 69k tris).
+- 2026-11-01 · house build · G6 for drawings: tools/house/house_slices.py cuts the exported GLB (plans at FFL+1.2, section planes, elevation projections) and house_overlay.py measures each wall face against the sheet's own vectors (trace_drawing.extract). Measure faces only: internal leaf/insulation lines are not drawn as straight lines and pair with the wrong neighbour.
+
+- 1 Nov 2026 (house build, round 5): temporary works are modelled as a site manager would plan them, each "typical — not from the drawings": Heras compound, skip on boards, welfare cabin and toilet, pallets and bulk bags, floor protection, scaffold up for the strip-out with guardrails, toe boards, ladder bay, ties and braces, inner standards stopping under an eaves overhang, sheeting over an opened wing, tarps over new rafters until the membrane. Props say "temporary works design by others".
+- 1 Nov 2026: an as-built layer (CONTRACT §6) from the photo survey sits over the drawn front: walls re-cut where the survey puts the frames, the real anthracite frames, stone/concrete surrounds, lead strip, the soldier course from Jack's own cut bricks, dish, meter box, lights, mirror and plaque. Depths stay drawn; where the survey's face depth differs (bay 255 mm) it is a question, not geometry.
+- 1 Nov 2026: Jack's roof photos read median (153,126,109) in sun and (107,88,82) in shade, against the garden model's flat (156,138,120). The tile texture base was set darker and browner (148,116,100) because the sunlit front slope renders lighter than the photo under the look-render sun.
+
 ## Lighting and look (G5, G7)
 - 2026-10-31 · front garden · Sun direction and height from the client's own frames (shadows, sun in shot); for
   Jack's garden: ~22° up, from the street side and the west.
 - 2026-10-31 · front garden · Neutral tone mapping matched his photos; AgX washed them grey.
 - 2026-10-31 · front garden · Cycles proof from a walk-frame camera is the quickest honest look test.
 
+- 2026-11-01 · front garden audit-3 · site.json is written by the export step from plan + built objects (boxes with rot,
+  circles, polygons for curved beds; app.js resolves polygons), and tools/check_site_export.py fails if it is older than
+  either GLB. The viewer shows a byte progress bar and starts on the path 6 m from the door.
+
+- 1 Nov 2026: the house look renders use the Standard view transform, the clear-sky HDRI (kloofendal_43d, strength 0.8) and the sun at 4.5. AgX with the partly cloudy sky washed the brick out.
+
+- 2026-11-01 · house, first Quest test · What landed: standing at the road looking at the whole house. What didn't: gaze
+  picking (use a right-controller ray), a board that can't be hidden, flat "cartoon" surfaces, falling through at the
+  stair top, freezes. A desktop pass proves nothing about the headset: walk every stair, read frame time and memory on
+  the Quest, and do a scale check against known heights (the drawn 2110 under a steel feels low in VR even when right).
+
 ## Cloud and cost (G8)
 - 2026-10-31 · front garden · RunPod via tools/cloud/cloud_blender.py; an L40 or 4090 bakes the ground light map
   (2040 × 2550, 256 spp) in ~4 min. Always a money cap; watch the remote log in the first minutes.
 - 2026-10-31 · front garden · Python light-map packing hangs on ~450 objects: use smart_project +
   average_islands_scale + pack_islands.
+
+- 2026-11-01 · front garden splat test · tools/cloud/cloud_splat.py (+ splat_pod.sh/.py): walk video in, splat out on
+  one RunPod GPU. Run 2: L40S $0.79/h, 64 min, $0.84 (£0.66): installs 3 min, frames 4 fps 40 s, GPU SIFT 18 s,
+  17.5k pairs matched 48 s, GLOMAP global solve 23-30 min (CPU-bound, only ~3 cores used: the slow step), gsplat MCMC
+  30k steps at 1080x1920, 1.5M Gaussians in 25 min, download 1.2 GB in 7 min. The whole test cost £1.02 (run 1 £0.36 lost).
+- 2026-11-01 · splat test · Lock a new solve to the site's metres by finding the old solve's frames among the new ones
+  by picture, then Umeyama on camera centres: 0.15 m RMS at 4 fps (nearest-frame timing; interpolate for better).
+- 2026-11-01 · splat test · Web formats: splat-transform 3.10.1 .compressed.ply works on a CPU pod (1.5M Gaussians ->
+  92 MB; the 700k Quest copy -> 43 MB); .sog fails there (k-means needs a GPU device for node). The viewer is
+  splat.html?site=<name> (PlayCanvas 2.23.1, WebXR, stick locomotion); the Quest uses the light copy over :8443.
+- 2026-11-01 · Unreal cloud · Epic's engine images (ghcr.io/epicgames/unreal-engine, newest dev-slim-5.8.4) need the GitHub
+  account to be IN the EpicGames org (accept the invite at github.com/orgs/EpicGames/invitation), not just linked. No SSH in
+  them: drive the pod with tools/cloud/pod_agent.py over RunPod's HTTPS proxy. Jack's rule: every teardown salvages first
+  (renders, logs, project, shader cache) so a failure never wastes money already spent.
+- 2026-11-01 · house viewer · A read path must never copy the whole design; cache text widths (measureText ~40 µs a call);
+  draw and upload a hidden VR panel before it is shown. Test VR code with `?xrsim=1` and `?test=walk` (head mode too).
+- 2026-11-01 · house round 6 · A room outline is not a floor: probe the walking line at stair heads. Diff kept existing
+  floors/foundations by area. Time wall courses by height. gltf-transform meshopt halves the Quest GLB and keeps extras.
+  ambientCG API: ambientcg.com/api/v2/full_json?type=Material&q=…, download get?file=<id>_1K-JPG.zip. Heights: ray-cast the
+  GLB per room before believing "it feels wrong" (the drawings were right; 2.11 m steel is low by design).
+- 2026-11-01 · studio · Jack's Mac (8 GB) struggles when several jobs run: run one heavy job at a time, stop servers that
+  are not in use (review page, old upload/static servers), keep only the headset server up while he tests.
+- 2026-11-01 · tools · AnyScene (github.com/apekshik/anyscene, MIT, 151 stars, Oct 2026; seen via @CY160909): agents build
+  Blender scenes from a brief; image->3D props via Tripo H3.1 + Meshy 7.1 on fal (~$1.65 a prop, pick the better), a
+  prop validator after every dressing pass (BVH overlap with a 3 mm lift, prop-prop clashes, floating > 1 cm with the ray
+  started above the support, spiral-search to a clear spot), gates with contact sheets (concept, picks, clay layout,
+  lit stills, shot previews), grime/edge-wear node group with per-instance tint, a camera rig (handheld walk, rack focus,
+  lens FX). Borrow: the validator and the clay-sheet gate (free). Later, with Jack's OK: image->3D for signature items
+  free libraries lack. Not for us: inventing scenes from a brief (we need measured truth); Cycles on a local NVIDIA GPU.
+- 2026-11-01 · planner · SVG drawn in metres: give strokes and label halos in world units or vector-effect non-scaling-stroke,
+  or px values become metres and cover the plan. Room planner: planner.html (2D first, 3D boxes on demand), change list in
+  assets/sites/house/spec/changes/ via /spec/changes, catalogue_v1.json (399 entries, style-tagged).
+- 2026-11-01 · planner · Jack: "this is the kind of thing this is useful for, it catches mistakes early." The planner's live checks
+  (faces the wall, overlaps, door swings, drawer clearance, floating) found 9 back-to-front kitchen/utility units in a signed
+  spec before any 3D time. Run its checks on every spec; fixes go in as numbered errata in SIGNOFF.md with Jack's OK.
+- 2026-11-01 · assets · Free sources ranked in ~/Desktop/garden-scans/asset-library/SOURCES.md. No login: Poly Haven (CC0, API,
+  User-Agent required), ambientCG (CC0), Smithsonian (decor). Best for fittings: BlendKit (ex-BlenderKit; free plan, .blend,
+  needs Jack's login; prefer CC0 items for the web viewer). Fab/Megascans not free since 2024 (free packs fortnightly; keep
+  out of the web viewer until the EULA is read). Avoid IKEA (NC), Thingiverse, Poliigon/CGTrader/TurboSquid/Dimensiva/BIM in
+  the web viewer (fine in renders). No free source has decent skirting/architraves/window boards/shaker doors: model them.
+- 2026-11-01 · tools · gaussian-splat-to-blender-nodes ("World to World Mapping", github.com/gokayfem/gaussian-splat-to-blender-nodes,
+  MIT, 71 stars, 24 Oct 2026; seen via @VFXDESK): an AGENT-GUIDED reconstruction skill, not an automatic splat-to-mesh
+  converter: splat as reference -> measured frame and cameras -> scene parts rebuilt as editable Geometry/Shader Nodes ->
+  audit + matched-view comparison -> optional calibrated multi-view projection of the captured look onto the meshes (UV
+  prep, depth visibility, robust projection, material fallback) -> packed .blend. Same idea as our measured model + photo
+  textures; worth borrowing its hybrid projection tools for "today" surfaces (brick, paving, garden) after the first build.
+  Review the code before installing it as a skill (external code).

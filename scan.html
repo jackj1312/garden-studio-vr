@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room Scan</title>
+<style>
+  :root { --bg: #f4f2ee; --ink: #1d1d1b; --muted: #6b6a66; --line: #d9d6cf; --accent: #2f6f5e; --ok: #2f6f5e; --warn: #9a5b12; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161615; --ink: #eceae4; --muted: #a09e98; --line: #353431; --accent: #7cc4ad; --ok: #7cc4ad; --warn: #e0a85a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  label { display: block; font-weight: 600; margin: 18px 0 8px; }
+  .rooms { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rooms button { font: inherit; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  .rooms button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .rooms button.done::after { content: " \2713"; color: var(--ok); }
+  input[type=text] { font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  #go { font: inherit; font-weight: 600; margin-top: 22px; padding: 16px 22px; border-radius: 12px; border: 0; background: var(--accent); color: var(--bg); width: 100%; }
+  #go:disabled { opacity: .45; }
+  #msg { margin-top: 14px; color: var(--muted); min-height: 1.5em; }
+  ol { padding-left: 20px; color: var(--muted); }
+  ol li { margin: 6px 0; }
+  .warn { color: var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Room scan</h1>
+  <p class="lead">Scan each room with the Quest. Pick the room, put the headset on and press Start. Every room you save is sent straight to the studio.</p>
+
+  <label>1. Which room are you in?</label>
+  <div class="rooms" id="rooms"></div>
+  <input type="text" id="custom" placeholder="Or type another name, e.g. loft-front" style="margin-top:10px">
+
+  <button id="go" disabled>Start scan in the headset</button>
+  <div id="msg"></div>
+  <button id="probe" style="font:inherit;margin-top:12px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--ink);width:100%">Check what this headset can scan (10 seconds)</button>
+  <div id="probeOut" style="margin-top:8px;color:var(--muted);white-space:pre-wrap"></div>
+
+  <label>How it works</label>
+  <ol>
+    <li>Stand in the middle of the room and press Start.</li>
+    <li>If the Quest doesn't know this room yet, press <b>B</b> to run room setup. Look slowly round every wall, the floor and the ceiling until the mesh covers it all.</li>
+    <li>In room setup, keep the boxes for real furniture and fittings: sofa, bed, table, wardrobe, units, bath, radiator. Delete any it puts on toys, bags or mess.</li>
+    <li>Back in the scan, check the coloured outlines sit on the walls, doors and windows. Then pull the <b>right trigger</b> to save. You'll feel a buzz and see "Saved".</li>
+    <li>Press <b>Y</b> or the Meta button to finish, then pick the next room.</li>
+  </ol>
+  <p class="warn">Safety: on the stairs and in the loft, stand still while scanning and move only with the headset off or with passthrough clear in front of you. In the loft, stay on boarded areas.</p>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+/* Room scan for the Quest 3 (WebXR immersive-ar). The Quest's own room setup (Space Setup) measures the room; this
+ * page reads it through plane-detection and mesh-detection and posts one JSON per room to /scan/room on the studio
+ * server (tools/https-serve.py), which keeps it out of the repo. Each room is in its own session's coordinates: the
+ * studio registers it onto the traced plan afterwards. Colour is not available here; surfaces come from photos. */
+import * as THREE from "three";
+
+const SITE = new URLSearchParams(location.search).get("site") || "house";
+const PRESETS = [
+  ["porch", "Porch"], ["hall", "Hall"], ["living", "Living room"], ["sitting", "Sitting room"], ["kitchen", "Kitchen"],
+  ["store", "Store"], ["lobby", "Lobby"], ["cloaks", "Cloaks / WC"], ["conservatory", "Conservatory"], ["under-stairs", "Under stairs"],
+  ["stairs", "Stairs"], ["landing", "Landing"], ["bedroom-1", "Bedroom 1 (front left)"], ["bedroom-2", "Bedroom 2 (front bay)"],
+  ["bedroom-3", "Bedroom 3 (rear)"], ["bathroom", "Bathroom"], ["cupboard-1", "Landing cupboard"], ["loft", "Loft"],
+];
+const COLORS = { wall: 0x5aa9e6, floor: 0x7cc47c, ceiling: 0xb48ce0, door: 0xf2a541, window: 0x4fd1c5, table: 0xe76f51,
+  couch: 0xe76f51, bed: 0xe76f51, storage: 0xe76f51, shelf: 0xe76f51, screen: 0xe76f51, lamp: 0xe76f51, plant: 0x8ab17d,
+  "global mesh": 0xffffff, other: 0xcccccc };
+
+let room = "", saved = new Set();
+const $ = id => document.getElementById(id);
+const roomsEl = $("rooms"), go = $("go"), msg = $("msg"), custom = $("custom");
+
+function slug(s) { return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48); }
+function pick(id) {
+  room = id; custom.value = PRESETS.some(p => p[0] === id) ? "" : custom.value;
+  for (const b of roomsEl.children) b.classList.toggle("on", b.dataset.id === id);
+  go.disabled = !room;
+}
+for (const [id, name] of PRESETS) {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = name; b.dataset.id = id;
+  b.onclick = () => pick(id); roomsEl.appendChild(b);
+}
+custom.oninput = () => { const s = slug(custom.value); for (const b of roomsEl.children) b.classList.remove("on"); room = s; go.disabled = !s; };
+
+async function refreshSaved() {
+  try {
+    const r = await (await fetch(`/scan/rooms?site=${SITE}`, { cache: "no-store" })).json();
+    saved = new Set(r.rooms.map(x => x.room));
+    for (const b of roomsEl.children) b.classList.toggle("done", saved.has(b.dataset.id));
+    msg.textContent = saved.size ? `Saved so far: ${[...saved].join(", ")}` : "No rooms saved yet.";
+  } catch { msg.textContent = "Can't reach the studio server: is the Mac on and serving?"; }
+}
+refreshSaved();
+
+/* ---------- the AR scan ---------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(1); renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType("local-floor");
+renderer.domElement.style.display = "none"; document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+
+// the status panel rides on the left controller; redrawn only when its text changes
+const panelCv = document.createElement("canvas"); panelCv.width = 512; panelCv.height = 256;
+const panelTex = new THREE.CanvasTexture(panelCv); panelTex.colorSpace = THREE.SRGBColorSpace;
+const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.12), new THREE.MeshBasicMaterial({ map: panelTex, transparent: true }));
+panel.position.set(0, 0.07, -0.08); panel.rotation.x = -0.6;
+const left = renderer.xr.getController(0), right = renderer.xr.getController(1);
+scene.add(left, right);
+let panelText = "";
+function say(lines) {
+  const t = lines.join("\n"); if (t === panelText) return; panelText = t;
+  const c = panelCv.getContext("2d"); c.clearRect(0, 0, 512, 256);
+  c.fillStyle = "rgba(20,20,18,0.85)"; c.beginPath(); c.roundRect(0, 0, 512, 256, 24); c.fill();
+  c.fillStyle = "#eceae4"; c.font = "600 34px system-ui"; c.fillText(lines[0], 24, 52);
+  c.font = "26px system-ui"; c.fillStyle = "#c9c6bf";
+  lines.slice(1).forEach((l, i) => c.fillText(l, 24, 100 + i * 38));
+  panelTex.needsUpdate = true;
+}
+
+const overlay = new THREE.Group(); scene.add(overlay);
+const drawn = new Map();   // XRPlane / XRMesh -> {obj, changed}
+let session = null, refSpace = null, lastSave = 0;
+
+function lineMat(label) { return new THREE.LineBasicMaterial({ color: COLORS[label] ?? COLORS.other, transparent: true, opacity: 0.9 }); }
+function planeObj(plane) {
+  const pts = plane.polygon.map(p => new THREE.Vector3(p.x, p.y, p.z)); pts.push(pts[0].clone());
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat(plane.semanticLabel || "other"));
+}
+function meshObj(mesh) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(mesh.vertices), 3));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(mesh.indices), 1));
+  const label = mesh.semanticLabel || "other";
+  return new THREE.LineSegments(new THREE.WireframeGeometry(g), new THREE.LineBasicMaterial({ color: COLORS[label] ?? COLORS.other,
+    transparent: true, opacity: label === "global mesh" ? 0.18 : 0.8 }));
+}
+function sync(frame, set, make, space) {
+  if (!set) return 0;
+  for (const [k, v] of drawn) if (v.kind === make && !set.has(k)) { overlay.remove(v.obj); drawn.delete(k); }
+  for (const item of set) {
+    let d = drawn.get(item);
+    if (!d || d.changed !== item.lastChangedTime) {
+      if (d) overlay.remove(d.obj);
+      d = { obj: make(item), changed: item.lastChangedTime, kind: make }; d.obj.matrixAutoUpdate = false;
+      overlay.add(d.obj); drawn.set(item, d);
+    }
+    const pose = frame.getPose(item[space], refSpace);
+    if (pose) d.obj.matrix.fromArray(pose.transform.matrix);
+  }
+  return set.size;
+}
+
+const r3 = v => Math.round(v * 1000) / 1000;
+function collect(frame) {
+  const out = { site: SITE, room, device: navigator.userAgent, captured: new Date().toISOString(), units: "m",
+    frame: "local-floor at session start: y up, metres", planes: [], meshes: [] };
+  for (const p of frame.detectedPlanes || []) {
+    const pose = frame.getPose(p.planeSpace, refSpace);
+    out.planes.push({ label: p.semanticLabel || "other", orientation: p.orientation, changed: p.lastChangedTime,
+      matrix: pose ? Array.from(pose.transform.matrix, r3) : null, polygon: p.polygon.map(q => [r3(q.x), r3(q.y), r3(q.z)]) });
+  }
+  for (const m of frame.detectedMeshes || []) {
+    const pose = frame.getPose(m.meshSpace, refSpace);
+    out.meshes.push({ label: m.semanticLabel || "other", changed: m.lastChangedTime, matrix: pose ? Array.from(pose.transform.matrix, r3) : null,
+      vertices: Array.from(m.vertices, r3), indices: Array.from(m.indices) });
+  }
+  const view = frame.getViewerPose(refSpace);
+  if (view) out.viewer = Array.from(view.transform.matrix, r3);
+  return out;
+}
+
+async function save(frame) {
+  const data = collect(frame);
+  if (!data.planes.length && !data.meshes.length) { say(["Nothing to save yet", "Press B to set up this room first"]); return; }
+  say(["Saving…", `${data.planes.length} surfaces, ${data.meshes.length} meshes`]);
+  try {
+    const r = await fetch(`/scan/room?site=${SITE}&room=${room}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status);
+    saved.add(room);
+    for (const s of session.inputSources) s.gamepad?.hapticActuators?.[0]?.pulse?.(0.8, 120);
+    say([`Saved ✓ ${room}`, `${j.planes} surfaces, ${j.meshes} meshes`, "Y or Meta button to finish"]);
+  } catch (e) { say(["Save failed", String(e.message || e).slice(0, 40), "Pull the trigger to try again"]); }
+}
+
+const held = {};
+function pressed(id, now) { const was = held[id]; held[id] = now; return now && !was; }
+
+function scanLoop(t, frame) {
+  if (!frame || !refSpace) return;
+  const np = sync(frame, frame.detectedPlanes, planeObj, "planeSpace");
+  const nm = sync(frame, frame.detectedMeshes, meshObj, "meshSpace");
+  let trig = false, b = false, y = false;
+  for (const s of session.inputSources) {
+    const gp = s.gamepad; if (!gp) continue;
+    if (s.handedness === "right") { trig = !!gp.buttons[0]?.pressed; b = !!gp.buttons[5]?.pressed; }
+    if (s.handedness === "left") y = !!gp.buttons[5]?.pressed;
+  }
+  if (pressed("b", b) && session.initiateRoomCapture) session.initiateRoomCapture().catch(() => say(["Room setup unavailable", "Run Space Setup from Quest settings"]));
+  if (pressed("y", y)) { session.end(); return; }
+  if (pressed("trig", trig) && t - lastSave > 1500) { lastSave = t; save(frame); return; }
+  if (t - lastSave > 4000 || !panelText) say(np + nm ? [`Room: ${room}`, `${np} surfaces, ${nm} meshes found`, "Right trigger: save · B: room setup", "Y: finish"]
+                                       : [`Room: ${room}`, "This room isn't set up yet", "Press B to run room setup", "Y: finish"]);
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(scanLoop);
+
+/* what this headset's browser really offers (Meta's docs don't say for mesh or depth): a short AR session asking for
+ * everything, then a report to the page and to the studio, so a one-pass whole-house mode is built only if it can work */
+$("probe").onclick = async () => {
+  const out = $("probeOut"); out.textContent = "Put the headset on: it opens passthrough for a few seconds…";
+  if (!navigator.xr || !(await navigator.xr.isSessionSupported("immersive-ar"))) { out.textContent = "Open this page in the Quest browser."; return; }
+  const want = ["plane-detection", "mesh-detection", "depth-sensing", "anchors", "hit-test", "camera-access", "bounded-floor", "unbounded"];
+  let s;
+  try {
+    s = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: ["local-floor"], optionalFeatures: want,
+      depthSensing: { usagePreference: ["cpu-optimized", "gpu-optimized"], dataFormatPreference: ["luminance-alpha", "float32", "unsigned-short"] } });
+  } catch (e) { out.textContent = "Couldn't start: " + e.message; return; }
+  await renderer.xr.setSession(s); const ref = renderer.xr.getReferenceSpace();
+  const rep = { browser: navigator.userAgent, enabled: s.enabledFeatures ? [...s.enabledFeatures] : "not reported",
+    depthUsage: s.depthUsage ?? null, depthFormat: s.depthDataFormat ?? null, roomCapture: typeof s.initiateRoomCapture === "function" };
+  let frames = 0;
+  await new Promise(done => renderer.setAnimationLoop((t, f) => {
+    if (!f) return; frames++;
+    if (frames === 240) {
+      rep.planes = f.detectedPlanes ? f.detectedPlanes.size : "no API"; rep.meshes = f.detectedMeshes ? f.detectedMeshes.size : "no API";
+      try { const v = f.getViewerPose(ref); const d = v && f.getDepthInformation?.(v.views[0]); rep.depth = d ? `${d.width}x${d.height}, ${d.rawValueToMeters} m per unit` : "none"; }
+      catch (e) { rep.depth = "error: " + e.message; }
+      done();
+    }
+  }));
+  await s.end(); renderer.setAnimationLoop(scanLoop);
+  out.textContent = Object.entries(rep).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("\n");
+  fetch(`/scan/room?site=${SITE}&room=capability-probe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ probe: rep, planes: [], meshes: [] }) }).catch(() => {});
+};
+
+go.onclick = async () => {
+  if (!navigator.xr || !(await navigator.xr.isSessionSupported("immersive-ar"))) { msg.textContent = "Open this page in the Quest browser."; return; }
+  session = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: ["local-floor"],
+    optionalFeatures: ["plane-detection", "mesh-detection", "anchors"] });
+  await renderer.xr.setSession(session); refSpace = renderer.xr.getReferenceSpace();
+  left.add(panel); panelText = ""; overlay.clear(); drawn.clear();
+  session.addEventListener("end", () => { session = null; refSpace = null; left.remove(panel); refreshSaved(); });
+};
+</script>
+</body>
+</html>

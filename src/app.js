@@ -355,9 +355,40 @@ function applyStage(v) {
  *  Collision
  * ------------------------------------------------------------------ */
 const PLAYER_R = 0.32;
+/* polygon obstacles (curved beds, generated with the model: site.json "pts"): point-in-polygon and nearest edge point */
+function inPoly(x, z, P) {
+  let inside = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const [xi, zi] = P[i], [xj, zj] = P[j];
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function nearestOnPoly(x, z, P) {
+  let best = [x, z], bd = Infinity;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const [ax, az] = P[j], [bx, bz] = P[i], dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz;
+    const t = L > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L)) : 0;
+    const qx = ax + t * dx, qz = az + t * dz, d = (x - qx) ** 2 + (z - qz) ** 2;
+    if (d < bd) { bd = d; best = [qx, qz]; }
+  }
+  return [best[0], best[1], Math.sqrt(bd)];
+}
 function resolve(x, z, fromX = x, fromZ = z) {
   for (const o of obstacles) {
     if (stageValue + 0.001 < o.from) continue;
+    if (o.kind === "poly") {
+      if (inPoly(fromX, fromZ, o.pts)) continue;                 // already inside: never eject
+      const inside = inPoly(x, z, o.pts);
+      const [qx, qz, d] = nearestOnPoly(x, z, o.pts);
+      if (inside || d < PLAYER_R) {
+        let nx = x - qx, nz = z - qz;
+        if (inside) { nx = -nx; nz = -nz; }                     // from inside, out through the nearest edge
+        const n = Math.hypot(nx, nz);
+        if (n > 1e-6) { x = qx + (nx / n) * (PLAYER_R + 1e-4); z = qz + (nz / n) * (PLAYER_R + 1e-4); }
+      }
+      continue;
+    }
     if (o.kind === "circle") {
       const dx = x - o.cx, dz = z - o.cz;
       const d = Math.hypot(dx, dz), min = o.r + PLAYER_R;
@@ -373,7 +404,8 @@ function resolve(x, z, fromX = x, fromZ = z) {
     if (Math.abs(flx) < ex && Math.abs(flz) < ez) continue;      // already inside: never eject
     if (Math.abs(lx) < ex && Math.abs(lz) < ez) {
       const ox = ex - Math.abs(lx), oz = ez - Math.abs(lz);
-      if (ox < oz) lx = Math.sign(lx || 1) * ex; else lz = Math.sign(lz || 1) * ez;
+      // push a hair beyond the edge: exactly on it, rounding (rotated boxes) reads as 'inside' next frame and lets you through
+      if (ox < oz) lx = Math.sign(lx || 1) * (ex + 1e-4); else lz = Math.sign(lz || 1) * (ez + 1e-4);
       const c2 = Math.cos(o.rot), s2 = Math.sin(o.rot);
       x = o.cx + (lx * c2 - lz * s2);
       z = o.cz + (lx * s2 + lz * c2);

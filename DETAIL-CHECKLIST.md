@@ -63,3 +63,99 @@ detail is found.
 - Upstands match the border they continue (same unit), raised.
 - Photo-textured objects (doors, shed fronts) need real geometry under the photo, so they hold up in Unreal light.
 - Loose clutter in photos (a broom handle) belongs to the "today" build only, modelled, not painted into a texture.
+
+## From the matched-view audit 2, 1 Nov 2026 (check on every project)
+- Every plan outline says what it IS: the soil edge, or the outer edge of its border; borders lie on the side the
+  orthophoto shows (CORRECTIONS-LOG 66).
+- Ground surfaces never stack: paving, gravel and lawn are cut round beds and each other; soil sits below its edging (65).
+- Junctions between edging runs: one butts into the other, no sett passes through another; edgings stop at walls and
+  are cut round posts (67).
+- Timber: post, beam and rafter sections measured on close frames; heights from 3D points or probe lines (68).
+- Anything standing beside the house (pergola, shed, posts) clears the eaves, gutters, downpipes and walls (68).
+- Every trim follows the line it finishes (a sloped roof has a sloped fascia) (69).
+- Hedges and beds at the foot of every wall and boundary, both ends confirmed in photos (70).
+- No single-sided visible parts (soffits, boards, tiles, wheels): closed solids only; the open-parts check reads 0 (71).
+- Boundary heights (fences, walls, hedges) probed on 3 frames (74).
+- A neighbour's material differs from the client's only if the same frame, in the same light, shows it (73).
+- Movable things in the photos (benches, pots, bikes, brooms) are modelled for the today build, located by ground rays.
+
+## From the matched-view audit 3, 1 Nov 2026 (check on every project)
+- Hedges: base footprint probed on the ground (both faces and the front) and the top probed along the length; clipped
+  blocks are built as flat-faced blocks with crisp tops, loose growth and leaders as they are; a hedge has its own bed and
+  border where the photos show one (CORRECTIONS-LOG 84).
+- Every tiling texture wraps: tile it 2x2 and look at the seams before use; dark lines repeating at the tile size in a
+  render are a seam, not a shadow (85).
+- Mortar colour sampled (sunlit, low-saturation pixels), never typed (86).
+- Each window on its own: number of lights, surround width (probe 5/7/9 cm), head type (stone head, steel lintel, packer
+  strip), sill type (stone, flush band), surround colour (87).
+- A mirror must show the garden (a baked reflection from its own position) and its bars counted (88).
+- Every object's SIZE measured (two-view triangulation of its ends, height probes), not only its position (89).
+- Printed things read as printed: house plaques, bin numbers and stickers as decals with the text the close-up shows
+  (black or white numerals as photographed) (90, 91).
+- Sweep each wall end to end, including behind posts and in beds: panels, bird tables, lights (92).
+- Fixture colours (a white floodlight) and roof-edge heights read at the edge itself (93).
+- Ground levels: is a paved area flat or falling? 3D points of the ground in 0.5 m bands (94).
+- Collision is generated with the model (site.json newer than model.glb), curved beds as polygons; the start point is
+  near the entrance (80, 95).
+- Closed parts face outwards (signed volume > 0): the viewer draws front faces only (inside-out check in the build).
+
+## From the matched-view audit 4, 1 Nov 2026 (check on every project)
+- Window heads: what each one really is, from its close-up AND a frame (concrete head, lead or zinc flashing strip, packer, steel
+  lintel); a thin flashing is not a lintel. The client's word on what a part is wins (CORRECTIONS-LOG 105).
+- Soldier courses: the house's own bricks on end, each unit cut from the course's own close-up, the same brick as the wall
+  around them (never flat tone bands) (105).
+- Verge foot / box end: bargeboard depth and the box end (depth back to the wall, bottom height) probed; no wall face shows
+  above a soffit line anywhere round a porch or bay (109).
+- Every element that abuts the house (shed, porch walls, lean-to roofs, fences to sheds, hedges to walls) touches it: listed
+  in the build's MUST_TOUCH and the must-touch check reads 0 gaps (106).
+- Wall lines (party line, bay sides, flank) from the architect's drawings registered on two walls and checked against 3D-point
+  face peaks and arris probes; > 5 cm conflicts listed for the client (110).
+- A straightened photo used as a surface carries only that surface (no wall or sky past its edge) (111).
+- Bed corners and inside borders: no soil showing between border and paving or gravel, corners included (the 'soil past its
+  border' check reads 0) (107, 112).
+- Raised edging that dives to meet flush edging eases down over the whole length the client marks (107).
+- Chimney: count the pots (and cowls, aerials) on a 4K crop.
+
+
+## Interior finish: "it needs to feel like a finished house" (Jack, 1 Nov 2026; check on every project)
+"Internal doors need to look real… even down to skirtings, architraves and window boards, these are the details that matter most."
+- [ ] Internal doors are real panel/shaker doors: lining and stops, 3 hinges, lever on rose with latch, ~3 mm gaps, swing correct.
+- [ ] Architraves on both faces of every opening (moulded profile, mitred corners); loft hatch trimmed.
+- [ ] Skirting in every room (moulded, ~145-170 mm, mitred, returned at architraves, painted); tile skirting in wet rooms per spec.
+- [ ] Window boards on every window (~25 mm, bullnose, 20-30 mm projection, notched round reveals); crisp plastered reveals.
+- [ ] Switches (~1.2 m) and sockets (450 mm) at UK heights; radiators under windows with valves and pipes; smoke alarms.
+- [ ] Ceiling lights, curtain poles/blinds, door stops, stair balustrade and handrail as real joinery.
+- [ ] Walls meet ceilings and floors cleanly: no gaps, no floating trim, no exposed raw edges.
+- [ ] Scripted furniture passes its close-up test against a real product before placement (CORRECTIONS-LOG 183).
+- [ ] Lived-in layer in every room (Jack, 1 Nov): fruit in the bowl, reed diffusers, candles, books, throws, towels, kitchen
+      counter items, keys dish, plants; tidy and homely, no toys or mess; every prop on its surface (validator: no overlap,
+      no float > 1 cm).
+
+## SHELL READY (G5b, Jack 1 Nov 2026): the bare house before any furniture
+- [ ] Rooms match the drawn outlines; chimney breasts, piers, bays, nibs and the stair void as drawn (never two loose pillars).
+- [ ] Ceilings in every room at the drawn height (sloped under roofs); no voids, no sky.
+- [ ] Every door opens fully into a room or outside; no wall or solid behind or in the swing.
+- [ ] Every window: glass, frame colour, plastered reveals (no brick showing), head, window board.
+- [ ] The semi joins its neighbour: continuous party wall, roofs meeting, nothing through the roof.
+- [ ] Finishes everywhere, skirting and architraves; no raw construction material visible.
+- [ ] Setting unbroken (hedges, fences, paving continuous as in the photos).
+- [ ] Walk inspection frames per room, Before and After, each passed in writing.
+
+## "Still mid-build" tells: none may show in a finished house (Jack, 1 Nov 2026)
+Walls and ceilings: bare brick/block/stud, plasterboard joints, unpainted plaster, missing or open ceilings, visible joists,
+rafters or deck undersides, gaps where walls meet ceilings or floors, raw corners (no beads).
+Structure: bare steels or timber beams, padstones, lintels or wall plates visible from rooms.
+Openings: brick in reveals, no window boards, no heads, doorways without doors, linings or architraves; doors with no
+handles, gaps or swings into walls; holes with no frame.
+Floors: bare screed, chipboard or joists; no thresholds between rooms; no skirting; unfinished stair treads, no balustrade.
+Services: wires or pipes showing, no switches, sockets, light fittings (bare bulbs), radiators, valves, smoke alarms.
+Kitchen and bathrooms: carcasses without doors or worktops, no taps, no tiles or splashbacks, no sealant lines.
+Outside: open eaves, no gutters or downpipes, scaffold marks, rubble, bare ground, unfinished paving edges.
+Feel: everything flat and identical, no wear or variation, no light fittings on, empty rooms.
+Finished = every surface finished and edged (beads, skirting, architraves, window boards, sealant), every opening framed
+and dressed, services finished at the wall, kitchen and bathrooms complete, lights on, outside closed and tidy, a lived-in
+layer (soft furnishings, books, plants, fruit) and slight natural variation and wear.
+- [ ] Soft items are never boxes (Jack, 1 Nov: "the towels have no texture, they are just bricks"): towels, throws, bedding,
+      cushions and curtains get real shape from Blender cloth simulation (draped over the rail, folded, plumped) or a
+      scanned/library model, and a fabric material with weave normal, sheen and roughness variation (terry for towels);
+      in Unreal the cloth shading model adds the soft sheen. Each passes the close-up test sheet before placement.

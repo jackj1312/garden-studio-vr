@@ -10,7 +10,22 @@ Airbnb walkthrough was made (Blender -> Unreal 5.8). Runs on a rented Linux GPU 
 3. In RunPod -> Settings -> Container Registry Auth, add `ghcr.io` with your GitHub username and that token, named
    `ghcr-epic`. (Claude never sees the token; pods pull the engine image with it.)
 
-## Pipeline
+## Pipeline v2: native rebuild (Jack, 1 Nov 2026: "look incredible, not an uprated version of ours"; CORRECTIONS-LOG 147)
+The skeleton (positions, sizes, levels) is the measured model; every surface and object is re-made from free scanned CC0
+libraries (Poly Haven, ambientCG) in Unreal itself. Site-specific choices live in `sites/<site>.json`; the scripts are generic.
+1. `~/splat/bin/python tools/unreal/fetch_assets.py tools/unreal/sites/front-garden.json` -> the shared asset library
+   (~/Desktop/garden-scans/asset-library, by source, LIBRARY.md lists URL + licence). Then, once per model asset:
+   `Blender -b --factory-startup --python tools/unreal/export_ue.py -- --prep-models ~/Desktop/garden-scans/asset-library <ids>`.
+2. `Blender -b master/front-garden.blend --python master/front-garden-v2.py -- --ue out/unreal-ue/front-garden` (about 30 s, 0.7 GB):
+   one FBX per Unreal material with metre UVs (planar per face, timber along the grain, random offset per unit), plants listed
+   under "replace" become placements, hedges become leaf-ball scatters with an inset core, lawns get real grass blades.
+3. `~/splat/bin/python tools/unreal/prepare_ue.py tools/unreal/sites/front-garden.json out/unreal-ue/front-garden`: tints from the
+   client's photo colours, tiling from real unit sizes (course period found in each scan), cameras from the photo solve -> bundle.tar.
+4. Cloud: `cloud_ue.py up --max-gbp <cap>`, `put` project.tar + bundle.tar + garden_ue2.py, run the editor with
+   `-ExecCmds="py /tmp/job/garden_ue2.py --bundle /tmp/job/bundle --out /tmp/job/out --cams check"` (ONE matched camera
+   first), `get` the PNGs, `tools/unreal/sheet.py` (prints the EV offset to the photos), then `--cams all`; always `down`.
+
+## Pipeline v1 (superseded: our USD in a UsdStageActor gave untextured grey, CORRECTIONS-LOG 147)
 1. `blender -b master/front-garden.blend --python master/front-garden-v2.py -- --usd out/garden.usdc`
    exports the measured model (one USD, true metres, real unit geometry for brick and paving).
 2. `tools/unreal/garden_ue.py` (Unreal Python, run headless in the editor): new level, import the USD, sun from the

@@ -1,0 +1,697 @@
+{
+ "site": "house",
+ "spec": "spec_v1.json",
+ "made": "2026-11-01T14:50:01+00:00",
+ "made_by": "tools/planner/make_doors.py",
+ "versions": {
+  "before": {
+   "elements": "as_built_now",
+   "glb": "as_built_now.glb",
+   "leaves": {
+    "AB-F-AB-G-porchL-front-door-as-built": [
+     {
+      "node": "AB-F-AB-G-porchL-front-door-as-built_leaf",
+      "hinge": [
+       3.1195,
+       1.306
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-F-bathL-bathroom-door": [
+     {
+      "node": "F-F-bathL-bathroom-door_leaf",
+      "hinge": [
+       6.51,
+       -1.286
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-bed1-bedroom-1-door": [
+     {
+      "node": "F-F-bed1-bedroom-1-door_leaf",
+      "hinge": [
+       3.605,
+       -2.075
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-bed2back-bedroom-2-door": [
+     {
+      "node": "F-F-bed2back-bedroom-2-door_leaf",
+      "hinge": [
+       6.412,
+       -1.1725
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-cpd1-cpd-door": [
+     {
+      "node": "F-F-cpd1-cpd-door_leaf",
+      "hinge": [
+       4.293,
+       -1.225
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-cpd2side-cpd-2-door-from-bedroom-2": [
+     {
+      "node": "F-F-cpd2side-cpd-2-door-from-bedroom-2_leaf",
+      "hinge": [
+       5.59,
+       -0.9
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-rbedDoorWall-rear-bedroom-door": [
+     {
+      "node": "F-F-rbedDoorWall-rear-bedroom-door_leaf",
+      "hinge": [
+       6.367,
+       -2.319
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-front-hall-door-from-porch-internal-type": [
+     {
+      "node": "F-G-front-hall-door-from-porch-internal-type_leaf",
+      "hinge": [
+       4.766,
+       -0.1575
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-hallKit-kitchen-door": [
+     {
+      "node": "F-G-hallKit-kitchen-door_leaf",
+      "hinge": [
+       5.585,
+       -2.659
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-kitRear-kitchen-lobby-door": [
+     {
+      "node": "F-G-kitRear-kitchen-lobby-door_leaf",
+      "hinge": [
+       5.699,
+       -5.5925
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-livHall-living-door": [
+     {
+      "node": "F-G-livHall-living-door_leaf",
+      "hinge": [
+       3.605,
+       -1.286
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-osPart-cloaks-door": [
+     {
+      "node": "F-G-osPart-cloaks-door_leaf",
+      "hinge": [
+       6.5825,
+       -5.863
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-osRear2-rear-lobby-door": [
+     {
+      "node": "F-G-osRear2-rear-lobby-door_leaf",
+      "hinge": [
+       5.714,
+       -6.6475
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-porchL-porch-external-door": [
+     {
+      "node": "F-G-porchL-porch-external-door_leaf",
+      "hinge": [
+       3.137,
+       0.566
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-rearL-living-conservatory-double-doors": [
+     {
+      "node": "F-G-rearL-living-conservatory-double-doors_leaf0",
+      "hinge": [
+       1.289,
+       -4.5175
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     },
+     {
+      "node": "F-G-rearL-living-conservatory-double-doors_leaf1",
+      "hinge": [
+       2.236,
+       -4.5175
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 1,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-stair-under-stair-cupboard-door": [
+     {
+      "node": "F-G-stair-under-stair-cupboard-door_leaf",
+      "hinge": [
+       4.5975,
+       -4.241
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-wingL-sitting-room-door": [
+     {
+      "node": "F-G-wingL-sitting-room-door_leaf",
+      "hinge": [
+       5.5375,
+       -1.035
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ]
+   }
+  },
+  "after": {
+   "elements": "approved_2b",
+   "glb": "approved_2b.glb",
+   "leaves": {
+    "F-F-bathL-bathroom-door": [
+     {
+      "node": "F-F-bathL-bathroom-door_leaf",
+      "hinge": [
+       6.51,
+       -1.286
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-bed1-bedroom-1-door": [
+     {
+      "node": "F-F-bed1-bedroom-1-door_leaf",
+      "hinge": [
+       3.605,
+       -2.075
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-bed2back-bedroom-2-door": [
+     {
+      "node": "F-F-bed2back-bedroom-2-door_leaf",
+      "hinge": [
+       6.412,
+       -1.1725
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-cpd1-cpd-door": [
+     {
+      "node": "F-F-cpd1-cpd-door_leaf",
+      "hinge": [
+       4.293,
+       -1.225
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-cpd2side-cpd-2-door-from-bedroom-2": [
+     {
+      "node": "F-F-cpd2side-cpd-2-door-from-bedroom-2_leaf",
+      "hinge": [
+       5.59,
+       -0.9
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-ensSplay-en-suite-door-762": [
+     {
+      "node": "F-F-ensSplay-en-suite-door-762_leaf",
+      "hinge": [
+       6.6601,
+       -4.936
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-F-rbedDoorWall-rear-bedroom-door": [
+     {
+      "node": "F-F-rbedDoorWall-rear-bedroom-door_leaf",
+      "hinge": [
+       6.367,
+       -2.319
+      ],
+      "y": 2.6755,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-F-rearC-bedroom-3-door-762": [
+     {
+      "node": "F-F-rearC-bedroom-3-door-762_leaf",
+      "hinge": [
+       5.643,
+       -4.455
+      ],
+      "y": 2.6755,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-cloakPart-cloaks-door-838": [
+     {
+      "node": "F-G-cloakPart-cloaks-door-838_leaf",
+      "hinge": [
+       6.515,
+       -1.377
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-extRear-bi-fold-doors": [
+     {
+      "node": "F-G-extRear-bi-fold-doors_leaf0",
+      "hinge": [
+       1.805,
+       -8.163
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": [
+       -0.004,
+       -0.0
+      ],
+      "leaf_index": 0,
+      "conf": "typical",
+      "source": "glb"
+     },
+     {
+      "node": "F-G-extRear-bi-fold-doors_leaf1",
+      "hinge": [
+       3.307,
+       -8.163
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": [
+       -1.378,
+       -0.0
+      ],
+      "leaf_index": 1,
+      "conf": "typical",
+      "source": "glb"
+     },
+     {
+      "node": "F-G-extRear-bi-fold-doors_leaf2",
+      "hinge": [
+       3.315,
+       -8.163
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": [
+       -1.386,
+       -0.0
+      ],
+      "leaf_index": 2,
+      "conf": "typical",
+      "source": "glb"
+     },
+     {
+      "node": "F-G-extRear-bi-fold-doors_leaf3",
+      "hinge": [
+       4.817,
+       -8.163
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": [
+       -2.76,
+       -0.0
+      ],
+      "leaf_index": 3,
+      "conf": "typical",
+      "source": "glb"
+     }
+    ],
+    "F-G-front-front-door-external": [
+     {
+      "node": "F-G-front-front-door-external_leaf",
+      "hinge": [
+       4.766,
+       -0.1575
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-front-hall-door-from-porch-internal-type": [
+     {
+      "node": "F-G-front-hall-door-from-porch-internal-type_leaf",
+      "hinge": [
+       4.766,
+       -0.1575
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-hallKit-kitchen-door": [
+     {
+      "node": "F-G-hallKit-kitchen-door_leaf",
+      "hinge": [
+       5.585,
+       -2.659
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-kitR-utility-external-door-new": [
+     {
+      "node": "F-G-kitR-utility-external-door-new_leaf",
+      "hinge": [
+       8.7975,
+       -3.353
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-kitRear-kitchen-lobby-door": [
+     {
+      "node": "F-G-kitRear-kitchen-lobby-door_leaf",
+      "hinge": [
+       5.699,
+       -5.5925
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-livHall-living-door": [
+     {
+      "node": "F-G-livHall-living-door_leaf",
+      "hinge": [
+       3.605,
+       -1.286
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-osPart-cloaks-door": [
+     {
+      "node": "F-G-osPart-cloaks-door_leaf",
+      "hinge": [
+       6.5825,
+       -5.863
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-osRear2-rear-lobby-door": [
+     {
+      "node": "F-G-osRear2-rear-lobby-door_leaf",
+      "hinge": [
+       5.714,
+       -6.6475
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-porchL-porch-external-door": [
+     {
+      "node": "F-G-porchL-porch-external-door_leaf",
+      "hinge": [
+       3.137,
+       0.574
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-rearL-living-conservatory-double-doors": [
+     {
+      "node": "F-G-rearL-living-conservatory-double-doors_leaf0",
+      "hinge": [
+       1.289,
+       -4.5175
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "assumed",
+      "source": "glb"
+     },
+     {
+      "node": "F-G-rearL-living-conservatory-double-doors_leaf1",
+      "hinge": [
+       2.236,
+       -4.5175
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 1,
+      "conf": "assumed",
+      "source": "glb"
+     }
+    ],
+    "F-G-stair-under-stair-cupboard-door": [
+     {
+      "node": "F-G-stair-under-stair-cupboard-door_leaf",
+      "hinge": [
+       4.5975,
+       -4.241
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ],
+    "F-G-utilKit-utility-door-910": [
+     {
+      "node": "F-G-utilKit-utility-door-910_leaf",
+      "hinge": [
+       6.308,
+       -4.4405
+      ],
+      "y": 0.0,
+      "swing_deg": -90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "spec override: opens INTO the utility (the model's derived swing put the leaf across the island stools)"
+     }
+    ],
+    "F-G-wingL-sitting-room-door": [
+     {
+      "node": "F-G-wingL-sitting-room-door_leaf",
+      "hinge": [
+       5.4925,
+       -1.035
+      ],
+      "y": 0.0,
+      "swing_deg": 90.0,
+      "slide": null,
+      "leaf_index": 0,
+      "conf": "scaled",
+      "source": "glb"
+     }
+    ]
+   }
+  }
+ }
+}

@@ -46,6 +46,8 @@ for fr in a.frames.split(","):
             allp.append(uv[ok])
     if not allp: continue
     allp = np.concatenate(allp)
+    allp = allp[(allp[:, 0] >= 0) & (allp[:, 0] < im.width) & (allp[:, 1] >= 0) & (allp[:, 1] < im.height)]   # lines running out of frame
+    if not len(allp): continue
     if not a.full:
         x0, y0 = np.clip(allp.min(0) - a.pad * s, 0, None); x1, y1 = allp.max(0) + a.pad * s
         im = im.crop((int(x0), int(y0), int(min(x1, im.width)), int(min(y1, im.height))))

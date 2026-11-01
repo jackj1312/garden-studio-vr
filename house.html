@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>House Build Stages</title>
+<style>
+  :root {
+    --bg: #eef0ee; --panel: #fffffff0; --ink: #1f2320; --ink-soft: #5b6159; --line: #d6d8d2;
+    --accent: #3f6f8a; --accent-ink: #ffffff; --warn: #9a6a1f; --fail: #c0392b; --pass: #2f7a3f;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181a; --panel: #1d2124f0; --ink: #e8e9e4; --ink-soft: #a2a79f; --line: #33383b;
+      --accent: #78aecb; --accent-ink: #0d1316; --warn: #d6a35a; --fail: #ef6b5e; --pass: #79c48a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181a; --panel: #1d2124f0; --ink: #e8e9e4; --ink-soft: #a2a79f; --line: #33383b;
+    --accent: #78aecb; --accent-ink: #0d1316; --warn: #d6a35a; --fail: #ef6b5e; --pass: #79c48a; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  canvas { display: block; touch-action: none; }
+  [hidden] { display: none !important; }
+  button, select {
+    font: inherit; font-size: 12.5px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap; min-height: 32px;
+  }
+  select { max-width: 220px; }
+  button:hover { border-color: var(--ink-soft); }
+  button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); height: 26px; }
+  .card { background: var(--panel); backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 12px; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .sep { width: 1px; height: 22px; background: var(--line); }
+  .spacer { flex: 1; }
+  .meta { font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  /* role modes: the same page, different tools */
+  .builder-only, .architect-only, .customer-only { display: none; }
+  [data-mode="builder"] .builder-only, [data-mode="architect"] .builder-only, [data-mode="inspector"] .builder-only { display: revert; }
+  .rules-only { display: none; }
+  [data-mode="architect"] .rules-only, [data-mode="inspector"] .rules-only { display: revert; }
+  [data-mode="architect"] .architect-only { display: revert; }
+  [data-mode="customer"] .customer-only { display: revert; }
+  [data-mode="customer"] .full-only { display: none; }
+
+  #top { position: fixed; top: max(10px, env(safe-area-inset-top, 0px)); left: 16px; right: 16px; z-index: 5;
+         padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #top h1 { font-size: 14px; margin: 0 6px 0 2px; letter-spacing: -0.01em; }
+  #modeLabel { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+  #sectionCtl { display: flex; gap: 8px; align-items: center; flex: 1 1 260px; min-width: 220px; }
+  #sectionCtl.off .when-on { display: none; }
+  #sectionCtl:not(.off) { flex: 1 1 100%; }
+  [data-mode="customer"] #sectionCtl { display: none; }
+  #sectionOffset { flex: 1; }
+  #rulesSummary[data-status="fail"] { border-color: var(--fail); color: var(--fail); font-weight: 600; }
+  #rulesSummary[data-status="pass"] { border-color: var(--pass); color: var(--pass); }
+  #rulesSummary[data-status="warn"] { border-color: var(--warn); color: var(--warn); }
+
+  #stagebar { position: fixed; left: 16px; right: 16px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+              padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 6px; }
+  #stagebar.single #scrub, #stagebar.single #ticks, #stagebar.single .stage-buttons { display: none; }
+  .stage-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .stage-note { font-size: 13px; color: var(--ink-soft); line-height: 1.45; max-width: 90ch; }
+  #ticks button { padding: 4px 8px; min-width: 30px; font-variant-numeric: tabular-nums; }
+  #help { font-size: 11.5px; color: var(--ink-soft); }
+
+  #stageListWrap { position: fixed; left: 16px; top: var(--top-h, 70px); max-height: calc(100vh - var(--top-h, 70px) - 200px); width: min(320px, calc(100vw - 32px)); z-index: 4;
+                   overflow: auto; padding: 8px; }
+  #stageList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  #stageList li button { display: flex; gap: 10px; align-items: baseline; width: 100%; border: 0; text-align: left; white-space: normal; padding: 7px 8px; }
+  #stageList .n { font-variant-numeric: tabular-nums; color: var(--ink-soft); min-width: 18px; font-weight: 600; flex: none; padding-right: 4px; }
+  #stageList p { display: none; margin: 0 8px 8px 36px; font-size: 13px; line-height: 1.5; color: var(--ink); }
+  #stageList li.on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 8px; }
+  #stageList li.on p { display: block; }
+  #stageList li.on .t { font-weight: 600; }
+  #stageListToggle { display: none; }
+  .phone-only { display: none; }
+  #stageList li .subs { display: none; margin: 0 8px 8px 36px; flex-wrap: wrap; gap: 4px; }
+  #stageList li.on .subs { display: flex; }
+  #stageList li .subs .sub, #stageList li .all { border: 1px solid var(--line); padding: 3px 8px; min-height: 26px; font-size: 12px; }
+  #stageList li .all { margin: 6px 8px; width: auto; }
+  .nfc { font-size: 11px; }
+  [data-mode="customer"] .nfc { display: none; }
+  #start .liability { max-width: 52ch; text-align: left; }
+
+  #board { position: fixed; right: 16px; top: var(--top-h, 70px); width: min(400px, calc(100vw - 32px)); z-index: 6; padding: 14px 16px;
+           max-height: calc(100vh - var(--top-h, 70px) - 210px); overflow: auto; border-left: 5px solid var(--board-accent, #f2d36b); }
+  #board h2 { font-size: 15px; margin: 0 26px 2px 0; line-height: 1.35; letter-spacing: -0.01em;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  #board .sub { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 8px; }
+  #board .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+  #board .tabs button { padding: 4px 9px; min-height: 28px; font-size: 12px; }
+  #board .tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  #board .body p { margin: 0 0 6px; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  #board .body p.dim { color: var(--ink-soft); font-size: 12.5px; }
+  #board .body p.b { font-weight: 600; }
+  #board .body p[data-status="pass"] { color: var(--pass); }
+  #board .body p[data-status="fail"] { color: var(--fail); font-weight: 600; }
+  #board .body p[data-status="warn"], #board .body p[data-status="unknown"] { color: var(--warn); }
+  #board .body p[data-status="unverified"] { color: var(--fail); font-weight: 600; }
+  #board .body canvas { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); margin: 4px 0; }
+  #board .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  #board .btns button.danger { border-color: var(--fail); color: var(--fail); }
+  #board .composer textarea, #board .composer input { width: 100%; font: inherit; font-size: 13px; padding: 8px; border-radius: 8px;
+           border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  #board .composer .author { flex: 1; width: auto; }
+  #boardClose { position: absolute; top: 8px; right: 8px; min-height: 26px; padding: 2px 8px; }
+  #stageList li[data-point] .pt { display: none; margin: 0 8px 10px 36px; }
+  #stageList li[data-point].on .pt { display: block; }
+  #stageList .pt p { font-size: 12.5px; margin: 0 0 8px; color: var(--ink-soft); }
+  #stageList .chk { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+  #stageList .chk .rt.unv { color: var(--fail); }
+  #stageList .chk .rb { display: flex; gap: 4px; }
+  #stageList .chk .rb button { min-height: 26px; padding: 2px 8px; font-size: 12px; }
+  #stageList .chk .rb button[data-s="fail"][aria-pressed="true"] { background: var(--fail); border-color: var(--fail); }
+  #stageList .chk input { font: inherit; font-size: 12px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+  [data-mode="inspector"] .customer-only#stageListWrap, [data-mode="inspector"] #stageListWrap { display: block; }
+  #rules { position: fixed; left: 16px; bottom: 200px; width: min(420px, calc(100vw - 32px)); max-height: 40vh; overflow: auto; z-index: 6; padding: 12px 14px; }
+  #rules h3 { margin: 0 0 8px; font-size: 13px; }
+  #rules .liability, #start .liability { font-size: 12.5px; line-height: 1.5; color: var(--ink); border-left: 3px solid var(--warn); padding: 4px 0 4px 10px; margin: 6px 0 10px; }
+  #rulesSummary[data-status="info"] { border-color: var(--ink-soft); }
+  #rulesList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+  #rulesList li { display: grid; grid-template-columns: 54px 1fr; gap: 2px 8px; }
+  #rulesList li b { font-size: 11px; letter-spacing: 0.04em; }
+  #rulesList li small { grid-column: 2; color: var(--ink-soft); }
+  #rulesList li[data-status="fail"] b { color: var(--fail); }
+  #rulesList li[data-status="pass"] b { color: var(--pass); }
+  #rulesList li[data-status="warn"] b, #rulesList li[data-status="unknown"] b { color: var(--warn); }
+
+  #legend { position: fixed; left: 16px; bottom: 200px; z-index: 5; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; max-width: calc(100vw - 32px); }
+  #legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  /* homeowners (round 6c): only Before / After and Fly; no stages, board or tools */
+  [data-mode="customer"] #stagebar, [data-mode="customer"] #stageListWrap, [data-mode="customer"] #toGarden,
+  [data-mode="customer"] #top .tools-group, [data-mode="customer"] #versions, [data-mode="customer"] #board,
+  [data-mode="customer"] #menuToggle { display: none !important; }
+  #baBar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+           padding: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+  #baBar button { font-size: 17px; min-height: 52px; padding: 10px 26px; font-weight: 600; }
+  #baBar #baHelp { flex-basis: 100%; text-align: center; }
+  #baBar select { font-size: 16px; min-height: 52px; padding: 10px 14px; font-weight: 600; max-width: 200px; }
+  /* the studio review (?mode=review): the homeowner page plus the marking tool */
+  .review-only { display: none; }
+  [data-review] .review-only { display: revert; }
+  #baMark[aria-pressed="true"] { background: #ff5a1f; border-color: #ff5a1f; color: #111; }
+  #markHint { position: fixed; top: max(64px, calc(env(safe-area-inset-top, 0px) + 60px)); left: 50%; transform: translateX(-50%);
+    max-width: calc(100vw - 32px); z-index: 6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 14px 9px 12px; border-radius: 10px; background: rgba(14,16,14,0.88); color: #f4f3ee;
+    border-left: 5px solid var(--mark, #ff5a1f); font-size: 12.5px; pointer-events: none; }
+  #markHint b { color: var(--mark, #ff5a1f); font-weight: 700; letter-spacing: 0.02em; }
+  #markHint .k { color: #b9bcb2; }
+  .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; padding: 1px 5px; border: 1px solid #4a4e47; border-radius: 4px; color: #d8dad1; }
+  #noteBox { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+    width: min(560px, calc(100vw - 32px)); z-index: 9; display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 16px; border-radius: 12px; background: rgba(14,16,14,0.94); color: #f4f3ee;
+    border: 1px solid #33373a; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+  #noteBox .nb-title { font-weight: 700; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; }
+  #noteBox input { font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 8px; border: 1px solid #4a4e47;
+    background: #1b1e1b; color: #f4f3ee; width: 100%; }
+  #noteBox input:focus-visible { outline: 2px solid #7aa86a; outline-offset: 1px; }
+  #noteBox .nb-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #noteBox .nb-row button { color: #f4f3ee; border-color: #4a4e47; }
+  #noteBox .nb-row button.primary { color: #11140f; background: #7aa86a; border-color: #7aa86a; }
+  #noteBox .nb-row button.danger { color: #ff8a7e; border-color: #8a3a33; }
+  #noteBox #noteRec.rec { background: #d8342b; border-color: #d8342b; }
+  #noteBox [data-status] { font-size: 12px; color: #b9bcb2; }
+  #marksPanel { position: fixed; right: 16px; top: max(118px, calc(env(safe-area-inset-top, 0px) + 112px)); width: min(360px, calc(100vw - 32px)); z-index: 6;
+    max-height: calc(100vh - 230px); overflow: auto; padding: 12px 14px; }
+  #marksPanel .mh { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  #marksPanel .mh b { font-size: 13.5px; }
+  #marksPanel ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  #marksPanel li { border-left: 4px solid var(--k); padding: 6px 0 6px 10px; border-bottom: 1px solid var(--line); }
+  #marksPanel li .mt { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+  #marksPanel li p { margin: 4px 0; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+  #marksPanel li .mb { display: flex; gap: 6px; }
+  #marksPanel li .mb button { min-height: 26px; padding: 2px 9px; font-size: 12px; }
+  #marksPanel li .mb button.danger { border-color: var(--fail); color: var(--fail); }
+  #marksPanel .empty { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+  @media (max-width: 760px) { #marksPanel { top: auto; bottom: 170px; max-height: 34vh; } #baBar button { padding: 10px 16px; } }
+  #perfHud { position: fixed; left: 16px; top: var(--top-h, 70px); z-index: 7; margin: 0; padding: 8px 10px; border-radius: 8px;
+             background: rgba(10,12,11,0.82); color: #e8e9e2; font: 11.5px/1.45 ui-monospace, Menlo, monospace; pointer-events: none; }
+  #testOut { position: fixed; inset: 60px 16px auto auto; z-index: 20; max-width: min(720px, calc(100vw - 32px)); max-height: 80vh; overflow: auto;
+             margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(10,12,11,0.92); color: #e8e9e2; font: 11.5px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
+  #toast { position: fixed; left: 50%; top: 76px; transform: translateX(-50%); z-index: 8; padding: 9px 14px; border-radius: 10px;
+           background: rgba(14,16,14,0.9); color: #f4f3ee; font-size: 13px; max-width: calc(100vw - 32px); }
+
+  #start { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 16px; text-align: center; padding: 24px; background: var(--bg); }
+  #start h2 { font-size: clamp(22px, 5vw, 30px); margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+  #start p { margin: 0; max-width: 46ch; color: var(--ink-soft); font-size: 14.5px; line-height: 1.6; }
+  #start .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  #start .note { font-size: 12.5px; color: var(--warn); }
+  #loading { width: min(300px, 70vw); }
+  #loadTrack { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  #loadBar { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s ease; }
+  #loadText { display: block; font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  #loading.inline { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 9; }
+  body.in-vr #top, body.in-vr #stagebar, body.in-vr #board, body.in-vr #stageListWrap { display: none !important; }
+
+  /* phones: stage list becomes a sheet behind a button; panels stack */
+  @media (max-width: 760px) {
+    #top { gap: 6px; padding: 6px 8px; }
+    #top h1 { display: none; }
+    #stageListWrap { display: none; top: auto; bottom: 200px; max-height: 45vh; }
+    body.list-open #stageListWrap { display: block; }
+    [data-mode="customer"] #stageListToggle, [data-mode="inspector"] #stageListToggle { display: revert; }
+    #board { top: auto; bottom: 200px; max-height: 42vh; }
+    #rules { bottom: 200px; }
+    #legend { bottom: 196px; }
+    .stage-note { font-size: 12.5px; }
+    #ticks { display: none !important; }
+    #help, #top .sep, #versionDesc { display: none; }
+    .phone-only { display: revert; }
+    #top .tools-group, #top #sectionCtl, #top .architect-only, #top #rulesSummary, #top #title, #top #modeLabel { display: none; }
+    body.top-open #top .tools-group { display: flex; }
+    #stageNote { display: none; }
+    body.note-open #stageNote { display: block; }
+    #stagebar { padding: 8px 10px 6px; }
+    #board .body { max-height: 26vh; overflow: auto; }
+    #top button, #top select { padding: 4px 8px; min-height: 30px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="top" class="card">
+  <button id="menuToggle" class="phone-only" aria-label="More tools">☰</button>
+  <h1 id="title">House</h1>
+  <span id="modeLabel"></span>
+  <div class="group" id="versions">
+    <button id="before" aria-pressed="false" title="As built now">Before</button>
+    <button id="after" aria-pressed="false" title="The chosen proposal">After</button>
+    <select id="versionSel" aria-label="Version"></select>
+    <button id="asBuilt" aria-pressed="false" hidden title="Show what was actually built where it differs from the drawings">As built</button>
+  </div>
+  <div class="sep"></div>
+  <button id="toGarden" class="customer-only">See the extension ▸</button>
+  <div class="group tools-group">
+    <button id="walk" aria-pressed="false" title="V">Walk</button>
+    <select id="spawnSel" aria-label="Go to"><option value="">Go to…</option></select>
+    <button id="toolsTab">Tools</button>
+    <button id="notesTab">Leave a note</button>
+    <button id="toolMeasure" aria-pressed="false" title="M">Measure</button>
+    <button id="measureClear" disabled>Clear</button>
+    <button id="toolHeights" aria-pressed="false" title="Heights of ceilings and beams above the floor and your eyes">Heights</button>
+    <button id="doorsAll" title="O">Open doors</button>
+    <button id="fly" aria-pressed="false" title="F (W A S D, Q / E down / up)">Fly</button>
+    <button id="fastWalk" aria-pressed="false" title="G: twice the walking speed (fly unchanged)">Fast walk</button>
+    <button id="scaleCue" title="A 1.80 m figure and a 1 m post, put down in front of you">Scale figure</button>
+    <button id="xray" aria-pressed="false" title="X"><span class="full-only">X-ray</span><span class="customer-only">See inside</span></button>
+    <button data-storey="roof" aria-pressed="false"><span class="full-only">Hide roof</span><span class="customer-only">Lift the roof</span></button>
+    <button data-storey="first" aria-pressed="false"><span class="full-only">Hide 1st</span><span class="customer-only">Lift the first floor</span></button>
+    <button data-storey="ground" aria-pressed="false" class="builder-only">Hide ground</button>
+    <button data-storey="site" aria-pressed="false" class="builder-only">Hide site</button>
+  </div>
+  <div id="sectionCtl" class="off builder-only">
+    <select id="sectionSel" aria-label="Section"></select>
+    <input class="when-on" type="range" id="sectionOffset" min="-10" max="10" step="0.01" value="0" aria-label="Move the cut">
+    <span class="when-on meta" id="offsetLabel">0 mm</span>
+    <button class="when-on" id="sectionFlip">Flip</button>
+  </div>
+  <div class="group architect-only">
+    <button id="undo" disabled>Undo</button>
+    <button id="redo" disabled>Redo</button>
+    <span class="meta" id="editCount">0 edits</span>
+    <button id="saveEdits">Save edits</button>
+    <label class="meta" style="cursor:pointer">Load <input id="loadEdits" type="file" accept="application/json" style="width:0;opacity:0;position:absolute"></label>
+    <button id="resetEdits">Reset</button>
+  </div>
+  <button id="rulesSummary" class="rules-only" data-status="pass">Regs</button>
+  <div class="spacer"></div>
+  <button id="vr" class="primary">Enter VR</button>
+</div>
+
+<div id="stageListWrap" class="card customer-only"><ol id="stageList"></ol></div>
+
+<!-- homeowners (round 6c): Before / After and Fly, nothing else -->
+<div id="baBar" class="card customer-only">
+  <button id="baBefore" aria-pressed="false">Before</button>
+  <button id="baAfter" aria-pressed="true">After</button>
+  <button id="baFly" aria-pressed="false" title="F · W A S D, Q / E down / up">Fly</button>
+  <select id="baGoto" aria-label="Go to a room or place"><option value="">Go to…</option></select>
+  <button id="baFast" aria-pressed="false" title="G · twice the walking speed (fly unchanged)">Fast</button>
+  <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
+  <div id="baHelp" class="meta"></div>
+</div>
+
+<!-- the studio review (?mode=review): the marking tool (src/marks.js, src/notes.js) -->
+<div id="markHint" hidden>
+  <b>MARK · <span data-kind>Correction</span></b>
+  <span class="k">drag on any surface to draw · right-drag to look · click a label to edit its note · <span class="kbd">K</span> kind · <span class="kbd">Z</span> undo · <span class="kbd">M</span> done</span>
+  <span class="k" data-status></span>
+</div>
+<div id="marksPanel" class="card" hidden role="region" aria-label="Marks">
+  <div class="mh"><b data-head>Marks</b><span class="meta" data-status></span><span class="spacer"></span><button id="marksDone">Done</button></div>
+  <ol></ol>
+</div>
+<div id="noteBox" hidden role="dialog" aria-label="Note for this mark">
+  <div class="nb-title" data-title>Note</div>
+  <input id="noteText" type="text" maxlength="500" placeholder="What's wrong here, or what's proposed?" autocomplete="off">
+  <div class="nb-row">
+    <button id="noteRec" type="button">● Record</button>
+    <span data-status></span>
+    <span class="spacer"></span>
+    <button id="noteDelete" type="button" class="danger" hidden>Delete</button>
+    <button id="noteSkip" type="button">Skip</button>
+    <button id="noteSave" type="button" class="primary">Save</button>
+  </div>
+</div>
+
+<div id="board" class="card" hidden role="region" aria-label="Board">
+  <button id="boardClose" aria-label="Close">×</button>
+  <h2></h2>
+  <div class="sub"></div>
+  <div class="tabs" role="tablist"></div>
+  <div class="body"></div>
+</div>
+
+<div id="rules" class="card" hidden>
+  <h3>Building Regulations: what the model checked</h3>
+  <p id="rulesHead" class="meta"></p>
+  <p id="rulesLiability" class="liability"></p>
+  <ol id="rulesList"></ol>
+</div>
+
+<div id="legend" class="card" hidden></div>
+<div id="toast" hidden></div>
+
+<div id="stagebar" class="card">
+  <div class="row">
+    <div style="flex:1;min-width:0">
+      <div class="stage-name" id="stageName">Loading…</div>
+      <div class="stage-note" id="stageNote"></div>
+      <div class="meta" id="versionDesc"></div>
+    </div>
+    <span class="meta" id="stageState"></span>
+  </div>
+  <input type="range" id="scrub" min="1" max="12" step="0.01" value="1" aria-label="Build stage">
+  <div class="row">
+    <div class="group stage-buttons">
+      <button id="prev" aria-label="Previous stage">◀</button>
+      <button id="play" class="primary">Play build</button>
+      <button id="next" aria-label="Next stage">▶</button>
+      <button id="stageListToggle">All stages</button>
+    </div>
+    <div class="group" id="ticks"></div>
+  </div>
+  <div id="help"></div>
+  <div class="meta nfc">Not for construction · guidance, not approval</div>
+</div>
+
+<div id="start">
+  <h2>How the extension gets built</h2>
+  <p>Walk through the house at true scale and watch it go up stage by stage, from the first props to the finished rooms.
+     Tap anything to see what it is.</p>
+  <div id="loading">
+    <div id="loadTrack"><div id="loadBar"></div></div>
+    <span id="loadText">Loading…</span>
+  </div>
+  <div class="actions">
+    <button class="primary" id="startDesktop" disabled>Explore on this screen</button>
+    <button id="startVR" disabled>Enter VR</button>
+  </div>
+  <p class="note" id="xrNote"></p>
+  <p class="liability" id="startLiability">Not for construction: drawn from the planning and building-regulations drawings to explain the work.
+     Do not set out, order or build from it. Building Regulations notes are guidance, not approval.</p>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="src/house/viewer.js?v=h19"></script>
+</body>
+</html>

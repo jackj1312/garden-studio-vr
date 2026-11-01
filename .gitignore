@@ -22,3 +22,10 @@ master/front-garden*
 renders/front-garden/
 master/phototex/
 out/
+
+# drawing overlays of a client house (architect drawings are private)
+renders/house-build/
+renders/unreal/
+assets/sites/house-preview/
+master/ambientcg/
+assets/sites/house-wip/

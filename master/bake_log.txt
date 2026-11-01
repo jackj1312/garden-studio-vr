@@ -1,0 +1,9 @@
+started Sat Oct 31 14:36:38 2026
+14:36:56 | INFO: Data are loaded, start creating Blender stuff
+14:36:56 | INFO: Blender create Mesh node mesh.007
+14:36:56 | INFO: Draco Decoder: Decode primitive mesh.007
+14:36:57 | INFO: Blender create Mesh node mesh.006
+14:36:57 | INFO: Draco Decoder: Decode primitive mesh.006
+14:36:58 | INFO: Blender create Mesh node mesh.008
+14:36:58 | INFO: Draco Decoder: Decode primitive mesh.008
+14:36:58 | INFO: glTF import finished in 1.48s

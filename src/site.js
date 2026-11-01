@@ -23,16 +23,30 @@ export async function installSite(scene, world, player, name) {
 
   world.existing.visible = false;            // the fictional garden steps aside
   world.obstacles.length = 0;                // the demo garden's collision does not apply here
-  for (const o of meta.obstacles || []) {     // the site's own: boxes and circles in viewer coordinates
-    world.obstacles.push(o.r ? { kind: "circle", cx: o.x, cz: o.z, r: o.r, from: 1 }
-                             : { kind: "box", cx: o.x, cz: o.z, hw: o.hw, hd: o.hd, rot: 0, from: 1 });
+  for (const o of meta.obstacles || []) {     // the site's own, generated with the model: boxes (rot for slanted runs), circles, polygons
+    world.obstacles.push(o.pts ? { kind: "poly", pts: o.pts, from: 1 }
+                       : o.r ? { kind: "circle", cx: o.x, cz: o.z, r: o.r, from: 1 }
+                             : { kind: "box", cx: o.x, cz: o.z, hw: o.hw, hd: o.hd, rot: o.rot || 0, from: 1 });
   }
 
   // the headset gets the lighter cut when the site has one
   const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);
   const file = (isQuest && meta.glbQuest) || meta.glb || "site.glb";
   if (isQuest && meta.grassPerM2Quest) meta.grassPerM2 = meta.grassPerM2Quest;
-  const g = await new Promise((res, rej) => gltf().load(`${base}/${file}?v=${BUILD}`, res, undefined, rej));
+  // a byte progress bar while the model downloads (buyer judge: 15-30 s of nothing on the Quest)
+  const bar = document.getElementById("loadBar"), label = document.querySelector("#loading span");
+  const mgr = THREE.DefaultLoadingManager, itemProgress = mgr.onProgress;
+  mgr.onProgress = () => {};                                   // the item counter would fight the byte bar
+  if (label) label.textContent = isQuest ? "Loading your garden (headset version)…" : "Loading your garden…";
+  const onProgress = e => {
+    if (!e.lengthComputable && !e.total) return;
+    const f = e.loaded / (e.total || e.loaded);
+    if (bar) bar.style.width = `${Math.round(f * 100)}%`;
+    if (label) label.textContent = `Loading your garden… ${(e.loaded / 1048576).toFixed(1)} of ${(e.total / 1048576).toFixed(1)} MB`;
+  };
+  const g = await new Promise((res, rej) => gltf().load(`${base}/${file}?v=${BUILD}`, res, onProgress, rej))
+    .finally(() => { mgr.onProgress = itemProgress; if (label) label.textContent = "Preparing the garden…"; });
+  console.info(`site ${name}: loaded ${file}${isQuest ? " (Quest cut)" : ""}`);
   const root = g.scene;
   root.name = `Site:${name}`;
   let tris = 0;

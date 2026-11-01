@@ -1,0 +1,1353 @@
+{
+ "site": "front-garden",
+ "note": "Unreal look spec for 23 Battle Road front garden (Jack, 1 Nov 2026: 'look incredible'; positions, sizes and levels exactly as measured; surfaces and objects from free scanned CC0 libraries, close in look; brick colour, anthracite frames, roof tiles, porch + mirror, paving pattern, plant species and apple tree shape matched closely). Colour targets are sRGB means of the client's own photo tiles (master/phototex) or sampled sunlit walk pixels; tint = target / library mean, in linear.",
+ "model_mode": "today",
+ "library": [
+  {
+   "src": "polyhaven",
+   "id": "brick_4",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Displacement"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "roof_tiles",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Displacement"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "short_bricks_floor",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Displacement"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "dry_river_pebbles",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Displacement"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "leafy_grass",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "brown_mud_leaves_01",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "granular_concrete",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "concrete_pavement",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "asphalt_02",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "coated_pine_02",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "raw_plank_wall",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "weathered_brown_planks",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "waffle_pique_cotton",
+   "kind": "texture",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "island_tree_02",
+   "kind": "model",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "branches_diff",
+    "branches_nor_dx",
+    "branches_arm",
+    "leaves_diff",
+    "leaves_nor_dx",
+    "leaves_arm",
+    "leaves_alpha"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "celandine_01",
+   "kind": "model",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Alpha"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "grass_medium_01",
+   "kind": "model",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "Alpha"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "periwinkle_plant",
+   "kind": "model",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "opacity"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "island_tree_01",
+   "kind": "model",
+   "maps": [
+    "Diffuse",
+    "nor_dx",
+    "arm",
+    "leaves_diff",
+    "leaves_nor_dx",
+    "leaves_arm",
+    "leaves_alpha"
+   ]
+  },
+  {
+   "src": "polyhaven",
+   "id": "kloofendal_43d_clear_puresky",
+   "kind": "hdri",
+   "res": "2k"
+  }
+ ],
+ "materials": {
+  "MI_Brick": {
+   "type": "scan",
+   "tex": "brick_4",
+   "course_m": [
+    0.225,
+    0.075
+   ],
+   "target_srgb": [
+    128,
+    84,
+    72
+   ],
+   "macro": 0.12,
+   "antitile": 0.0,
+   "note": "UK 215x65 stretcher bond, 10 mm joints; colour = Jack's brick close-up 20506; r5 matched view: close-up colour (168,135,120) read pale/orange at distance, set to the sunlit wall in the July/Oct frames; judges r8: main brick a duller, darker brown-red",
+   "desat": 0.12
+  },
+  "MI_BrickDark": {
+   "type": "scan",
+   "tex": "brick_4",
+   "course_m": [
+    0.225,
+    0.075
+   ],
+   "target_srgb": [
+    110,
+    72,
+    62
+   ],
+   "macro": 0.1,
+   "desat": 0.1
+  },
+  "MI_Roof": {
+   "type": "scan",
+   "tex": "roof_tiles",
+   "course_m": [
+    null,
+    0.1
+   ],
+   "target_srgb": [
+    102,
+    82,
+    74
+   ],
+   "macro": 0.22,
+   "note": "plain tiles, 100 mm gauge; roof photo median (153,126,109) sunlit"
+  },
+  "MI_Ridge": {
+   "type": "scan",
+   "tex": "roof_tiles",
+   "tile_m": [
+    0.6,
+    0.6
+   ],
+   "target_srgb": [
+    90,
+    72,
+    66
+   ],
+   "macro": 0.1
+  },
+  "MI_Paving": {
+   "type": "scan",
+   "tex": "short_bricks_floor",
+   "course_m": [
+    0.14,
+    null
+   ],
+   "rot90": 1,
+   "target_srgb": [
+    166,
+    138,
+    128
+   ],
+   "macro": 0.1,
+   "note": "rumbled block paving, 160 mm courses laid across the path (Jack's close-up 20517)",
+   "desat": 0.12
+  },
+  "MI_Gravel": {
+   "type": "scan",
+   "tex": "dry_river_pebbles",
+   "tile_m": [
+    0.36,
+    0.36
+   ],
+   "target_srgb": [
+    198,
+    176,
+    142
+   ],
+   "antitile": 1.0,
+   "macro": 0.12,
+   "displace_cm": 1.6,
+   "rough_mul": 1.0,
+   "note": "pea shingle 15-20 mm (close-up 20520)"
+  },
+  "MI_LawnBase": {
+   "type": "scan",
+   "tex": "leafy_grass",
+   "tile_m": [
+    1.6,
+    1.6
+   ],
+   "target_srgb": [
+    92,
+    112,
+    44
+   ],
+   "antitile": 1.0,
+   "macro": 0.15
+  },
+  "MI_Turf": {
+   "type": "scan",
+   "tex": "leafy_grass",
+   "tile_m": [
+    2.5,
+    2.5
+   ],
+   "target_srgb": [
+    98,
+    118,
+    50
+   ],
+   "antitile": 1.0,
+   "macro": 0.2
+  },
+  "MI_Soil": {
+   "type": "scan",
+   "tex": "brown_mud_leaves_01",
+   "tile_m": [
+    1.3,
+    1.3
+   ],
+   "target_srgb": [
+    70,
+    56,
+    44
+   ],
+   "antitile": 1.0,
+   "macro": 0.15
+  },
+  "MI_Sett": {
+   "type": "scan",
+   "tex": "granular_concrete",
+   "tile_m": [
+    0.8,
+    0.8
+   ],
+   "target_srgb": [
+    132,
+    131,
+    128
+   ],
+   "macro": 0.15,
+   "random_offset": true,
+   "note": "charcoal-grey edging setts (walk_0013 close view)"
+  },
+  "MI_Kerb": {
+   "type": "scan",
+   "tex": "concrete_pavement",
+   "tile_m": [
+    1.8,
+    1.8
+   ],
+   "target_srgb": [
+    160,
+    158,
+    152
+   ],
+   "macro": 0.1
+  },
+  "MI_Road": {
+   "type": "scan",
+   "tex": "asphalt_02",
+   "tile_m": [
+    3.0,
+    3.0
+   ],
+   "target_srgb": [
+    88,
+    88,
+    90
+   ],
+   "antitile": 1.0,
+   "macro": 0.15
+  },
+  "MI_Pavement": {
+   "type": "scan",
+   "tex": "asphalt_02",
+   "tile_m": [
+    2.0,
+    2.0
+   ],
+   "target_srgb": [
+    110,
+    108,
+    106
+   ],
+   "antitile": 1.0,
+   "macro": 0.15
+  },
+  "MI_Concrete": {
+   "type": "scan",
+   "tex": "concrete_pavement",
+   "tile_m": [
+    1.8,
+    1.8
+   ],
+   "target_srgb": [
+    176,
+    170,
+    158
+   ],
+   "macro": 0.05
+  },
+  "MI_Pine": {
+   "type": "scan",
+   "tex": "coated_pine_02",
+   "tile_m": [
+    1.05,
+    1.05
+   ],
+   "target_srgb": [
+    176,
+    140,
+    96
+   ],
+   "desat": 0.35,
+   "grain": true,
+   "random_offset": true,
+   "note": "new treated pine pergola and bench"
+  },
+  "MI_Fence": {
+   "type": "scan",
+   "tex": "raw_plank_wall",
+   "tile_m": [
+    1.87,
+    1.87
+   ],
+   "target_srgb": [
+    168,
+    150,
+    128
+   ],
+   "desat": 0.3,
+   "grain": true,
+   "random_offset": true
+  },
+  "MI_Shed": {
+   "type": "scan",
+   "tex": "weathered_brown_planks",
+   "tile_m": [
+    1.8,
+    1.8
+   ],
+   "target_srgb": [
+    112,
+    62,
+    56
+   ],
+   "desat": 0.2,
+   "note": "red-brown stained shiplap (close-up shed_cladding)"
+  },
+  "MI_Felt": {
+   "type": "scan",
+   "tex": "asphalt_02",
+   "tile_m": [
+    1.0,
+    1.0
+   ],
+   "target_srgb": [
+    52,
+    52,
+    54
+   ],
+   "rough_mul": 1.0
+  },
+  "MI_Cushion": {
+   "type": "scan",
+   "tex": "waffle_pique_cotton",
+   "tile_m": [
+    0.28,
+    0.28
+   ],
+   "target_srgb": [
+    40,
+    112,
+    118
+   ],
+   "desat": 1.0
+  },
+  "MI_StoneBench": {
+   "type": "scan",
+   "tex": "concrete_pavement",
+   "tile_m": [
+    0.9,
+    0.9
+   ],
+   "target_srgb": [
+    123,
+    113,
+    105
+   ]
+  },
+  "MI_Bark": {
+   "type": "scan",
+   "tex": "island_tree_02",
+   "uv": "model",
+   "target_srgb": [
+    112,
+    104,
+    94
+   ],
+   "desat": 0.3,
+   "note": "apple bark: greyer than the island-tree scan"
+  },
+  "MI_Branches": {
+   "type": "scan",
+   "tex": "island_tree_02:branches_",
+   "uv": "model"
+  },
+  "MI_Leaves": {
+   "type": "foliage",
+   "tex": "island_tree_02:leaves_",
+   "alpha": "leaves_alpha",
+   "target_srgb": [
+    92,
+    118,
+    46
+   ],
+   "note": "apple tree canopy, Oct green",
+   "clip": 0.28
+  },
+  "MI_Celandine": {
+   "type": "foliage",
+   "tex": "celandine_01",
+   "alpha": "Alpha",
+   "target_srgb": [
+    72,
+    96,
+    40
+   ],
+   "desat": 0.45
+  },
+  "MI_HedgeBall": {
+   "type": "foliage",
+   "tex": "celandine_01",
+   "alpha": "Alpha",
+   "target_srgb": [
+    82,
+    100,
+    44
+   ],
+   "note": "boundary/street hedge (Jack's hedge close-up colour); desaturated so celandine's yellow flowers read as leaf, not flowers (judges r8)",
+   "desat": 0.45
+  },
+  "MI_Stipa": {
+   "type": "foliage",
+   "tex": "grass_medium_01",
+   "alpha": "Alpha",
+   "target_srgb": [
+    150,
+    140,
+    90
+   ]
+  },
+  "MI_Salvia": {
+   "type": "foliage",
+   "tex": "periwinkle_plant",
+   "alpha": "opacity",
+   "note": "shrub_sorrel_01 is a 5 cm plant: periwinkle (0.4 m, violet flowers) stands in for salvia"
+  },
+  "MI_Lavender": {
+   "type": "foliage",
+   "tex": "periwinkle_plant",
+   "alpha": "opacity",
+   "target_srgb": [
+    110,
+    118,
+    104
+   ]
+  },
+  "MI_FarTree": {
+   "type": "foliage",
+   "tex": "island_tree_01:leaves_",
+   "alpha": "leaves_alpha"
+  },
+  "MI_FarBark": {
+   "type": "scan",
+   "tex": "island_tree_01",
+   "uv": "model"
+  },
+  "MI_VertexPlant": {
+   "type": "vcfoliage",
+   "rough": 0.6
+  },
+  "MI_LawnBlades": {
+   "type": "vcfoliage",
+   "rough": 0.82
+  },
+  "MI_HedgeCore": {
+   "type": "flat",
+   "color": [
+    30,
+    42,
+    18
+   ],
+   "rough": 0.9
+  },
+  "MI_Conifer": {
+   "type": "flat",
+   "color": [
+    60,
+    70,
+    34
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_ConiferRust": {
+   "type": "flat",
+   "color": [
+    96,
+    72,
+    40
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_Anthracite": {
+   "type": "flat",
+   "color": [
+    52,
+    56,
+    60
+   ],
+   "rough": 0.38,
+   "note": "RAL 7016 uPVC/aluminium frames and door"
+  },
+  "MI_UPVC": {
+   "type": "flat",
+   "color": [
+    232,
+    232,
+    228
+   ],
+   "rough": 0.42
+  },
+  "MI_Glass": {
+   "type": "glass",
+   "color": [
+    10,
+    12,
+    13
+   ],
+   "rough": 0.03
+  },
+  "MI_Mirror": {
+   "type": "flat",
+   "color": [
+    235,
+    235,
+    235
+   ],
+   "metal": 1.0,
+   "rough": 0.02,
+   "note": "porch garden mirror: real reflection via Lumen HWRT"
+  },
+  "MI_Net": {
+   "type": "flat",
+   "color": [
+    178,
+    178,
+    174
+   ],
+   "rough": 0.9
+  },
+  "MI_Room": {
+   "type": "flat",
+   "color": [
+    40,
+    36,
+    32
+   ],
+   "rough": 0.9
+  },
+  "MI_Gutter": {
+   "type": "flat",
+   "color": [
+    18,
+    18,
+    19
+   ],
+   "rough": 0.35
+  },
+  "MI_Lead": {
+   "type": "flat",
+   "color": [
+    96,
+    98,
+    100
+   ],
+   "rough": 0.6,
+   "noise": 1
+  },
+  "MI_Chrome": {
+   "type": "flat",
+   "color": [
+    220,
+    220,
+    222
+   ],
+   "metal": 1.0,
+   "rough": 0.12
+  },
+  "MI_DarkGrey": {
+   "type": "flat",
+   "color": [
+    60,
+    62,
+    64
+   ],
+   "rough": 0.5
+  },
+  "MI_White": {
+   "type": "flat",
+   "color": [
+    225,
+    225,
+    220
+   ],
+   "rough": 0.5
+  },
+  "MI_StoneCream": {
+   "type": "flat",
+   "color": [
+    200,
+    190,
+    165
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_SurroundStone": {
+   "type": "flat",
+   "color": [
+    196,
+    186,
+    162
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_Reveal": {
+   "type": "flat",
+   "color": [
+    190,
+    170,
+    140
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_BinGrey": {
+   "type": "flat",
+   "color": [
+    58,
+    62,
+    64
+   ],
+   "rough": 0.55,
+   "noise": 1
+  },
+  "MI_BinBrown": {
+   "type": "flat",
+   "color": [
+    92,
+    64,
+    44
+   ],
+   "rough": 0.55,
+   "noise": 1
+  },
+  "MI_Rubber": {
+   "type": "flat",
+   "color": [
+    20,
+    20,
+    20
+   ],
+   "rough": 0.8
+  },
+  "MI_PotGlaze": {
+   "type": "flat",
+   "color": [
+    56,
+    52,
+    50
+   ],
+   "rough": 0.25,
+   "noise": 1
+  },
+  "MI_ChimneyPot": {
+   "type": "flat",
+   "color": [
+    150,
+    88,
+    60
+   ],
+   "rough": 0.8,
+   "noise": 1
+  },
+  "MI_Slate": {
+   "type": "flat",
+   "color": [
+    40,
+    42,
+    46
+   ],
+   "rough": 0.6
+  },
+  "MI_Yellow": {
+   "type": "flat",
+   "color": [
+    220,
+    180,
+    30
+   ],
+   "rough": 0.5
+  },
+  "MI_Red": {
+   "type": "flat",
+   "color": [
+    180,
+    30,
+    25
+   ],
+   "rough": 0.4
+  },
+  "MI_Orange": {
+   "type": "flat",
+   "color": [
+    220,
+    110,
+    30
+   ],
+   "rough": 0.5
+  },
+  "MI_Lamp": {
+   "type": "flat",
+   "color": [
+    235,
+    235,
+    230
+   ],
+   "rough": 0.3
+  },
+  "MI_Teal": {
+   "type": "flat",
+   "color": [
+    40,
+    112,
+    118
+   ],
+   "rough": 0.8
+  },
+  "MI_ShedDoor": {
+   "type": "scan",
+   "tex": "weathered_brown_planks",
+   "tile_m": [
+    1.8,
+    1.8
+   ],
+   "target_srgb": [
+    112,
+    62,
+    56
+   ],
+   "desat": 0.2,
+   "note": "shed front doors: vertical boards (walk_0077)",
+   "rot90": 1
+  },
+  "MI_FarGround": {
+   "type": "flat",
+   "color": [
+    66,
+    74,
+    46
+   ],
+   "rough": 1.0,
+   "note": "ground beyond the site to the horizon"
+  },
+  "MI_Groundcover": {
+   "type": "foliage",
+   "tex": "periwinkle_plant",
+   "alpha": "opacity",
+   "target_srgb": [
+    80,
+    104,
+    52
+   ],
+   "desat": 0.3,
+   "note": "bed under-planting so no bare soil shows (judges r8)"
+  },
+  "MI_GrassFill": {
+   "type": "foliage",
+   "tex": "grass_medium_01",
+   "alpha": "Alpha",
+   "target_srgb": [
+    120,
+    128,
+    70
+   ]
+  }
+ },
+ "slots": {
+  "FG2_brick_house": "MI_Brick",
+  "FG2_brick_porch": "MI_Brick",
+  "FG2_mortar_house": "MI_Concrete",
+  "FG2_soldier_units": "MI_BrickDark",
+  "FG_roof_tiles": "MI_Roof",
+  "FG2_ridge_tile": "MI_Ridge",
+  "FG2_porch_roof_nb": "MI_Roof",
+  "FG2_paving_units": "MI_Paving",
+  "FG_gravel": "MI_Gravel",
+  "FG_lawn": "MI_LawnBase",
+  "FG_turf_neighbour": "MI_Turf",
+  "FG_mulch": "MI_Soil",
+  "FG_soil": "MI_Soil",
+  "FG2_sett_grey": "MI_Sett",
+  "FG_kerb": "MI_Kerb",
+  "FG_road": "MI_Road",
+  "FG_pavement": "MI_Pavement",
+  "FG2_timber_pine": "MI_Pine",
+  "FG2_timber_pale": "MI_Fence",
+  "FG2_timber_pale_v0": "MI_Fence",
+  "FG2_timber_pale_v1": "MI_Fence",
+  "FG2_timber_pale_v2": "MI_Fence",
+  "FG2_timber_pale_v3": "MI_Fence",
+  "FG2_fence_gap": "MI_HedgeCore",
+  "FG_shed_red": "MI_Shed",
+  "FG2_shed_front": "MI_ShedDoor",
+  "FG2_roof_felt": "MI_Felt",
+  "FG_cushion_teal": "MI_Cushion",
+  "FG2_bench_stone": "MI_StoneBench",
+  "island_tree_02.001": "MI_Bark",
+  "island_tree_02_branches.001": "MI_Branches",
+  "island_tree_02_leaves.001": "MI_Leaves",
+  "VertexPlant": "MI_VertexPlant",
+  "FG2_hedge_leaf": "MI_HedgeCore",
+  "FG_hedge_face": "MI_HedgeCore",
+  "FG2_conifer_green": "MI_Conifer",
+  "FG2_conifer_rust": "MI_ConiferRust",
+  "FG2_anthracite": "MI_Anthracite",
+  "FG2_front_door_face": "MI_Anthracite",
+  "FG2_white_upvc": "MI_UPVC",
+  "FG_fascia_white": "MI_UPVC",
+  "FG2_glass": "MI_Glass",
+  "FG2_front_door_glass": "MI_Glass",
+  "FG_glass_roof": "MI_Glass",
+  "FG2_mirror_face": "MI_Mirror",
+  "FG2_net": "MI_Net",
+  "FG_room_inside": "MI_Room",
+  "FG_gutter_black": "MI_Gutter",
+  "FG2_lead": "MI_Lead",
+  "FG2_lead_strip": "MI_Lead",
+  "FG2_chrome": "MI_Chrome",
+  "FG2_dark_grey": "MI_DarkGrey",
+  "FG2_dish_grey": "MI_White",
+  "FG2_stone_cream": "MI_StoneCream",
+  "FG2_surround_stone": "MI_SurroundStone",
+  "FG2_reveal_buff": "MI_Reveal",
+  "FG2_bin_grey": "MI_BinGrey",
+  "FG2_bin_grey_face": "MI_BinGrey",
+  "FG2_bin_brown": "MI_BinBrown",
+  "FG2_bin_brown_face": "MI_BinBrown",
+  "FG_wheel": "MI_Rubber",
+  "FG2_pot_lava_glaze": "MI_PotGlaze",
+  "FG2_chimney_pot": "MI_ChimneyPot",
+  "FG2_slate": "MI_Slate",
+  "FG2_plaque_face": "MI_Slate",
+  "FG2_broom_yellow": "MI_Yellow",
+  "FG2_alarm_red": "MI_Red",
+  "FG2_packer_orange": "MI_Orange",
+  "FG2_lamp_white": "MI_Lamp",
+  "FG2_downlight": "MI_Chrome",
+  "FG2_drain_grate": "MI_DarkGrey"
+ },
+ "replace": {
+  "note": "objects swapped for library models of the same type and size, placed exactly at the measured spot (base centre, height)",
+  "Plant2_*_stipa_*": {
+   "model": "grass_medium_01",
+   "mi": "MI_Stipa",
+   "variants": [
+    "large_a",
+    "large_b",
+    "large_c",
+    "mid_a",
+    "tall_a",
+    "tall_b"
+   ]
+  },
+  "Plant2_*_box_ball_*": {
+   "model": "celandine_01",
+   "mi": "MI_Celandine"
+  },
+  "Plant2_*_salvia_*": {
+   "model": "periwinkle_plant",
+   "mi": "MI_Salvia",
+   "variants": [
+    "01",
+    "02",
+    "03"
+   ]
+  },
+  "Plant2_*_lavender_*": {
+   "model": "periwinkle_plant",
+   "mi": "MI_Lavender",
+   "variants": [
+    "01",
+    "02",
+    "04"
+   ]
+  }
+ },
+ "hedges": {
+  "objects": [
+   "B_hedge",
+   "B_street_hedge_west",
+   "B_street_hedge_east"
+  ],
+  "model": "celandine_01",
+  "mi": "MI_HedgeBall",
+  "ball_m": 0.5,
+  "spacing_m": 0.21,
+  "core_inset_m": 0.14
+ },
+ "lawn": {
+  "objects": [
+   "G2_lawn",
+   "G2_lawn_west"
+  ],
+  "blades_per_m2": 3000,
+  "height_m": [
+   0.018,
+   0.036
+  ],
+  "width_m": [
+   0.003,
+   0.005
+  ],
+  "colour_srgb": [
+   90,
+   126,
+   40
+  ],
+  "note": "October lawn, mown in stripes across the garden (walk_0013), lush; colour from Jack's lawn close-up",
+  "stripe_m": 0.9,
+  "stripe_axis": "y",
+  "tip": 1.0,
+  "stripe_gain": 0.07
+ },
+ "far_trees": [
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -16,
+    -36
+   ],
+   "h": 8
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    12,
+    -31
+   ],
+   "h": 7
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -26,
+    -24
+   ],
+   "h": 9
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    22,
+    -24
+   ],
+   "h": 8.5
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -18,
+    14
+   ],
+   "h": 9
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -6,
+    16
+   ],
+   "h": 10
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    6,
+    15
+   ],
+   "h": 8.5
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    15,
+    12
+   ],
+   "h": 9.5
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    24,
+    4
+   ],
+   "h": 8
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    30,
+    -8
+   ],
+   "h": 9
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -30,
+    6
+   ],
+   "h": 9
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -24,
+    18
+   ],
+   "h": 10
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    12,
+    22
+   ],
+   "h": 11
+  },
+  {
+   "model": "island_tree_01",
+   "xy": [
+    -2,
+    24
+   ],
+   "h": 9
+  }
+ ],
+ "cameras": {
+  "check": [
+   "20260719_102925.jpg"
+  ],
+  "set": [
+   "walk_0013.jpg",
+   "walk_0037.jpg",
+   "walk_0053.jpg",
+   "walk_0077.jpg",
+   "walk_0167.jpg",
+   "walk_0197.jpg",
+   "20260719_102925.jpg"
+  ],
+  "long_edge_px": 1600
+ },
+ "sun": {
+  "note": "site.json: low sun ~22 deg from the street side and the west (walk frames 143/157); front-garden-v2 mockup az 48",
+  "blender_az_deg": 48,
+  "elevation_deg": 22
+ },
+ "far_trees_note": "background screen behind and beside the houses (not measured; fills the skyline the photos show)",
+ "far_ring": {
+  "model": "island_tree_01",
+  "centre": [
+   0,
+   -6
+  ],
+  "r": [
+   30,
+   48
+  ],
+  "n": 34,
+  "h": [
+   7,
+   12
+  ],
+  "skip_road_y": [
+   -30,
+   -19
+  ],
+  "note": "background screen of trees all round (not measured)"
+ },
+ "video": {
+  "from": 9,
+  "to": 57,
+  "smooth": 7,
+  "step": 2,
+  "speed_mps": 1.0,
+  "eye_m": 1.6,
+  "fps": 24,
+  "res": [
+   1280,
+   720
+  ],
+  "hfov_deg": 68,
+  "note": "walk film along Jack's own walk path (walk frames 9-57: street to porch and pergola)"
+ },
+ "bed_fill": [
+  {
+   "objects": [
+    "G2_bed_soil",
+    "G2_house_bed",
+    "G2_wing_bed",
+    "G2_bed_strip"
+   ],
+   "model": "periwinkle_plant",
+   "mi": "MI_Groundcover",
+   "variants": [
+    "03",
+    "04",
+    "05",
+    "06"
+   ],
+   "per_m2": 5,
+   "h": [
+    0.14,
+    0.3
+   ]
+  },
+  {
+   "objects": [
+    "G2_bed_soil",
+    "G2_house_bed",
+    "G2_wing_bed"
+   ],
+   "model": "grass_medium_01",
+   "mi": "MI_GrassFill",
+   "variants": [
+    "mid_a",
+    "mid_b",
+    "mid_c",
+    "small_a"
+   ],
+   "per_m2": 2,
+   "h": [
+    0.15,
+    0.3
+   ]
+  }
+ ],
+ "far_ring2": {
+  "model": "island_tree_01",
+  "centre": [
+   0,
+   -6
+  ],
+  "r": [
+   19,
+   30
+  ],
+  "n": 18,
+  "h": [
+   6,
+   10
+  ],
+  "skip_road_y": [
+   -30,
+   -19
+  ],
+  "skip_box": [
+   -14,
+   16,
+   -21,
+   10
+  ]
+ },
+ "tree_rows": {
+  "model": "island_tree_01",
+  "rows": [
+   [
+    14,
+    -24,
+    15,
+    12,
+    4.5,
+    [
+     6,
+     9
+    ]
+   ],
+   [
+    16,
+    13,
+    -16,
+    15,
+    5.0,
+    [
+     7,
+     10
+    ]
+   ],
+   [
+    -15,
+    14,
+    -16,
+    -22,
+    5.0,
+    [
+     6,
+     9
+    ]
+   ]
+  ],
+  "note": "neighbours' trees as a screen beyond the boundaries (the photos show trees/houses there, not a horizon)"
+ }
+}

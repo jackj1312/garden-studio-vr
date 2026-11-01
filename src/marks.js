@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { hapticPulse } from "./presence.js?v=f383e46-1642";
 import { buildCollision } from "./surface.js?v=f383e46-1642";
-import { createNotes } from "./notes.js?v=f383e46-1642";
+import { createNotes } from "./notes.js?v=h19";   // h19: inXR + Delete (the house review); the garden is unchanged by it
 
 /* ------------------------------------------------------------------ *
  *  Marking: draw on the garden the way you draw the Quest's Guardian.
@@ -19,6 +19,18 @@ import { createNotes } from "./notes.js?v=f383e46-1642";
  *  viewer x, plan y = -viewer z, metres); "points3d" and "normals" are
  *  the surface points in viewer coordinates; "surface" is the material
  *  the stroke mostly lay on (FG_brick_gltf: a wall).
+ *
+ *  Other viewers (the house, src/house/viewer.js ?mode=review) pass:
+ *  raycast(ray, far) -> {point, normal, surface, tag} for their own ray
+ *  tree (tag: what was hit, e.g. a part name: counted per stroke and
+ *  saved, most first, as extra[tagField]), meta() -> fields stamped on a new stroke (version,
+ *  view, stage...), annotate(stroke) -> fields added when it ends,
+ *  visible(stroke) -> shown now or not (marks of another version stay
+ *  in the file but hidden), inXR() (a simulated headset counts),
+ *  onChange() (a list to redraw), hint {draw, note} texts and
+ *  seeThrough: false (a faint ghost through walls, and labels only
+ *  within LABEL_NEAR of the eye, so a house full of marks stays calm).
+ *  Those extra fields are saved beside the garden's and kept on load.
  * ------------------------------------------------------------------ */
 
 export const KINDS = {
@@ -36,6 +48,7 @@ const LIFT = 0.015;           // ribbon base off the surface, along its normal
 const HEIGHT = 0.03;          // ribbon thickness, along the normal
 const POLL_MS = 4000;         // while a voice note is being transcribed
 const POLL_FOR = 5 * 60 * 1000;
+const LABEL_NEAR = 7;         // seeThrough: false: labels show within this many metres of the eye
 
 const UP = new THREE.Vector3(0, 1, 0);
 const r3 = v => Math.round(v * 1000) / 1000;
@@ -127,7 +140,14 @@ function makeLabel(line1, line2, css) {
   return s;
 }
 
-export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
+/* the fields every stroke has; anything else a viewer stamps on (meta / annotate) rides along in s.extra */
+const CORE = new Set(["id", "kind", "closed", "points", "points3d", "normals", "surface", "length_m", "area_m2", "created", "note", "audio", "note_status"]);
+
+export function createMarks({ scene, camera, renderer, siteKey, onActive, raycast = null, meta = null, annotate = null,
+                              visible = null, inXR = null, onChange = null, hint: hintText = null, seeThrough = true, tagField = "elements" }) {
+  const xr = inXR || (() => renderer.xr.isPresenting);
+  const shown = s => !visible || visible(s);
+  const changed = () => { try { onChange?.(); } catch (err) { console.warn("marks: onChange", err); } };
   const ribbonMat = new THREE.MeshBasicMaterial({
     vertexColors: true, toneMapped: false, fog: false, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
@@ -136,13 +156,13 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
      the grass tufts and behind a hedge */
   const ghostMat = new THREE.MeshBasicMaterial({
     vertexColors: true, toneMapped: false, fog: false, side: THREE.DoubleSide,
-    transparent: true, opacity: 0.3, depthTest: false, depthWrite: false,
+    transparent: true, opacity: seeThrough ? 0.3 : 0.1, depthTest: false, depthWrite: false,
   });
 
   const group = new THREE.Group();
   group.name = "Marks";
   scene.add(group);
-  const notes = createNotes({ scene, camera, renderer, siteKey });
+  const notes = createNotes({ scene, camera, renderer, siteKey, inXR: xr });
 
   /* cursor: a glowing ring lying on whatever the ray hits, like the Guardian's */
   const cursor = new THREE.Group();
@@ -188,7 +208,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   let collision = null;
   const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion();
   const surf = { point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), surface: "ground" };
-  let t = 0, cursorBase = 1, triggerWas = false, hoverLabel = null;
+  let t = 0, cursorBase = 1, triggerWas = false, hoverLabel = null, labelTick = 0;
 
   function drawHint() {
     const k = KINDS[kind];
@@ -198,17 +218,19 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     hctx.fillStyle = k.css; hctx.font = "700 46px system-ui, sans-serif";
     hctx.fillText(`MARK · ${k.label}`, 36, 58);
     hctx.fillStyle = "#e6e7e0"; hctx.font = "26px system-ui, sans-serif";
-    hctx.fillText(notes.isOpen ? "Trigger types · hold A (or the button) to talk"
-      : `Trigger draw · Grip undo · A kind · ${siteKey ? "B" : "L-stick"} done`, 36, 104);
+    hctx.fillText(notes.isOpen ? (hintText?.note || "Trigger types · hold A (or the button) to talk")
+      : (hintText?.draw || `Trigger draw · Grip undo · A kind · ${siteKey ? "B" : "L-stick"} done`), 36, 104);
     hctx.fillStyle = "#a7ab9e"; hctx.font = "24px system-ui, sans-serif";
-    hctx.fillText(`${strokes.length} mark${strokes.length === 1 ? "" : "s"}${status ? " · " + status : ""} · point at a label to edit its note`.slice(0, 60), 36, 146);
+    const n = strokes.filter(shown).length;
+    hctx.fillText(`${n} mark${n === 1 ? "" : "s"}${status ? " · " + status : ""} · point at a label to edit its note`.slice(0, 60), 36, 146);
     hintTex.needsUpdate = true;
     if (domHint) {
       domHint.hidden = !active;
       domHint.style.setProperty("--mark", k.css);
       domHint.querySelector("[data-kind]").textContent = k.label;
+      const n = strokes.filter(shown).length;
       domHint.querySelector("[data-status]").textContent =
-        `${strokes.length} mark${strokes.length === 1 ? "" : "s"}${status ? " · " + status : ""}`;
+        `${n} mark${n === 1 ? "" : "s"}${status ? " · " + status : ""}`;
     }
   }
 
@@ -220,6 +242,13 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   /* where the ray meets the site: walls, roofs, fences, kerbs, ground (the
      collision copy), else the y = 0 plane */
   function castSurface() {
+    if (raycast) {                          // the viewer's own ray tree (the house BVH); nothing hit = nothing to draw on
+      const h = raycast(raycaster.ray, MAX_REACH);
+      if (!h) return null;
+      surf.point.copy(h.point); surf.normal.copy(h.normal); surf.surface = h.surface || "surface"; surf.tag = h.tag ?? null;
+      return surf;
+    }
+    surf.tag = null;
     const h = collision?.raycast(raycaster.ray, MAX_REACH);
     if (h) {
       surf.point.copy(h.point); surf.normal.copy(h.normal); surf.surface = h.surface;
@@ -271,10 +300,11 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   function addLabel(s) {
     dropLabel(s);
     const line1 = s.closed ? `${s.area.toFixed(1)} m² · ${s.length.toFixed(1)} m` : `${s.length.toFixed(1)} m`;
-    const line2 = s.note ? shorten(s.note, 34)
+    const line2 = s.note ? shorten(s.note, 28)
       : s.note_status === "awaiting transcription" ? "voice note · transcribing…" : "";
     s.label = makeLabel(line1, line2, KINDS[s.kind].css);
     s.label.userData.stroke = s;
+    s.label.visible = shown(s);
     const at = new THREE.Vector3(), n = new THREE.Vector3();
     if (s.closed) for (const p of s.pts) at.add(p);
     else at.copy(s.pts[s.pts.length - 1]);
@@ -296,8 +326,25 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
       for (const [k, c] of s.surfCount || []) if (c > bc) { best = k; bc = c; }
       s.surface = best;
     }
+    if (s.tagCount?.size) {                 // what the stroke lay on, most first (the house: element ids)
+      s.extra = s.extra || {};
+      s.extra[tagField] = [...s.tagCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k]) => k);
+    }
     buildMesh(s);
     addLabel(s);
+    setShown(s);
+  }
+  function setShown(s) {
+    const on = shown(s);
+    if (s.mesh) s.mesh.visible = on;
+    if (s.ghost) s.ghost.visible = on;
+    if (s.label) s.label.visible = on && near(s);
+  }
+  const _eye = new THREE.Vector3();
+  function near(s) {
+    if (seeThrough || !s.label) return true;
+    camera.getWorldPosition(_eye);
+    return s.label.position.distanceToSquared(_eye) < LABEL_NEAR * LABEL_NEAR;
   }
 
   function disposeStroke(s) {
@@ -309,7 +356,9 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   function begin(h) {
     live = { id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind, closed: false,
              pts: [h.point.clone()], nrm: [h.normal.clone()], surfCount: new Map([[h.surface, 1]]),
-             created: new Date().toISOString(), since: 0, note: null, audio: null, note_status: null };
+             tagCount: h.tag != null ? new Map([[h.tag, 1]]) : null,
+             created: new Date().toISOString(), since: 0, note: null, audio: null, note_status: null,
+             extra: meta ? { ...meta() } : null };
     buildMesh(live);
   }
   /* returns true when a point was added */
@@ -327,6 +376,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
       live.nrm.push(i === steps ? h.normal.clone() : new THREE.Vector3().lerpVectors(lastN, h.normal, f).normalize());
     }
     live.surfCount.set(h.surface, (live.surfCount.get(h.surface) || 0) + steps);
+    if (h.tag != null) { live.tagCount = live.tagCount || new Map(); live.tagCount.set(h.tag, (live.tagCount.get(h.tag) || 0) + steps); }
     live.since += d;
     buildMesh(live);
     return true;
@@ -336,10 +386,12 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     if (!s) return null;
     if (s.pts.length < 2 || length3(s.pts, false) < 0.1) { disposeStroke(s); return null; }
     finish(s);
+    if (annotate) { try { s.extra = { ...(s.extra || {}), ...annotate(s) }; } catch (err) { console.warn("marks: annotate", err); } }
     strokes.push(s);
     save();
     drawHint();
     openNote(s);
+    changed();
     return s;
   }
 
@@ -351,7 +403,10 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
       save();
       if (s.note_status === "awaiting transcription") watchTranscripts();
       drawHint();
+      changed();
     },
+    /* the note panel's Delete (only offered where the viewer lists marks) */
+    remove: onChange ? s => remove(s) : null,
   };
   function openNote(s) { notes.open(s, noteCallbacks); drawHint(); }
 
@@ -376,6 +431,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
           s.note = f.note; s.note_status = "transcribed";
           addLabel(s);
           notes.refresh(s);
+          changed();
           console.info(`marks: transcript for ${s.id}: ${f.note}`);
         }
       }
@@ -384,7 +440,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
 
   /* labels you can point at to reopen a note */
   function pickLabel() {
-    const labels = strokes.map(s => s.label).filter(Boolean);
+    const labels = strokes.filter(shown).map(s => s.label).filter(l => l?.visible);
     if (!labels.length) return null;
     const h = raycaster.intersectObjects(labels, false)[0];
     return h ? h : null;
@@ -411,6 +467,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
       note: s.note || null,
       audio: s.audio || null,
       note_status: s.note_status || null,
+      ...(s.extra || {}),
     })),
   });
   let saving = null, again = false;
@@ -436,6 +493,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     await saving;
     saving = null;
     drawHint();
+    changed();
     if (again) { again = false; save(); }
   }
 
@@ -452,8 +510,11 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
                           : st.points.map(([x, y]) => new THREE.Vector3(x, groundY(x, -y), -y));   // older, ground-only marks
         const nrm = has3d && Array.isArray(st.normals) && st.normals.length === pts.length
           ? st.normals.map(([x, y, z]) => new THREE.Vector3(x, y, z).normalize()) : pts.map(() => UP.clone());
+        const extra = {};
+        for (const [k, v] of Object.entries(st)) if (!CORE.has(k)) extra[k] = v;
         const s = { id: st.id, kind: st.kind, pts, nrm, created: st.created, surface: st.surface || "ground",
-                    note: st.note || null, audio: st.audio || null, note_status: st.note_status || null };
+                    note: st.note || null, audio: st.audio || null, note_status: st.note_status || null,
+                    extra: Object.keys(extra).length ? extra : null };
         finish(s);
         if (st.closed && !s.closed) { s.closed = true; s.length = length3(pts, true); s.area = area3(pts); buildMesh(s); addLabel(s); }
         strokes.push(s);
@@ -461,6 +522,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
       if (strokes.length) console.info(`marks: ${strokes.length} loaded for ${siteKey}`);
       if (strokes.some(s => s.note_status === "awaiting transcription")) watchTranscripts();
       drawHint();
+      changed();
     } catch (err) {
       console.warn("marks: could not read marks.json", err);
     }
@@ -473,8 +535,9 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     if (active && !was) onActive?.(true);
     if (!active) { if (live) end(); if (notes.isOpen) notes.save(); cursor.visible = false; ray.visible = false; setHoverLabel(null); }
     hint.visible = active;
-    if (active && !renderer.xr.isPresenting && document.pointerLockElement) document.exitPointerLock();
+    if (active && !xr() && document.pointerLockElement) document.exitPointerLock();
     drawHint();
+    changed();
   }
   function cycleKind() {
     kind = KIND_ORDER[(KIND_ORDER.indexOf(kind) + 1) % KIND_ORDER.length];
@@ -482,12 +545,28 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
   }
   function undo() {
     if (live) { disposeStroke(live); live = null; return; }
-    const s = strokes.pop();
-    if (!s) return;
+    let i = strokes.length - 1;
+    while (i >= 0 && !shown(strokes[i])) i--;          // the last mark you can see (not one on another version)
+    if (i >= 0) remove(strokes[i]);
+  }
+  function remove(s) {
+    const i = strokes.indexOf(s);
+    if (i < 0) return false;
+    strokes.splice(i, 1);
     notes.forget(s);
+    if (hoverLabel === s.label) hoverLabel = null;
     disposeStroke(s);
     save();
     drawHint();
+    changed();
+    return true;
+  }
+  /* the viewer's filter changed (another version on screen): show / hide each mark */
+  function refreshVisibility() {
+    for (const s of strokes) setShown(s);
+    if (hoverLabel && !hoverLabel.visible) setHoverLabel(null);
+    drawHint();
+    changed();
   }
 
   /* ---------------- headset ---------------- */
@@ -544,7 +623,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     raycaster.setFromCamera(ndc, camera);
   }
   canvas.addEventListener("pointerdown", e => {
-    if (!active || renderer.xr.isPresenting || e.button !== 0) return;
+    if (!active || xr() || e.button !== 0) return;
     aimAt(e);
     const lh = pickLabel();
     if (lh) { e.preventDefault(); openNote(lh.object.userData.stroke); return; }
@@ -556,7 +635,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     showCursor(h);
   });
   canvas.addEventListener("pointermove", e => {
-    if (!active || renderer.xr.isPresenting) return;
+    if (!active || xr()) return;
     aimAt(e);
     if (!live) setHoverLabel(pickLabel()?.object || null);
     const h = castSurface();
@@ -564,14 +643,14 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     showCursor(h);
   });
   const up = e => {
-    if (!live || renderer.xr.isPresenting) return;
+    if (!live || xr()) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     end();
   };
   canvas.addEventListener("pointerup", up);
   canvas.addEventListener("pointercancel", up);
   addEventListener("keydown", e => {
-    if (e.repeat || renderer.xr.isPresenting || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.repeat || xr() || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     if (e.code === "KeyM") setActive(!active);
     else if (active && e.code === "KeyK") cycleKind();
@@ -587,7 +666,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     get noteOpen() { return notes.isOpen; },
     get collision() { return collision; },
     strokes, notes,
-    setActive, toggle: () => setActive(!active), cycleKind, undo, updateXR, load, save, toJSON, openNote,
+    setActive, toggle: () => setActive(!active), cycleKind, undo, remove, refreshVisibility, isShown: shown, updateXR, load, save, toJSON, openNote,
     /* the A button while a note is open: hold to talk */
     talk(down) { notes.talk(down); drawHint(); },
     attachHint(controller) { controller.add(hint); },
@@ -596,8 +675,9 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive }) {
     update(dt) {
       t += dt;
       notes.update(dt);
-      if (!renderer.xr.isPresenting) ray.visible = false;
+      if (!xr()) ray.visible = false;
       if (cursor.visible) cursor.scale.setScalar(cursorBase * (1 + 0.07 * Math.sin(t * 6)));
+      if (!seeThrough && (labelTick += dt) > 0.25) { labelTick = 0; for (const s of strokes) if (s.label) s.label.visible = shown(s) && near(s); }
     },
   };
 }

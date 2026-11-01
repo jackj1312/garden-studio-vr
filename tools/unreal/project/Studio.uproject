@@ -1,0 +1,13 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "",
+  "Category": "",
+  "Description": "Garden Studio: measured houses and gardens, lit in Unreal (made by tools/unreal)",
+  "Plugins": [
+    { "Name": "PythonScriptPlugin", "Enabled": true },
+    { "Name": "EditorScriptingUtilities", "Enabled": true },
+    { "Name": "USDImporter", "Enabled": true },
+    { "Name": "MovieRenderPipeline", "Enabled": true },
+    { "Name": "SequencerScripting", "Enabled": true }
+  ]
+}

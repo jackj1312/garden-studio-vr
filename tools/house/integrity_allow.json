@@ -1,0 +1,221 @@
+{
+ "note": "Integrity faults left open on purpose, each with its reason and who decides. The gate passes only with these listed; every one is in the report. Remove an entry as soon as its fix lands.",
+ "allow": [
+  {
+   "category": "sky_leak",
+   "version": "as_built_now",
+   "match": [
+    "conservatory"
+   ],
+   "reason": "the conservatory's party side (x 0.16) has no wall or frame in the 4915.1 trace (only the rear and right frames): sky shows over the dwarf wall. The back is not photographed: question for Jack (what closes that side), not invented."
+  },
+  {
+   "category": "open_shell",
+   "match": [
+    "G-stair_"
+   ],
+   "reason": "the stair spine wall's cells meet the notched hall floor in a T-junction: 2 faces of 216 read inward (inside the floor zone, not seen). Next fix: the spine's lower cells on the floor grid."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "F-cpd2side",
+    "F-wingL"
+   ],
+   "reason": "the landing cupboard partition's lining runs 40 cm2 into the wing wall's lining at the ceiling corner (inside the cupboard, 4.85 m up). Next fix: join the partition lining to the wing lining."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "B-beam-2",
+    "B-beam-3"
+   ],
+   "reason": "beams 2 and 3 share an end face over the bedroom 3 ceiling (above the ceiling, 4.88 m): next fix in the beam overrides (parked builder work, Jack 1 Nov)."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "CJ-left",
+    "CL-ff-new"
+   ],
+   "reason": "ceiling joist ends flush with the flat ceiling edge where the sloped ceiling starts (x 3.62): 6 cm2 each, seen only at the catslide junction. Next fix: stop the joists 2 mm short."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "G-hallKit",
+    "infill"
+   ],
+   "reason": "the old kitchen door infill (After) stands on the wall lowered 20 mm for the old threshold: a 20 mm slot at the floor, hidden by the skirting line. Next fix: infill from the lowered base."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "XF-F-cpd"
+   ],
+   "reason": "the two landing cupboards' floors meet under a stud partition 15 mm wide: seen from the hall below only through the partition line. Next fix: one floor under both."
+  },
+  {
+   "category": "above_roof",
+   "match": [
+    "RM-house-main.rear-2k"
+   ],
+   "reason": "a kept strip of the main roof's rear membrane where the extension roof ties in (After), 2.48 m over the extension tiles: next fix in the diff of kept roof layers (the tiles over it come out; the membrane must too)."
+  },
+  {
+   "category": "sky_leak",
+   "version": "approved_2b",
+   "match": [
+    "R-g-kitchen-living-dining"
+   ],
+   "reason": "7 of 1500 rays pass the 4 mm clearances between the bi-fold leaves (door clearance, by design)."
+  },
+  {
+   "category": "sky_leak",
+   "version": "approved_2b",
+   "match": [
+    "R-g-utility"
+   ],
+   "reason": "2 rays through a door-leaf clearance (by design)."
+  },
+  {
+   "category": "sky_leak",
+   "version": "approved_2b",
+   "match": [
+    "R-f-bedroom-3-rear-new"
+   ],
+   "reason": "2-3 rays at the catslide / ashlar junction: next fix with the sloped ceiling's lower edge."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "F-bed1",
+    "F-rear~k2"
+   ],
+   "reason": "T-junction of a kept first-floor wall with the re-cut rear wall (12.9 mm = the lining): next fix in the wall joins of re-cut walls."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "F-rear~k2",
+    "F-stairR"
+   ],
+   "reason": "as above (re-cut rear wall T-junction)."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "SL0-"
+   ],
+   "reason": "the new slab's layers meet the kept old floor / rear wall 7-27 mm short below the floor finish (hidden by it and the skirting). Next fix: the new slab to the old faces."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "G-utilKit",
+    "XF-G-kitchen"
+   ],
+   "reason": "as above: under the floor finish."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "SC-beam-6"
+   ],
+   "reason": "steel boxing 5 mm off the lining at the beam end (After, 2.2 m): next fix in steel_casings."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "G-kitR",
+    "XF-F-"
+   ],
+   "reason": "first-floor deck edge 25 mm short of the kitchen wall lining inside the floor zone (the ceiling below covers it). Next fix: deck edges on to the ground wall's lining."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "G-rearL",
+    "XF-G-store"
+   ],
+   "reason": "under the floor finish (Before store)."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "G-osPart",
+    "G-osRear2"
+   ],
+   "reason": "outshot partition 4.9 mm short of the rear wall at floor level (Before store, behind the skirting line). Next fix: T-join tolerance."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "G-stair_",
+    "XF-G-hall"
+   ],
+   "reason": "as the open_shell entry: the notched hall floor at the stair spine."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "G-sitBack",
+    "G-wingL"
+   ],
+   "reason": "the new plaster on the wing's old outside face meets the sitting room's back-wall lining in one plane at the corner (row 179 plaster_out): next fix: corner joins aware of the new plaster layer."
+  },
+  {
+   "category": "foliage_in_solid",
+   "match": [
+    "SPEC-CON-PLANT-1",
+    "G-osLeft"
+   ],
+   "reason": "spec_v1 puts CON-PLANT-1 (701 x 657 at x 2.55, z -5.15) through the outshot wall (face x 2.85): a spec position conflict for Jack, not moved."
+  },
+  {
+   "category": "sky_leak",
+   "version": "as_built_now",
+   "match": [
+    "C-CONS-B"
+   ],
+   "reason": "as the conservatory entry: its party side is open in the trace."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "SPEC-FLR-"
+   ],
+   "reason": "a floor finish edge only partly along a wall (a room corner beside a doorway or the ashlar) stops 10-26 mm short of that wall's lining at floor level; the skirting (held to the joinery bar, row 183) will cover it. Next fix: floor finish edges run per wall run, not per whole edge."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "SPEC-FLR-R-f-bathroom",
+    "SPEC-FLR-R-f-landing"
+   ],
+   "reason": "the bathroom and landing floor finishes overlap 2.4 cm2 in the bathroom doorway (the spec's room outlines overlap there). Next fix: one finish per place in doorways."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "SPEC-SKIRT-R-f-",
+    "ST-balustrade-landing"
+   ],
+   "reason": "row 191 (G5b): the landing skirting stops at the foot of the landing balustrade, 12-22 mm short of its base rail (the balustrade stands proud of the wall line on the trace). Low, at floor level; next fix: the balustrade base rail returned to the wall."
+  },
+  {
+   "category": "gap",
+   "match": [
+    "F-G-utilKit-utility-door-910_architraves",
+    "G-utilKit_L1_wall_lining"
+   ],
+   "version": "approved_2b",
+   "reason": "row 191 (G5b): the utility door's architrave bridges a 2.5-3.4 mm step in the stud lining at mid-height (the lining's upper lift is set back); a decorator's caulk line. Next fix: the lining lifts flush."
+  }
+ ]
+}

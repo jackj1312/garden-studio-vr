@@ -1,0 +1,9 @@
+{
+ "note": "G5b shell faults left open on purpose: each is a conflict INSIDE the traced drawings (room outline vs wall line), not a build fault, and is a question for Jack. The gate passes only with these listed; every one goes in the report. Remove an entry when the drawing question is answered.",
+ "allow": [
+  {"check": "a", "room": "R-g-hall", "kind": "face off the drawn line", "near": [5.5, -1.2], "tol": 0.15,
+   "reason": "trace conflict: the hall outline steps out to x 5.5 at z -1.10, but the wing wall (G-wingL) runs on to z -1.255, so for 155 mm the wall face stands 165 mm inside the outline (a nib at the hall/sitting-room corner). 4915.1/2B: which is right, the outline or the wall end? Built as the wall (structure wins)."},
+  {"check": "a", "room": "R-f-landing", "kind": "face off the drawn line", "near": [5.51, -2.354], "tol": 0.15,
+   "reason": "trace conflict (After): with the old bedroom door wall removed (4915.2B), the stair wall F-stairR still starts at z -2.233, so its end stands 122 mm into the landing outline (drawn at z -2.354). Built as the wall line; question for Jack: is the stair wall cut back to the landing line?"}
+ ]
+}

@@ -42,8 +42,15 @@ const KEYS = [];
   KEYS.push({ x: 510, y: 205, w: 220, h: 80, label: "Skip", act: "skip" });
   KEYS.push({ x: 745, y: 205, w: 254, h: 80, label: "Save", act: "save" });
 }
+/* where the viewer lists marks (the house review), the top row also has Delete */
+const KEYS_DEL = KEYS.filter(k => !["talk", "skip", "save"].includes(k.act)).concat([
+  { x: 25, y: 205, w: 380, h: 80, label: "Hold to talk", act: "talk" },
+  { x: 417, y: 205, w: 190, h: 80, label: "Delete", act: "delete" },
+  { x: 619, y: 205, w: 170, h: 80, label: "Skip", act: "skip" },
+  { x: 801, y: 205, w: 198, h: 80, label: "Save", act: "save" },
+]);
 
-export function createNotes({ scene, camera, renderer, siteKey }) {
+export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
   /* ---------------- headset panel ---------------- */
   const canvas = document.createElement("canvas");
   canvas.width = CW; canvas.height = CH;
@@ -68,7 +75,9 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
   let micStream = null, canUpload = !!siteKey;
 
   const isOpen = () => !!stroke;
-  const headset = () => renderer.xr.isPresenting;
+  const headset = inXR || (() => renderer.xr.isPresenting);
+  const keys = () => cb?.remove ? KEYS_DEL : KEYS;
+  const boxDel = document.getElementById("noteDelete");
 
   function wrap(str, max) {
     const words = str.split(" "), lines = [];
@@ -101,7 +110,7 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
     if (!shown) ctx.fillText("What's wrong here, or what's proposed?", 50, 135);
     else lines.forEach((l, i) => ctx.fillText(l, 50, 115 + i * 44));
     // keys
-    for (const key of KEYS) {
+    for (const key of keys()) {
       const on = hover === key;
       let fill = on ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", ink = "#eef0e8", label = key.label;
       if (key.act === "talk") {
@@ -109,9 +118,10 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
         label = recording ? `● Recording ${Math.floor((performance.now() - recStart) / 1000)} s · let go to stop` : "● Hold to talk";
       }
       if (key.act === "save") { fill = on ? "#9cc98a" : "#7aa86a"; ink = "#11140f"; }
+      if (key.act === "delete") { fill = on ? "#b0453c" : "rgba(216,52,43,0.55)"; }
       ctx.fillStyle = fill; roundRect(ctx, key.x, key.y, key.w, key.h, 14); ctx.fill();
       ctx.fillStyle = ink; ctx.textAlign = "center";
-      ctx.font = key.act === "talk" || key.act === "save" || key.act === "skip" ? "600 34px system-ui, sans-serif" : "600 38px system-ui, sans-serif";
+      ctx.font = key.act === "talk" || key.act === "save" || key.act === "skip" || key.act === "delete" ? "600 34px system-ui, sans-serif" : "600 38px system-ui, sans-serif";
       if (key.act === "talk" && recording) ctx.font = "600 27px system-ui, sans-serif";
       ctx.fillText(label, key.x + key.w / 2, key.y + key.h / 2 + 2);
     }
@@ -146,6 +156,7 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
       boxTitle.textContent = `Note · ${s.kind === "proposal" ? "Proposal" : "Correction"}`;
       boxTitle.style.color = KIND_CSS[s.kind];
       boxText.value = text;
+      if (boxDel) boxDel.hidden = !cb?.remove;
       setTimeout(() => boxText.focus(), 0);
     }
     draw();
@@ -168,6 +179,14 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
       }
     }
     close();
+  }
+
+  /* Delete on the panel / box: the stroke goes (the viewer saves the list) */
+  function del() {
+    if (!stroke || !cb?.remove) return;
+    const s = stroke, c = cb;
+    close();
+    c.remove(s);
   }
 
   /* the server's transcript arrived for this stroke */
@@ -242,12 +261,13 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
   let triggerWas = false;
   function keyAt(uv) {
     const x = uv.x * CW, y = (1 - uv.y) * CH;
-    return KEYS.find(k => x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h) || null;
+    return keys().find(k => x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h) || null;
   }
   function press(key) {
     if (!key) return;
     if (key.act === "save") { finish(true); return; }
     if (key.act === "skip") { finish(false); return; }
+    if (key.act === "delete") { del(); return; }
     if (key.act === "talk") { startRecording(); return; }
     if (key.act === "back") text = text.slice(0, -1);
     else if (text.length < 500) text += key.act;
@@ -281,6 +301,7 @@ export function createNotes({ scene, camera, renderer, siteKey }) {
     boxRec.addEventListener("click", () => { recording ? stopRecording(true) : startRecording(); });
     document.getElementById("noteSave").addEventListener("click", () => finish(true));
     document.getElementById("noteSkip").addEventListener("click", () => finish(false));
+    boxDel?.addEventListener("click", del);
   }
 
   return {

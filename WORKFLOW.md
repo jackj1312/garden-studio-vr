@@ -30,6 +30,21 @@ At the desk (tools/photogrammetry):
    full-resolution crops). Model, texture and check each element from its sheet. Ask the client for new photos only
    for elements no frame shows, and say which frames were searched.
 
+## G1b · Levels and topography (Jack, 1 Nov 2026: "the lidar aerial scans, that's a powerful tool")
+Every site gets a ground model, flat or steep. Sources, best first; each level records its source and accuracy:
+1. **The architect's drawings:** spot levels, sections, and any topographic survey (DWG/PDF) in the planning set, read to
+   data like the rest of the drawings.
+2. **Environment Agency LiDAR (England):** free aerial laser ground heights (DTM/DSM, 1 m and in places 50 cm, open
+   government licence; check current coverage and accuracy for the site, typically about ±15 cm) for the plot, the
+   neighbours and the street. Wales, Scotland and NI have their own LiDAR portals.
+3. **The client's capture:** the photo/video solve, a splat, or an iPhone depth scan for steps, banks and walls.
+4. **A measured survey** from a surveyor where steps, retaining walls or drainage must be exact (recommended in the quote).
+- **Build:** a terrain surface through all points (higher-confidence sources override lower), the house at its floor level
+  with cut and fill around it, steps, ramps and retaining walls as real elements, falls for drainage.
+- **Shown:** levels and contours on the planner's plan (free stage), walkable slopes in the viewer, an Unreal landscape in
+  the paid Unreal tier; dig and spoil volumes and foundation depths in the build stages follow the terrain.
+- **Check:** the terrain at the drawn spot levels within their stated accuracy; no level presented as surveyed unless it is.
+
 ## Presumed facts (Jack, 31 Oct 2026): ambiguity is filled by stated assumptions, never by gaps
 No client's garden is ever fully visible. Where the evidence runs out, apply a documented assumption so the model
 stays cohesive and lifelike, and mark it on the plan as **assumed** (its own colour) so the client can correct it:
@@ -49,6 +64,29 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 - Draw the plan (draw_plan.py) and the elevations; publish the review page with the review bar (1, 9).
 - The client (now Jack) annotates; every note is answered and redrawn. Sign-off before any modelling (20, 25).
 
+## G2b · Design specification, signed off before anything is built (Jack, 1 Nov 2026: "our first build is perfect")
+"We keep seeming to take 1 step forward and 2 back… we need to put parameters in place to stop usage and time wastage so
+our first build is perfect, this must include a full plan to follow with all fixtures and fittings mapped and placements
+certain." (CORRECTIONS-LOG 177)
+- **Inputs:** the signed-off plan (G2), the client's photos, the drawings, the benchmark the output must reach.
+- **Output:** one specification per deliverable, as a readable page for the client AND a machine-readable schedule the build
+  reads: every room; every fixture, fitting and piece of furniture with its type, size, exact position and orientation on the
+  plan; every finish and colour (measured from the client's photos for what exists, chosen and shown as swatches for what is
+  new); every external item; the source asset of each; the lighting and camera for renders; provenance (drawn / photo /
+  owner / typical).
+- **Sign-off:** the client reviews and edits it in the room planner, 2D plan first (Jack, 1 Nov: "the first time it's seen
+  should be the plan view, so you can edit before any 3D has had time spent… before money"), and sends it to build; decisions
+  that aren't placements go through the questions form. No 3D build of a room and no cloud render before that. After
+  sign-off nothing is changed except by the client's change request.
+- **Build rule:** the build follows the schedule exactly and never improvises a colour, position or product. Anything the
+  schedule doesn't cover stops the build and becomes a question.
+- **Check:** an automated comparison of the model with the schedule (every item present, in place within 20 mm, the right
+  asset and finish; colours within ΔE 5 of their target) passes before any judge sees it.
+- **Deposit gate (Jack, 1 Nov):** for a client, the planner (2D plan view) is free; when they're happy with it they pay the
+  deposit, and only then does the paid pipeline start (3D build, walkthrough, Unreal, film, headset visit).
+- **Waste limits:** one judge round and one fix round per deliverable before it goes to the client; a result that misses
+  the spec goes back to the spec, not to another trial-and-error round; cloud runs only against a signed-off spec.
+
 ## G3 · Element inventory
 - A list of every element on the house and in the garden: what it IS (mirror, not window), material, colour,
   size, position, and the photos that prove it (at least two) (19, 21, 22).
@@ -67,19 +105,77 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 - Real units for real things: kerbs and edgings as setts, boards as boards, windows from the elevation (24, 25).
 - Sun direction and height from the client's own shadows (14).
 
+## Studio asset library (Jack, 1 Nov 2026): every build reuses it
+Order of preference (Jack, 1 Nov: "surely we need to use pre-made assets… and only use script where nothing exists"):
+1) a proven library item; 2) a pre-made, well-built asset from the free/account libraries (Fab/Megascans and marketplace
+packs for the Unreal tier, with proper materials, LODs and interactive behaviour; CC0 equivalents for the web viewer);
+3) a parametric maker only where things must fit exact drawn sizes (joinery in the drawn openings, kitchen runs, built-ins)
+or nothing suitable exists. Every build looks in ~/Desktop/garden-scans/asset-library/ (README.md) first; anything new is made only when nothing fits,
+and once it passes its close-up test sheet it is added with its metadata, generator and licence, so each detail is solved
+once for every house. The room planner catalogue and Unreal builds read the same library.
+
+## G5b · SHELL READY, before anything is furnished or judged (Jack, 1 Nov 2026)
+"There must be a baseline we have to meet before we even get to the judging stage… the bare house model needs to be coherent
+with no issues like missing ceilings or gaps anywhere or doors that open to blank walls. Basically a shell that is ready to
+furnish. It cannot begin furnishing until all that is ready… we have a very detailed plan to work from so there is no
+ambiguity." (CORRECTIONS-LOG 191)
+The bare house (walls, floors, ceilings, roof, stairs, windows, doors, plaster, paint, joinery: no furniture or props) passes
+ALL of these, automated where possible, before furniture, decor or any judge:
+1. Every room matches its drawn outline (walls within 20 mm of the trace), and every drawn feature is there as drawn:
+   chimney breasts, piers, bays, nibs, bulkheads, the stair and its void.
+2. Every room is closed: a ceiling at its drawn height over the whole room (sloped where the roof slopes), a floor to
+   every wall, no sky or void visible from any standing point.
+3. Every door leads somewhere: both sides of every opening are walkable floor in a room or outside; nothing solid inside
+   the door's swing or beyond its opening; every door has its leaf, lining, stops and furniture and opens fully.
+4. Every window has glass, a frame of the right colour, plastered reveals (no brick or block showing inside), a head and a
+   window board; nothing blocks it inside.
+5. The house is whole: the party wall is continuous with the neighbour (a semi joins its pair with no gap or doubled wall),
+   roofs meet, gutters and verges close, nothing pokes through the roof.
+6. Every inside surface has its finish (plaster and paint, tiles in wet rooms), skirting in every room, architraves on
+   every opening; no raw construction material visible from a finished room.
+7. Outside: the setting is unbroken (hedges, fences, paving, kerbs continuous where they are in the photos/plan).
+8. The integrity gate (G6) passes with nothing waived that a homeowner can see, and the walk test passes.
+9. A walk inspection: a frame from the doorway and from the centre of every room, Before and After, every frame looked at,
+   with a written pass per room. Only then: furniture, the lived-in layer, Unreal, judges.
+
+## G5c · FINISHED HOUSE, before any judge or client sees it (Jack, 1 Nov 2026: "all these things need to be gates for the build to pass")
+Every "still mid-build" tell is a blocking gate (list in DETAIL-CHECKLIST, "Still mid-build tells"). Automated by
+tools/house/check_finish.py where it can be, plus the walk inspection for the rest; one failure blocks the build:
+- Walls and ceilings: no bare brick/block/stud or unpainted plaster visible from any room or stair; a ceiling over every room;
+  no joists, rafters or deck undersides visible; no gaps at wall/ceiling/floor junctions.
+- Structure: no steel, timber beam, padstone, lintel or wall plate visible from a room (boxed and painted).
+- Openings: every window has plastered reveals, a head and a window board; every doorway has a door (or is a drawn open
+  opening, lined), lining, stops, architraves both sides, a handle, even gaps, and a clear swing.
+- Floors: every room has its floor finish, thresholds at every doorway, skirting on every wall; the stair has finished
+  treads, nosings, a handrail and balustrade.
+- Services: switches and sockets in every room, a light fitting per room (no bare bulb), radiators with valves under
+  windows where the spec puts them, smoke alarms on the landing and hall; no visible pipes or wires except radiator tails.
+- Kitchen and bathrooms: every unit has doors/drawers, worktop, plinth; taps on every sink, basin and bath; tiles or
+  splashbacks; sealant lines; WC seats.
+- Outside: eaves, verges and soffits closed; gutters and downpipes on every roof edge that drains; paving and kerb edges
+  finished; no bare ground or rubble where the plan shows garden.
+- Feel: lights on where the scene says; the lived-in layer present; repeated items varied; nothing perfectly identical.
+G5b (shell) must pass before furnishing; G5c (finished) must pass before judges, Unreal or the client.
+
 ## G6 · Self-check against reality (on the Mac, light)
+- **A house built from architect drawings (1 Nov 2026):** tools/house/generate_house.py runs a per-stage support and clash check (nothing floats at any stage, nothing passes into anything except listed contacts) and must read 0 floating / 0 unintended clashes (113, 115); then house_slices.py + house_overlay.py lay the model over every plan, elevation and section sheet and measure wall faces (20 mm plans/sections, 30 mm elevations), with sections registered and visually confirmed first (114); one look render per proposal at its final stage before reporting (115). Results in renders/<site>-build/CHECK.md.
 - tools/blender/inspect_house.py: the model rendered through every solved camera, side by side with the photo.
 - Go element by element through the inventory in every matched view; anything off goes in the log first (26).
 - Re-check every line of DETAIL-CHECKLIST.md against the matched views.
-- Export checks: no white or missing materials (11, 12).
+- Export checks: no white or missing materials (11, 12); `python3 tools/check_site_export.py assets/sites/<site>` must PASS (site.json
+  regenerated with the model: collision fresher than both GLBs, polygons for curved beds; textured materials have TEXCOORD_0) (55, 80).
 - Three judges (Sonnet) against the benchmarks and the matched views; act on all, but photos win (18).
 - **Matched-view audit before anything is shown to Jack (PERMANENT, Jack 1 Nov 2026: "save this step as a permanent step before
   presenting it to me").** A dedicated agent renders the model through EVERY solved camera that sees each part, pairs real |
   model | model-outline-on-photo (tools/blender/house_audit_render.py, house_pairs.py), goes element by element through the
   inventory and DETAIL-CHECKLIST.md, writes every discrepancy with evidence to an AUDIT.md, fixes each from measurements,
-  runs the clash check (0 overlapping parts), and repeats until outlines sit on the real edges. Covers house, ground, kerbs,
+  runs the full clash check over EVERY object (`house_audit_render.py --passes check,clash --prefixes all`, tools/blender/clash_check.py: parts
+  passing into each other, coplanar duplicates, ground surfaces over each other or over setts, setts through setts, open single-sided
+  parts, soil showing past its border, and MUST TOUCH: every element that abuts another (shed to house, porch to house, fence to
+  shed) has no gap, from the build's MUST_TOUCH list — all must read 0, intended contacts allow-listed with the reason) (65-76, 106, 107, 112), and repeats until outlines sit on the real edges. Covers house, ground, kerbs,
   junctions, beds, boundaries, objects. Also checks the headset marks list (marks.json notes) so Jack's notes become checks.
-  First run (house, 1 Nov): 52 faults found and fixed. Then the three judges (quality vs benchmarks), then Jack.
+  First run (house, 1 Nov): 52 faults found and fixed. Second run (house and garden, Jack's 13 headset notes, 1 Nov): every note
+  plus ~20 more fixed; clash 46/10/6/18 -> 0 (renders/front-garden/audit-2/AUDIT.md). Then the three judges (quality vs benchmarks), then Jack.
 - **Cheap mockup first (Jack, 31 Oct):** a low-quality Blender render of the full scene on the Mac, headless
   (Eevee or Workbench, grass hair off, ~1000 px, one at a time), from the matched cameras and a short walk path.
   Iterate on that until it is right. Only then rent a cloud GPU for the real light bake, film or streaming.
@@ -95,6 +191,21 @@ stays cohesive and lifelike, and mark it on the plan as **assumed** (its own col
 ## G8 · Cloud (RunPod, cost approved per run)
 - tools/cloud/cloud_blender.py garden-bake: build, bake light maps, export, proof stills; hard money cap (15, 16).
 - Watch the remote log in the first minutes; stop anything idle.
+
+
+## G8b · Unreal look-dev, judged before the full Unreal build (Jack, 1 Nov 2026)
+"Render photos of the different rooms and the more unsure items like towels before we commit to the full thing so I and
+you can judge before real time is spent."
+- **Inputs:** a build that passed G5b (shell) and G5c (finished house), every asset already through its Blender test sheet.
+- **Step 1, look-dev booth:** the uncertain assets and materials (towels, throws, bedding, cushions, curtains, sofa fabric,
+  brick, floors, worktops, glass) rendered alone in Unreal, close up, under neutral daylight and under the scene's light.
+  Jack and Claude judge; anything fake goes back to its asset, not forward.
+- **Step 2, hero stills:** one composed still per room, plus the front from the road and the garden, at the spec cameras.
+  Judged against the spec's Unreal look targets and the Airbnb benchmark.
+- **Step 3, only after both are approved:** the walkthrough, the film and the streamed headset version.
+- **Cost:** steps 1 and 2 run in ONE GPU session (the engine start and shader compile are the main cost; stills take
+  seconds once loaded); the project and shader cache are salvaged so the next step starts fast; the spend is reported.
+- **Output:** a look-dev sheet and a hero-still sheet, each with Jack's verdict recorded before step 3 starts.
 
 ## G9 · Deliver
 - Quest in the browser: baked light (fallback).

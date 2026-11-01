@@ -71,7 +71,7 @@ def _unit(bm, uvl, centre, axes, size, cell, rng, bevel, face_axis):
     return vs
 
 def brick_wall(name, origin, along, up, length, height, M=None, seed=1, gain=(1, 1, 1), mortar_rgb=(0.20, 0.19, 0.11),   # greenish-tan (20506, linear)
-               brick=(0.215, 0.065, 0.10), joint=0.010, recess=0.004):
+               brick=(0.215, 0.065, 0.10), joint=0.010, recess=0.004, wrap=False):
     """a wall face of real bricks in stretcher bond: the brick faces lie in the plane through `origin` spanned by
     `along` and `up`, facing nrm = along x up (for a front wall running +x, that is -y: towards the road); bricks extend
     behind it; the mortar is a plane `recess` behind the faces."""
@@ -83,11 +83,14 @@ def brick_wall(name, origin, along, up, length, height, M=None, seed=1, gain=(1,
     bricks = []                      # (x (unclipped start), z, x0, x1, cell)
     course = 0; z = joint
     while z + Hh <= height + 1e-6:
-        x = -(pitch_x / 2) * (course % 2)
+        x = -(pitch_x / 2) * (course % 2); first = None
         while x < length:
-            x0, x1 = max(x, 0.0), min(x + L, length)
+            x0, x1 = (x, x + L) if wrap else (max(x, 0.0), min(x + L, length))   # wrap: whole bricks, the frame crops them
             if x1 - x0 > 0.03:
                 cell = cells[rng.integers(len(cells))]
+                if wrap and x < 0: first = cell
+                if wrap and x + L > length and first is not None: cell = first      # the brick cut by the right edge IS the left one
+
                 c = Vector(origin) + along * ((x0 + x1) / 2) + up * (z + Hh / 2) - nrm * (D / 2 + rng.normal(0, 0.0008))
                 res = bmesh.ops.create_cube(bm, size=1.0); vs = res["verts"]
                 for v in vs:
@@ -123,9 +126,12 @@ def brick_wall(name, origin, along, up, length, height, M=None, seed=1, gain=(1,
     return o
 
 def block_paving(name, poly_box, M=None, seed=2, gain=(1, 1, 1), row_w=0.16, joint=0.005, depth=0.06,
-                 sizes=((0.11, 0.25), (0.16, 0.40), (0.23, 0.35)), joint_rgb=(0.16, 0.15, 0.12), z=0.0, along_x=True):
+                 sizes=((0.11, 0.25), (0.16, 0.40), (0.23, 0.35)), joint_rgb=(0.16, 0.15, 0.12), z=0.0, along_x=True, wrap=False):
     """tumbled block paving over a rectangle (x0, x1, y0, y1), rows across x, each block wearing one of the client's
-    own block faces (chosen to match its shape), chamfered edges, dark grit joints"""
+    own block faces (chosen to match its shape), chamfered edges, dark grit joints.
+    wrap=True (texture sheets, audit-3 / CORRECTIONS-LOG 85): each row is laid cyclically over exactly x1 - x0 and a unit
+    crossing x1 is laid again at x - (x1 - x0), so the sheet tiles with no seam (the clipped rows drew a dark broken
+    line every 4 m on the ground)"""
     rng = np.random.default_rng(seed)
     img, cells = atlas("block", gain=gain)
     asp = np.array([c[4] for c in cells])
@@ -133,10 +139,28 @@ def block_paving(name, poly_box, M=None, seed=2, gain=(1, 1, 1), row_w=0.16, joi
     bm = bmesh.new(); uvl = bm.loops.layers.uv.new("UVMap")
     L_opts = np.array([s[0] for s in sizes]); P = np.array([s[1] for s in sizes]); P = P / P.sum()
     y = y0
+    Wd = x1 - x0
+    def row_units():
+        """(a0, a1) spans of one row: clipped to the rectangle, or (wrap) cyclic over its width"""
+        if not wrap:
+            x = x0 - rng.uniform(0, 0.1); out = []
+            while x < x1:
+                L = rng.choice(L_opts, p=P); out.append((max(x, x0), min(x + L, x1), L)); x += L
+            return out
+        Ls = []
+        while sum(Ls) < Wd - max(L_opts):
+            Ls.append(float(rng.choice(L_opts, p=P)))
+        rest = Wd - sum(Ls)
+        if rest >= 0.08: Ls.append(rest)
+        else: Ls[-1] += rest
+        x = x0 + rng.uniform(0, 0.2); out = []
+        for L in Ls:
+            out.append((x, x + L, L))
+            if x + L > x1: out.append((x - Wd, x + L - Wd, L))
+            x += L
+        return out
     while y < y1 - 0.02:
-        x = x0 - rng.uniform(0, 0.1)
-        while x < x1:
-            L = rng.choice(L_opts, p=P); a0, a1 = max(x, x0), min(x + L, x1)
+        for a0, a1, L in row_units():
             if a1 - a0 > 0.03:
                 want = L / row_w; k = int(np.argmin(np.abs(asp - want) + rng.uniform(0, 0.25, len(asp))))
                 u0, v0, u1, v1, _ = cells[k]
@@ -155,7 +179,6 @@ def block_paving(name, poly_box, M=None, seed=2, gain=(1, 1, 1), row_w=0.16, joi
                             s = (lp.vert.co.x - (a0 + joint / 2)) / (a1 - a0 - joint); t = (lp.vert.co.y - (y + joint / 2)) / (row_w - joint)
                             lp[uvl].uv = (u0 + (u1 - u0) * s, v0 + (v1 - v0) * t)
                 bmesh.ops.bevel(bm, geom=list({e for v in vs for e in v.link_edges}), offset=0.013, segments=4, profile=0.6, affect="EDGES")   # tumbled: well-rounded
-            x += L
         y += row_w
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     me.uv_layers["UVMap"].active = True; me.uv_layers["UVMap"].active_render = True

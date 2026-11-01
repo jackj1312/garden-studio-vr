@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Splat Walkthrough</title>
+<!--
+  Gaussian-splat viewer for a site "as it is today" (desktop, phone and Quest). Generic: the site's files live in
+  assets/sites/<site>/ (gitignored) with a splat.json manifest:
+    { "title", "files": {"desktop": "x.sog", "quest": "x_quest.sog"}, "up": "z", "start": "view name",
+      "views": [{"name", "eye": [x,y,z], "look": [x,y,z]}] }      (eye/look in the site's metres, z up)
+  Open: splat.html?site=front-garden-splat   (?q=quest forces the light file, ?q=desktop the full one)
+  Desktop: drag to look, WASD / arrows to walk, Q/E down/up, Shift faster. Phone: drag to look, two fingers to walk.
+  Quest: Enter VR; left stick walks where you look, right stick turns (30° steps), right trigger back to the start view.
+-->
+<style>
+  :root { --ink: #1d2126; --paper: rgba(250,250,247,.92); --line: rgba(0,0,0,.12); --accent: #2f6d4f; }
+  html, body { margin: 0; height: 100%; background: #c9d3dc; overflow: hidden; font: 14px/1.35 system-ui, -apple-system, Segoe UI, sans-serif; color: var(--ink); }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #hud { position: fixed; left: 16px; top: 16px; right: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; pointer-events: none; }
+  #hud > * { pointer-events: auto; }
+  .chip { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; backdrop-filter: blur(6px); }
+  button.chip { cursor: pointer; font: inherit; color: inherit; }
+  button.chip:hover { border-color: var(--accent); }
+  button.vr { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  #title { font-weight: 600; }
+  #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--paper); border: 1px solid var(--line);
+            border-radius: 12px; padding: 14px 18px; max-width: min(420px, calc(100vw - 64px)); text-align: center; }
+  #help { position: fixed; left: 16px; bottom: 16px; font-size: 12px; opacity: .85; max-width: calc(100vw - 32px); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><span class="chip" id="title">Splat</span><span id="views"></span><button class="chip vr" id="vr" hidden>Enter VR</button></div>
+<div id="status">Loading…</div>
+<div id="help" class="chip">Drag to look · WASD walk · Q/E down/up · Shift faster</div>
+<script type="module">
+import * as pc from 'https://cdn.jsdelivr.net/npm/playcanvas@2.23.1/build/playcanvas.mjs';
+
+const qs = new URLSearchParams(location.search);
+const site = qs.get('site') || 'front-garden-splat';
+const base = `assets/sites/${site}/`;
+const status = document.getElementById('status');
+const say = (t) => { status.hidden = !t; status.textContent = t || ''; };
+
+const man = await fetch(base + 'splat.json').then(r => r.ok ? r.json() : Promise.reject(new Error('no splat.json in ' + base))).catch(e => { say(e.message); throw e; });
+document.getElementById('title').textContent = man.title || site;
+document.title = man.title || 'Splat Walkthrough';
+const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);
+const tier = qs.get('q') || (isQuest ? 'quest' : 'desktop');
+const file = man.files[tier] || man.files.desktop;
+
+// site metres (z up) -> PlayCanvas (y up): (x, y, z) -> (x, z, -y)
+const toPc = (p) => man.up === 'z' ? new pc.Vec3(p[0], p[2], -p[1]) : new pc.Vec3(p[0], p[1], p[2]);
+
+const canvas = document.getElementById('c');
+const app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: false, xrCompatible: true, alpha: false }, mouse: new pc.Mouse(canvas), keyboard: new pc.Keyboard(window), touch: new pc.TouchDevice(canvas) });
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW); app.setCanvasResolution(pc.RESOLUTION_AUTO);
+app.graphicsDevice.maxPixelRatio = isQuest ? 1 : Math.min(window.devicePixelRatio, 2);
+window.addEventListener('resize', () => app.resizeCanvas());
+app.start();
+
+// rig = where you stand (on the ground) and which way you face; camera = eye height + pitch (XR drives it itself)
+const rig = new pc.Entity('rig'); app.root.addChild(rig);
+const cam = new pc.Entity('camera');
+cam.addComponent('camera', { clearColor: new pc.Color(0.79, 0.83, 0.86), fov: 70, nearClip: 0.05, farClip: 400 });
+rig.addChild(cam);
+const EYE = 1.55;
+let yaw = 0, pitch = 0;
+function place(view) {
+  const e = toPc(view.eye), l = toPc(view.look);
+  const d = l.clone().sub(e);
+  yaw = Math.atan2(-d.x, -d.z) * pc.math.RAD_TO_DEG;
+  pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) * pc.math.RAD_TO_DEG;
+  rig.setPosition(e.x, e.y - EYE, e.z);
+  apply();
+}
+function apply() {
+  rig.setEulerAngles(0, yaw, 0);
+  if (!app.xr.active) { cam.setLocalPosition(0, EYE, 0); cam.setLocalEulerAngles(pitch, 0, 0); }
+}
+
+// the splat
+say(`Loading the splat (${man.sizes?.[tier] || ''})…`);
+const asset = new pc.Asset('splat', 'gsplat', { url: base + file });
+app.assets.add(asset);
+asset.on('error', (e) => say('Could not load ' + file + ': ' + e));
+asset.ready(() => {
+  const s = new pc.Entity('splat');
+  s.addComponent('gsplat', { asset });
+  if (man.up === 'z') s.setEulerAngles(-90, 0, 0);
+  app.root.addChild(s);
+  say('');
+  window.__splatReady = true;
+});
+app.assets.load(asset);
+
+// viewpoints
+const views = man.views || [];
+const vbox = document.getElementById('views');
+for (const v of views) {
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = v.name; b.style.marginRight = '6px';
+  b.onclick = () => place(v); vbox.appendChild(b);
+}
+const startView = views.find(v => v.name === man.start) || views[0];
+if (startView) place(startView);
+window.__place = (name) => place(views.find(v => v.name === name));
+
+// desktop + phone controls
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag || touches > 1) return;
+  yaw += (e.clientX - drag.x) * 0.25; pitch = pc.math.clamp(pitch + (e.clientY - drag.y) * 0.25, -85, 85);
+  drag = { x: e.clientX, y: e.clientY }; apply();
+});
+let touches = 0, pinchY = null;
+canvas.addEventListener('touchstart', (e) => { touches = e.touches.length; if (touches === 2) pinchY = (e.touches[0].clientY + e.touches[1].clientY) / 2; }, { passive: true });
+canvas.addEventListener('touchend', (e) => { touches = e.touches.length; pinchY = null; }, { passive: true });
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 2 || pinchY === null) return;
+  const y = (e.touches[0].clientY + e.touches[1].clientY) / 2; walk(0, (pinchY - y) * 0.01, 0); pinchY = y;
+}, { passive: true });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); walk(0, -e.deltaY * 0.004, 0); }, { passive: false });
+
+function walk(right, fwd, up) {
+  const f = cam.forward.clone(); f.y = 0; f.normalize();
+  const r = cam.right.clone(); r.y = 0; r.normalize();
+  const p = rig.getPosition().clone().add(f.mulScalar(fwd)).add(r.mulScalar(right)); p.y += up;
+  rig.setPosition(p);
+}
+
+// Quest: VR with stick locomotion
+const vrBtn = document.getElementById('vr');
+const showVr = () => { vrBtn.hidden = !app.xr.isAvailable(pc.XRTYPE_VR); };
+app.xr.on('available:' + pc.XRTYPE_VR, showVr); showVr();
+vrBtn.onclick = () => {
+  if (app.xr.active) { cam.camera.endXr(); return; }
+  cam.camera.startXr(pc.XRTYPE_VR, pc.XRSPACE_LOCALFLOOR, { callback: (err) => err && say('VR failed: ' + err.message) });
+};
+app.xr.on('start', () => { vrBtn.textContent = 'Exit VR'; document.getElementById('help').hidden = true; });
+app.xr.on('end', () => { vrBtn.textContent = 'Enter VR'; document.getElementById('help').hidden = false; apply(); });
+let turnLatch = false, trigLatch = false;
+
+app.on('update', (dt) => {
+  const kb = app.keyboard, fast = kb.isPressed(pc.KEY_SHIFT) ? 4 : 1.4;
+  const ax = (kb.isPressed(pc.KEY_D) || kb.isPressed(pc.KEY_RIGHT) ? 1 : 0) - (kb.isPressed(pc.KEY_A) || kb.isPressed(pc.KEY_LEFT) ? 1 : 0);
+  const az = (kb.isPressed(pc.KEY_W) || kb.isPressed(pc.KEY_UP) ? 1 : 0) - (kb.isPressed(pc.KEY_S) || kb.isPressed(pc.KEY_DOWN) ? 1 : 0);
+  const ay = (kb.isPressed(pc.KEY_E) ? 1 : 0) - (kb.isPressed(pc.KEY_Q) ? 1 : 0);
+  if (ax || az || ay) walk(ax * fast * dt, az * fast * dt, ay * fast * dt);
+  if (!app.xr.active) return;
+  for (const src of app.xr.input.inputSources) {
+    const gp = src.gamepad; if (!gp) continue;
+    const sx = gp.axes[2] || 0, sy = gp.axes[3] || 0;
+    if (src.handedness === 'left' && Math.hypot(sx, sy) > 0.15) walk(sx * 1.4 * dt, -sy * 1.4 * dt, 0);
+    if (src.handedness === 'right') {
+      if (Math.abs(sx) > 0.7 && !turnLatch) { yaw -= Math.sign(sx) * 30; rig.setEulerAngles(0, yaw, 0); turnLatch = true; }
+      if (Math.abs(sx) < 0.3) turnLatch = false;
+      const trig = gp.buttons[0]?.pressed;
+      if (trig && !trigLatch && startView) place(startView); trigLatch = !!trig;
+    }
+  }
+});
+</script>
+</body>
+</html>

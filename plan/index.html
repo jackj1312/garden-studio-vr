@@ -1,1 +1,10 @@
-<!doctype html><meta charset="utf-8"><title>Room Planner</title><meta http-equiv="refresh" content="0; url=../planner.html"><a href="../planner.html">Open the room planner</a>
+<!doctype html><meta charset="utf-8"><title>Room Planner</title>
+<a id="planner-link" href="../planner.html?site=house-wip">Open the room planner</a>
+<script>
+  const target = new URL('../planner.html', location.href); if(location.port==='8443')target.port='8450';
+  target.search = location.search;
+  if (!target.searchParams.has('site')) target.searchParams.set('site', 'house-wip');
+  target.hash = location.hash;
+  document.getElementById('planner-link').href = target.href;
+  location.replace(target.href);
+</script>

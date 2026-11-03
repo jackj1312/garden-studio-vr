@@ -31,3 +31,4 @@ The current published build already fails gates. Keep its baseline separate from
 - 2026-11-03 · Jack added individually placeable plants and trees. Give each specimen its own ID, transform, undo history and terrain/support contact, including in saved patio and garden experiments.
 - 2026-11-03 · Jack requested a clickable How to use panel in every editor. Maintain context-specific mouse, touch and Quest controls as each furnishing, garden and planner mode ships.
 - 2026-11-03 · The shared garden layout now also has a concrete outbuilding base with measured arbitrary geometry. Later structure design will reference its stable ID and dimensions.
+- 2026-11-03 · Keep the ordinary 8443 walkthrough compatible with shared layouts. Route editable sessions to 8450 and read the saved site file when the existing daemon only offers the static route.

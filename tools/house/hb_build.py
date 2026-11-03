@@ -955,7 +955,9 @@ class StateBuilder:
                             mat="membrane", pkey=pl.key(), wing_cat=ws.get("category", "new")))
         for pl in ([] if massing else sysm.planes()):
             ws = pl.wing.spec
-            bm = R.battens(sysm, pl)
+            # Use the same clipped tile polygons for battens and the rooflight.
+            from hb_stage import battens_on
+            bm=battens_on(pl,[Q for tile,Q,_ in lay['tiles'] if tile is pl])
             if bm:
                 meta = M("roof_layer", "roof", ws.get("batten_label", cov["batten_label"]), ws.get("drawing", cov["drawing"]),
                          "exact" if ws.get("category") == "new" else "assumed", "Tiling battens", False)
@@ -1162,10 +1164,18 @@ class StateBuilder:
         for h in sysspec.get("rooflights", []):
             pl = next(p for p in sysm.planes() if p.id == h["plane"])
             x0, y0, x1, y1 = h["rect"]
-            pts = R.lift(pl, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
-            meta = M("rooflight", "roof", h["label"], h.get("drawing", ""), h.get("conf", "scaled"), "Roof window", False)
-            out.append(atom(f"RL-{sid}-{slug(h['label'])}", "mesh", "rooflight", meta, sig=sig_of("rl", h["rect"]),
-                            mesh=slab3d(pts, pl.n, -R.COVER_T, 0.06), mat="velux", wing_cat=pl.wing.spec.get("category", "new")))
+            name=f"RL-{sid}-{slug(h['label'])}"
+            meta=M("rooflight","roof",h["label"],h.get("drawing",""),h.get("conf","scaled"),"Roof window",False)
+            from hb_geom import prism_varz
+            rail=min(.055,(x1-x0)/5,(y1-y0)/5)
+            def member(xa,xb,ya,yb,lo,hi):
+                return prism_varz([(xa,ya),(xb,ya),(xb,yb),(xa,yb)],
+                                  lambda p:pl.z(p)+lo/pl.cos,lambda p:pl.z(p)+hi/pl.cos)
+            rails=[member(x0,x1,y0,y0+rail,-R.COVER_T,.055),member(x0,x1,y1-rail,y1,-R.COVER_T,.055),
+                   member(x0,x0+rail,y0+rail,y1-rail,-R.COVER_T,.055),member(x1-rail,x1,y0+rail,y1-rail,-R.COVER_T,.055)]
+            out.append(atom(name+"-frame","mesh","existing",meta,sig=sig_of("rl-frame",h["rect"]),mesh=merge_meshes(rails),mat="anthracite_upvc",wing_cat=pl.wing.spec.get("category","new")))
+            glass=member(x0+rail,x1-rail,y0+rail,y1-rail,.024,.034)
+            out.append(atom(name+"-glass","mesh","existing",meta,sig=sig_of("rl-pane",h["rect"]),mesh=glass,mat="glass",wing_cat=pl.wing.spec.get("category","new")))
         # stated extra roof members on a plane (trimmers, doubled rafters, plates)
         return out
 

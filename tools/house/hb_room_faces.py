@@ -16,6 +16,50 @@ def intervals(wall,c,room):
     cuts=sorted(cuts)
     return [(a,b) for a,b in zip(cuts,cuts[1:]) if b-a>.003 and point_in_poly(wall.point((a+b)/2,c),poly)]
 
+def active_faces(w):
+    layers=[l for l in w.layers() if not l.get('void')]
+    cs=[w.c_of(l[k]) for l in layers for k in ('o0','o1')]
+    return (min(cs),max(cs)) if cs else w.full_extent_c()
+
+def room_runs(w,c,side,room):
+    # Classify ownership on the air side, but keep the real slanted miter
+    # endpoints at the finish plane. A clipped inner leaf can be recessed
+    # behind the old cavity face specified in the signed room polygon.
+    result=[]
+    for delta in ([.025,.07,.13,.19] if w.only_layers else [.025]):
+        probe=c+side*delta
+        for a,b in intervals(w,probe,room):
+            if abs(a-w.end_u('a',probe))<.0001:a=w.end_u('a',c)
+            if abs(b-w.end_u('b',probe))<.0001:b=w.end_u('b',c)
+            result.extend(interval_minus([(a,b)],result))
+    return sorted(result)
+
+def room_zones(vb,rooms):
+    out=[]
+    vault=next((a for a in vb.atoms if a['id']=='CL-porch-vault'),None)
+    for room in rooms:
+        r=dict(room);out.append(r)
+        if 'porch' in r['id'] and vault:
+            verts=vault['mesh'][0]
+            y0,y1=min(p[1] for p in verts),max(p[1] for p in verts)
+            z0,z1=[min(p[2] for p in verts if abs(p[1]-y)<.00001) for y in (y0,y1)]
+            r['_top']=lambda pt:z0+(z1-z0)*(pt[1]-y0)/(y1-y0)
+            r['_multilevel']=True
+    landing=next((r for r in rooms if 'landing' in r['name']),None)
+    if landing:
+        for stair in [a['stair'] for a in vb.atoms if 'stair' in a and a['stair'].get('half_landing')]:
+            polys=[stair['half_landing']['poly']]
+            for f in stair.get('flights',[]):
+                x,y=f['start'];dx,dy=f['direction'];cross=(-dy*f['width']/2,dx*f['width']/2)
+                # Include the landing end, from the first nosing to the last.
+                run=(f['risers']-1)*f['going'];end=(x+dx*run,y+dy*run)
+                polys.append([(x+cross[0],y+cross[1]),(end[0]+cross[0],end[1]+cross[1]),
+                              (end[0]-cross[0],end[1]-cross[1]),(x-cross[0],y-cross[1])])
+            for i,poly in enumerate(polys):
+                out.append(dict(landing,polygon=[(x,-y) for x,y in poly],floor_y=0,_multilevel=True,
+                                _zone='stair'+str(i),_stair=True))
+    return out
+
 def clipped_conservatory_lining(w,lay,lift,rooms,original):
     if not lay.get('lining'):return original
     side=1 if w.c_of((lay['o0']+lay['o1'])/2)>0 else -1
@@ -31,7 +75,7 @@ def clipped_conservatory_lining(w,lay,lift,rooms,original):
 
 def transverse_parts(carrier,rooms,others,N):
     from hb_build import atom,M
-    w=carrier['wall'];out=[];cl,ch=w.full_extent_c()
+    w=carrier['wall'];out=[];cl,ch=active_faces(w)
     for direction,u in [(-1,w.ua),(1,w.ub)]:
         # A free wall end backs onto room air. Partition its cap by room
         # polygon crossings at this measured station, including clipped piers.
@@ -90,20 +134,23 @@ def build(vb,rooms,items):
     from hb_build import atom,M
     out=[]
     fittings={a['op']['id']:a for a in vb.atoms if a['kind']=='fixture' and not a['meta'].get('stage_out')}
+    rooms=room_zones(vb,rooms)
     for carrier in vb.walls_live():
         if carrier['meta'].get('stage_out') or carrier['meta'].get('context'):continue
         w=carrier['wall']
-        if w.only_layers is not None or w.meta.get('context'):continue
+        if w.meta.get('context') or not any(not lay.get('void') for lay in w.layers()):continue
         neighbours=[a for a in vb.walls_live() if a is not carrier and not a['meta'].get('stage_out') and not a.get('as_built') and not a['wall'].only_layers]
-        out.extend(transverse_parts(carrier,rooms,neighbours,vb.N))
-        for side,c in zip((-1,1),w.full_extent_c()):
+        out.extend(transverse_parts(carrier,[r for r in rooms if not r.get('_stair')],neighbours,vb.N))
+        for side,c in zip((-1,1),active_faces(w)):
+            claimed=[]
             for r in rooms:
-                if r['storey']!=w.storey or 'conservator' in r['id']:continue
+                if (r['storey']!=w.storey and not r.get('_multilevel')) or 'conservator' in r['id']:continue
                 floor=r['floor_y'];ceiling=r['ceiling_y'] if isinstance(r['ceiling_y'],(int,float)) else w.z1
-                for n,(lo,hi) in enumerate(intervals(w,c+side*.025,r)):
+                for n,(lo,hi) in enumerate(room_runs(w,c,side,r)):
                     zz=max(w.z0,floor);head=min(w.z1,ceiling)
+                    if '_top' in r:head=min(w.z1,max(r['_top'](w.point(u,c)) for u in (lo,hi)))
                     if head<=zz+.005:continue
-                    name=f"RL-{carrier['id']}-{side}-{r['id']}-{n}"
+                    name=f"RL-{carrier['id']}-{side}-{r['id']}-{n}"+r.get('_zone','')
                     face_id=f"{r['id']}/{w.id.split('~')[0]}/{side}"
                     base=dict(stage_in=vb.N,seq=.85 if vb.N>1 else 0,category='finish' if vb.N>1 else 'existing',surface_id=face_id,room_id=r['id'],surface_role='wall')
                     meta=M('wall_lining',w.storey,'Room finish '+r['name'],'signed room schedule','scaled','Finished wall',False,**base)
@@ -116,14 +163,26 @@ def build(vb,rooms,items):
                     # Partition by the real drawn openings at the construction step.
                     face=copy.copy(w);face.ua=lo;face.ub=hi;face.ends={'a':(lo,0),'b':(hi,0)}
                     face.z0=zz;face.z1=head
+                    if '_top' in r:
+                        us=sorted({lo,hi,*[u for u,z in (w.profile or []) if lo<u<hi]})
+                        face.profile=[(u,min(w.top_at(u),r['_top'](w.point(u,c)))) for u in us]
                     def band(z0,z1,finish,suffix):
                         q=copy.copy(face);q.z0=z0;q.z1=z1
                         near,far=c+side*.0003,c+side*.0025
                         offsets=sorted(w.t/2-p/w.out for p in (near,far))
                         layer={'key':'room_finish','o0':offsets[0],'o1':offsets[1]}
-                        cells=_cells_for_layer(q,layer,[])
-                        meshes=[hexa(points) for row in cells.values() for points in row]
-                        if meshes:emit(suffix,merge_meshes(meshes),finish)
+                        cuts=sorted({q.ua,q.ub,*[u for a,b,z,h in claimed for u in (a,b) if q.ua<u<q.ub]})
+                        meshes=[]
+                        for a,b in zip(cuts,cuts[1:]):
+                            occupied=[(l,h) for u,v,l,h in claimed if u<(a+b)/2<v]
+                            for bot,top in interval_minus([(z0,z1)],occupied):
+                                cell=copy.copy(q);cell.ua=a;cell.ub=b;cell.ends={'a':(a,0),'b':(b,0)}
+                                cell.z0=bot;cell.z1=top
+                                cells=_cells_for_layer(cell,layer,[])
+                                meshes.extend(hexa(points) for row in cells.values() for points in row)
+                        if meshes:
+                            emit(suffix,merge_meshes(meshes),finish)
+                            claimed.append((q.ua,q.ub,z0,z1))
                     tile_zones=[]
                     if 'FIN-TILE-WALL' in r['finishes']['walls']:
                         for fixture in items:
@@ -147,6 +206,7 @@ def build(vb,rooms,items):
                         tile_head=max([zz]+[v for a,b,v in tile_zones if a<(left+right)/2<b])
                         if tile_head>zz+.002:band(zz,tile_head,'FIN-TILE-WALL',f'-tile-{j}')
                         if head>tile_head+.002:band(tile_head,head,top_finish,f'-paint-{j}')
+                    if r.get('_stair'):continue
                     for op in w.openings:
                         a,b=op['u0'],op['u1'];bottom,top=op['z0'],op['z1']
                         if b<=lo or a>=hi or top<=zz or bottom>=head:continue
@@ -159,7 +219,9 @@ def build(vb,rooms,items):
                         if lo-.003<=a<=hi+.003:bits.append(box_uc(w,a,a+.003,bottom,top,*section))
                         if lo-.003<=b<=hi+.003:bits.append(box_uc(w,b-.003,b,bottom,top,*section))
                         ua=max(lo,a);ub=min(hi,b)
-                        if ub-ua>.007:bits.append(box_uc(w,ua,ub,top-.003,top,*section))
+                        if ub-ua>.007:
+                            bits.append(box_uc(w,ua,ub,top-.003,top,*section))
+                            if op['kind']=='window':bits.append(box_uc(w,ua,ub,bottom,bottom+.003,*section))
                         if bits:emit('-return-'+op['id'],merge_meshes(bits),top_finish)
     # As-built window boards and finishes replace their drawn counterpart as
     # a family, including split intervals and differently named measured returns.

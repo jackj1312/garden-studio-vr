@@ -331,6 +331,8 @@ class VersionBuild:
             import hb_room_faces
             scheduled=SPEC_V1['versions'][key]
             linings=hb_room_faces.build(self,scheduled['rooms'],scheduled['items'])
+            from hb_horizontal import horizontal
+            linings.extend(horizontal(self,scheduled['rooms']))
             SPEC_MATS.update(a['mat'][5:] for a in linings)
             self.atoms.extend(linings)
         self.questions += abq
@@ -394,24 +396,37 @@ class VersionBuild:
         zt = lambda p: pl["p0"][2] - (pl["p0"][1] - p[1]) * t - (R.COVER_T + pv["rafter_depth"]) / c - 0.001
         zb = lambda p: zt(p) - 0.0125 / c
         x0, y0, x1, y1 = pv["rect"]
-        # row 179: each edge of the vault lining runs on to the wall face within 30 mm (the traced rect stopped 18 mm short of the
-        # wing wall: a slot along the top of the porch wall, seen from the porch)
-        fps = [w["wall"].footprint(full=True) for w in self.walls_live()]
-        def reach(px, py, dx, dy):
-            for k in range(1, 31):
-                q = (px + dx * k * 0.001, py + dy * k * 0.001)
-                if any(G.point_in_poly(q, f) for f in fps): return (k - 1) * 0.001
-            return 0.0
-        ym, xm = (y0 + y1) / 2, (x0 + x1) / 2
-        x0 -= reach(x0, ym, -1, 0); x1 += reach(x1, ym, 1, 0); y0 -= reach(xm, y0, 0, -1); y1 += reach(xm, y1, 0, 1)
+        # The surveyed room perimeter belongs to the inner vault. The old
+        # rafter rectangle stopped 80 mm short of the house-side wall.
+        scheduled = SPEC_V1.get('versions', {}).get(SPEC_V1_MAP.get(self.v['id']), {})
+        porch = next((r for r in scheduled.get('rooms', []) if 'porch' in r['id']), None)
+        if porch:
+            x0=min(x for x,z in porch['polygon']); x1=max(x for x,z in porch['polygon'])
+            y0=min(-z for x,z in porch['polygon']); y1=max(-z for x,z in porch['polygon'])
         meta = M("wall_lining", "ground", pv["label"], "4915.3A section D-D (vaulted ceiling) / as built", "scaled", "Porch ceiling (vaulted)", False)
         if self.v["kind"] == "proposal" and self.v.get("base") not in pv["versions"]:      # the porch is built in this sequence
             st, sq = SPEC["staging"]["phases"].get("ceiling", [self.N, 0.1])
             meta.update(stage_in=st, seq=sq, stage_out=None, seq_out=None, category="finish")
         else: meta.update(stage_in=1, seq=0.0, stage_out=None, seq_out=None, category="existing")
         from hb_geom import prism_varz
-        return [atom("CL-porch-vault", "mesh", "existing", meta, sig=None, mesh=prism_varz([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], zb, zt),
-                     mat="plasterboard", cat=meta["category"])]
+        perimeter=[(x0,y0),(x1,y0),(x1,y1),(x0,y1)]
+        holes=[];returns=[]
+        for light in SPEC['defs']['porch'].get('rooflights',[]):
+            a,b,right,d=light['rect'];holes.append([(a,b),(right,b),(right,d),(a,d)])
+            for lo,hi,front,rear in [(a,a+.010,b,d),(right-.010,right,b,d),(a+.010,right-.010,b,b+.010),(a+.010,right-.010,d-.010,d)]:
+                returns.append(prism_varz([(lo,front),(hi,front),(hi,rear),(lo,rear)],zt,
+                                          lambda p:zt(p)+pv['rafter_depth']/math.cos(math.radians(pl['pitch']))))
+        mesh=G.merge_meshes([prism_varz(P,zb,zt) for P in G.poly_minus_convex(perimeter,holes)])
+        parts=[atom("CL-porch-vault", "mesh", "existing", dict(meta,surface_role='ceiling',room_id=porch['id'] if porch else ''), sig=None, mesh=mesh,mat="plasterboard",cat=meta["category"])]
+        if returns:parts.append(atom("CL-porch-rooflight-returns","mesh","existing",meta,sig=None,mesh=G.merge_meshes(returns),mat="plasterboard",cat=meta["category"]))
+        for plate in [a for a in self.atoms if a['meta'].get('group')=='wall_plate' and a.get('poly') and a['id'].startswith('WP-porch') and not a['meta'].get('stage_out')]:
+            P=plate['poly'];left,right=min(x for x,y in P),max(x for x,y in P);front,back=min(y for x,y in P),max(y for x,y in P)
+            if back-front>.15 or right-left<.5:continue
+            low=plate['z0']-.0125
+            front_board=[(left,front-.013),(right,front-.013),(right,front),(left,front)]
+            clad=[G.prism(P,low,plate['z0']-.0003),prism_varz(front_board,lambda p:low,zb)]
+            parts.append(atom('CL-'+plate['id']+'-lining','mesh','existing',meta,sig=None,mesh=G.merge_meshes(clad),mat='plasterboard',cat=meta['category']))
+        return parts
 
     def spec_finishes(self):
         """the signed spec's floor finishes (a 6 mm finish over each room's floor, 2 mm proud, clipped to the wall faces) and
@@ -574,7 +589,26 @@ class VersionBuild:
                 st, sq = SPEC["staging"]["phases"].get(cs.get("phase", "ceiling"), [self.N, 0.1])
                 meta.update(stage_in=st, seq=sq, stage_out=None, seq_out=None, category="finish")
             else: meta.update(stage_in=1, seq=0.0, stage_out=None, seq_out=None, category="existing")
-            out.append(atom(cs["id"], "mesh", "existing", meta, sig=None, mesh=prism_varz([tuple(p) for p in cs["poly"]], zb, zt),
+            # The signed internal section runs from the finished ashlar
+            # top to the flat *underside*. The outside rafter plane does
+            # not establish that datum. Clip the plan to the real room.
+            scheduled=SPEC_V1.get('versions',{}).get(SPEC_V1_MAP.get(self.v['id']),{})
+            room=next((r for r in scheduled.get('rooms',[]) if 'ashlar' in str(r['ceiling_y'])),None)
+            if room and cs['plane']=='ext.left':
+                ashlar=next(w['wall'] for w in self.walls_live() if w['wall'].ckey=='ashlar' and not w['meta'].get('stage_out'))
+                start=max(x for x,y in ashlar.footprint())
+                head=ashlar.top_at((ashlar.ua+ashlar.ub)/2)
+                knee=max(x for x,y in cs['poly'])
+                gradient=(cap-head)/(knee-start)
+                zbottom=lambda p:head+(p[0]-start)*gradient
+                top=lambda p:zbottom(p)+cs.get('t',.015)/pl.cos
+                polygons=G.convex_pieces([(x,-z) for x,z in room['polygon']])
+                strips=[G.clip_convex(P,[(-1,0,start),(1,0,-knee)]) for P in polygons]
+                mesh=G.merge_meshes([prism_varz(P,zbottom,top) for P in strips if len(P)>=3 and abs(G.area(P))>1e-7])
+                meta.update(room_id=room['id'],surface_role='ceiling')
+            else:
+                mesh=prism_varz([tuple(p) for p in cs['poly']],zb,zt)
+            out.append(atom(cs["id"], "mesh", "existing", meta, sig=None, mesh=mesh,
                             mat="plasterboard", cat=meta["category"]))
         return out
 
@@ -624,6 +658,7 @@ class VersionBuild:
                 bb = (min(q[0] for q in P), min(q[1] for q in P), max(q[0] for q in P), max(q[1] for q in P))
                 # a doorway shared by two pieces of one wall (a wall split by the diff) gets ONE threshold (two were coplanar: z-fighting)
                 dup = next((t for t in out if t.get("_th_bb") and t.get("_th_z") == round(o["z0"], 4) and
+                            (t["meta"].get("stage_in"),t["meta"].get("stage_out"),t["meta"].get("seq_out")) == (si,so,sqo) and
                             min(bb[2], t["_th_bb"][2]) - max(bb[0], t["_th_bb"][0]) > 0.05 and min(bb[3], t["_th_bb"][3]) - max(bb[1], t["_th_bb"][1]) > 0.05), None)
                 if dup is not None:
                     tb = dup["_th_bb"]; dup["_th_bb"] = u = (min(tb[0], bb[0]), min(tb[1], bb[1]), max(tb[2], bb[2]), max(tb[3], bb[3]))
@@ -1203,6 +1238,9 @@ def manifold_cells(bm, tol=1e-5):
 
 def build_blender(vb, MAT, coll):
     parts = vb.parts()
+    from hb_carrier_faces import CarrierFaces
+    vkey=SPEC_V1_MAP.get(vb.v['id'])
+    faces=CarrierFaces(vb,SPEC_V1['versions'][vkey]['rooms']) if vkey and not args.no_items else None
     meshes_by_key = {}
     objs = []
     for p in parts:
@@ -1238,6 +1276,8 @@ def build_blender(vb, MAT, coll):
             if p.get("uv") and p["uv"] != "world": uv_layer(me, p["uv"], p["mat"])
             else: uv_layer(me, "world", p["mat"])
             me.materials.append(MAT[p["mat"]])
+            if faces and p['atom']['kind']=='wall' and not p['props'].get('stage_out') and not p['props'].get('context') and p['props']['group'] in ('wall_outer','wall_inner','wall_insulation'):
+                faces.assign(p,me,MAT)
             ob = bpy.data.objects.new(p["name"], me)
         for k, v in p["props"].items():
             if v is None: continue
@@ -1664,6 +1704,23 @@ def allowed(a, b):
     return None
 
 
+def in_closed_solid(point,tree):
+    # The closest plane of a U-shaped jamb is not a containment test.
+    # Signed exit crossings also work for a part made of several closed cells.
+    votes=0
+    for direction in (Vector((.831,.257,.491)).normalized(),Vector((-.317,.911,.263)).normalized(),Vector((.211,-.473,.855)).normalized()):
+        origin=point;score=0
+        while True:
+            hit,normal,_,_=tree.ray_cast(origin,direction)
+            if hit is None:break
+            side=normal.dot(direction)
+            if abs(side)>1e-7:score+=1 if side>0 else -1
+            origin=hit+direction*.00002
+        if score>0:votes+=1
+        if votes==2:return True
+    return False
+
+
 def depth(a, b, ta, tb):
     """deepest vertex of one inside the other (closed meshes, outward normals), vertices in the common box only"""
     d = 0.0
@@ -1673,8 +1730,8 @@ def depth(a, b, ta, tb):
         if len(vs) > 4000: vs = vs[::len(vs) // 4000 + 1]       # thin evenly, never just the first few hundred (log: hidden clash)
         for v in vs:
             loc, nrm, idx, dist = t.find_nearest(v)
-            if loc is not None and (v - loc).dot(nrm) < -1e-5:
-                d = max(d, dist)
+            if loc is not None and dist>d and (v-loc).dot(nrm)<-1e-5 and in_closed_solid(v,t):
+                d=dist
     return d
 
 

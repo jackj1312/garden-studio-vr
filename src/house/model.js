@@ -150,6 +150,15 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
   for (const p of pending) {
     const ctx = !!p.ud.context;
     const set = materialSet(p.mat, p.ud.group || "fitting", ctx);
+    const substrate = p.mat.userData.substrate;
+    if (substrate && !set.finishStage && p.mat.userData.finish_stage > 1) {
+      const raw = materialsByName.get(substrate) || new THREE.MeshStandardMaterial({
+        name: substrate, color: new THREE.Color().fromArray(p.mat.userData.substrate_colour || [.6,.6,.6]), roughness: .9
+      });
+      set.finishStage = p.mat.userData.finish_stage;
+      set.finished = set.normal;
+      set.roughCarrier = materialSet(raw,p.ud.group || "fitting",ctx).normal;
+    }
     const key = batchKey(p.mat, p.ud.group || "fitting", ctx);
     if (!batchDefs.has(key)) batchDefs.set(key, { set, items: [], geoms: new Map(), ctx });
     const b = batchDefs.get(key);
@@ -237,6 +246,14 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
 
   function applyStage(v, force = false) {
     stageValue = v;
+    for (const set of sets.values()) {
+      if (!set.finishStage) continue;
+      const normal = progress(v, set.finishStage, .84) > .5 ? set.finished : set.roughCarrier;
+      if (normal === set.normal) continue;
+      const wasNormal = set.current !== set.xray;
+      set.normal = normal;
+      if (wasNormal) { set.current = normal; for (const mesh of set.targets) mesh.material = normal; }
+    }
     let doomedCount = 0;
     for (const p of parts) {
       const inT = progress(v, p.stage_in, p.seq);

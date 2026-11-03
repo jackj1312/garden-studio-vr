@@ -13,6 +13,26 @@ import hb_roof as R
 TYPICAL = "(typical — not from the drawings)"
 
 
+def resolve_spec(o, defs, depth=0):
+    """'@name' / '@name.key.0' references into spec['defs']; a reference to a list inside a list is spliced in"""
+    if depth > 20: raise ValueError("reference loop")
+    if isinstance(o, str) and o.startswith("@"):
+        path = o[1:].split(".")
+        v = defs[path[0]]
+        for k in path[1:]: v = v[int(k)] if isinstance(v, list) else v[k]
+        return resolve_spec(v, defs, depth + 1)
+    if isinstance(o, list):
+        out = []
+        for x in o:
+            r = resolve_spec(x, defs, depth + 1)
+            if isinstance(x, str) and x.startswith("@") and isinstance(r, list): out.extend(r)
+            else: out.append(r)
+        return out
+    if isinstance(o, dict):
+        return {k: resolve_spec(v, defs, depth + 1) for k, v in o.items()}
+    return o
+
+
 def val(x):
     return x["v"] if isinstance(x, dict) and "v" in x else x
 
@@ -89,6 +109,13 @@ class Levels:
 OPENING_DATUM = {"shift": 0.0}
 
 
+def opening_element_id(prefix, wall_id, op):
+    # A corrected carrier may own a previously reviewed door, threshold and
+    # opening. Preserve the issued ID independently of its current physical host.
+    host = op.get("identity_host") or (wall_id.split("~")[0] if prefix == "F" else wall_id)
+    return f"{prefix}-{slug(host)}-{slug(op['id'])}"
+
+
 def opening_from(o, base_z):
     c, wdt = val(o.get("c")), val(o.get("w"))
     z0, z1 = val(o.get("sill_z")), val(o.get("head_z"))
@@ -104,7 +131,8 @@ def opening_from(o, base_z):
     if z0 < base_z - 1e-6:
         note = f"sill {z0} below the wall base {base_z}: taken as the floor (CORRECTIONS-LOG 99)"
         z0 = base_z
-    return dict(id=o.get("id") or o.get("kind"), kind=o.get("kind", "opening"), u0=c - wdt / 2, u1=c + wdt / 2, z0=z0, z1=z1,
+    return dict(id=o.get("id") or o.get("kind"), identity_host=o.get("identity_host"),
+                retained_exterior_frame=o.get("retained_exterior_frame", False), kind=o.get("kind", "opening"), u0=c - wdt / 2, u1=c + wdt / 2, z0=z0, z1=z1,
                 panes=o.get("panes"), leaf=val(o.get("leaf")), hinge=o.get("hinge"), swing=o.get("swing"),
                 lintel=o.get("lintel"), src=o.get("src", ""), conf=conf_of(o), note=note, elev=o.get("elev"))
 
@@ -340,7 +368,7 @@ class StateBuilder:
                 o_plane = W.t / 2
             c_plane = W.c_of(o_plane)
             kind = o["kind"]
-            internal = not ext
+            internal = not (ext or o.get("retained_exterior_frame"))
             pan = o.get("panes") or ""
             m = re.search(r"(\d)-light", pan)
             nlights = int(m.group(1)) if m else (4 if kind == "bifold" else (2 if kind == "window" else 1))
@@ -352,7 +380,7 @@ class StateBuilder:
             meta = M(g, W.storey, f"{lbl}" + (f" ({pan})" if pan else ""), dref(o.get("src") or W.meta.get("src", ""), W.storey),
                      o.get("conf", "scaled"), plain, False)
             sig = sig_of("fx", W.point(o["u0"], 0), W.point(o["u1"], 0), o["z0"], o["z1"], kind, lbl)
-            out.append(atom(f"F-{slug(W.id.split('~')[0])}-{slug(lbl)}", "fixture", "window" if kind == "window" else "door", meta,
+            out.append(atom(opening_element_id("F", W.id, o), "fixture", "window" if kind == "window" else "door", meta,
                             sig=sig, wall=W, op=o, c_plane=c_plane, nlights=nlights, internal=internal,
                             rooms=self.rooms_named.get(W.storey, [])))
             if ext and kind == "window" and self.st.get("window_colour", "anthracite") == "anthracite":
@@ -1064,14 +1092,16 @@ class StateBuilder:
                 tag = "ridge_tiles"
             elif kind in ("hip", "valley"):
                 w_, d_ = spec_w.get("hip_section" if kind == "hip" else "valley_section", [0.045, 0.145])
-                V, F, Mx, L, key = R.crease_member(pa, pb, q0, q1, w_, d_)
-                A3 = (Mx[0][3], Mx[1][3], Mx[2][3]); B3 = (A3[0] + Mx[0][0] * L, A3[1] + Mx[1][0] * L, A3[2] + Mx[2][0] * L)
                 lbl = spec_w.get("hip_label" if kind == "hip" else "valley_label", f"{kind} rafter")
                 meta = M(kind, "roof", lbl, spec_w.get("drawing", ""), spec_w.get("conf", "scaled"), "Hip rafter" if kind == "hip" else "Valley rafter", False)
                 nspec = (wa.get("new_hips") if kind == "hip" else wa.get("new_valleys")) or (wb.get("new_hips") if kind == "hip" else wb.get("new_valleys"))
-                out.append(atom(f"R{kind[0].upper()}-{sid}-{pa.id}-{pb.id}-{q0[0]:.2f}", "member", kind, meta, sig=sig_of(kind, A3, B3),
-                                A=A3, B=B3, section=rect_section(w_, d_), mat="timber" if cat == "new" else "timber_existing", plumb=True,
-                                linear=True, wing_cat=cat, new_override=nspec))
+                seat=R.seated_crease(pa,pb,q0,q1,w_)
+                if seat:
+                    V, F, Mx, L, key = R.crease_member(pa, pb, *seat, w_, d_)
+                    A3 = (Mx[0][3], Mx[1][3], Mx[2][3]); B3 = (A3[0] + Mx[0][0] * L, A3[1] + Mx[1][0] * L, A3[2] + Mx[2][0] * L)
+                    out.append(atom(f"R{kind[0].upper()}-{sid}-{pa.id}-{pb.id}-{q0[0]:.2f}", "member", kind, meta, sig=sig_of(kind, A3, B3),
+                                    A=A3, B=B3, section=rect_section(w_, d_), mat="timber" if cat == "new" else "timber_existing", plumb=True,
+                                    linear=True, wing_cat=cat, new_override=nspec))
                 tag = "hip_tiles" if kind == "hip" else ("valley_lead" if cat == "new" else None)
             else:
                 tag = "valley_lead"
@@ -1104,10 +1134,17 @@ class StateBuilder:
                                     mesh=merge_meshes(strips), mat="lead", wing_cat="new"))
         # eaves: fascia, soffit, gutter. Row 179: where two eave lines meet (a hip corner, or an inside corner) every board is
         # mitred on the corner's bisector; square-ended boards overlapped there in one plane (z-fighting soffits and fascias).
-        EDGES = list(R.eave_edges(sysm)); SOFFITS = []
+        RUNS = R.board_edges(sysm) if not massing else [(w,p,a,b,a,b) for w,p,a,b in R.eave_edges(sysm)]
+        def exterior_run(pl,a,b):
+            # An upper eave may continue over a lower roof after an inside
+            # corner. That short step is not a third wing of the soffit joint.
+            probe = add(mul(add(a,b),.5), mul(pl.d,.002))
+            return massing or sysm.z(probe) is None
+        EDGES = [run[:4] for run in RUNS if exterior_run(run[1],run[2],run[3])]; SOFFITS = []
         def _mitres(a, b):
-            hps = []
+            hps, ends = [], []
             for (c, d_this) in ((a, unit(sub(b, a))), (b, unit(sub(a, b)))):
+                count = len(hps)
                 for (_w2, _p2, a2, b2) in EDGES:
                     for (c2, far) in ((a2, b2), (b2, a2)):
                         if length(sub(c2, c)) > 0.012 or length(sub(far, c2)) < 1e-6: continue
@@ -1117,11 +1154,12 @@ class StateBuilder:
                         sgn = 1.0 if dot(d_this, nperp) >= 0 else -1.0
                         # keep dot(p - c, nperp) * sgn >= 0  ->  -sgn*(nperp.p - nperp.c) <= 0
                         hps.append((-sgn * nperp[0], -sgn * nperp[1], sgn * (nperp[0] * c[0] + nperp[1] * c[1])))
-            return hps
+                ends.append(len(hps)>count)
+            return hps, ends
         def _cut(P, hps):
             Q = clip_convex(P, hps) if hps else P
             return Q if Q else P
-        for (wing, pl, a, b) in EDGES:
+        for (wing, pl, a, b, tile_a, tile_b) in RUNS:
             ws = wing.spec
             if ws.get("no_eaves_boards"): continue
             cat = ws.get("category", "new")
@@ -1129,19 +1167,32 @@ class StateBuilder:
             if dot(outw, pl.d) < 0: outw = mul(outw, -1)
             zt = pl.z(a)                                    # tile surface at the eave line
             soff = ws.get("soffit_by_plane", {}).get(pl.id.split(".")[-1], ws.get("soffit_z", self.lv.soffit))
-            fa = add(a, mul(outw, -0.05)); fb = add(b, mul(outw, -0.05))
+            ov = ws.get("overhang_by_plane", {}).get(pl.id.split(".")[-1], ws.get("overhang", 0.25))
+            outside = exterior_run(pl,a,b)
+            HP, joined = _mitres(a,b) if outside else ([],(False,False))
+            rakes=R.end_rakes(wing,pl,a,b,tile_a,tile_b,HP)
+            # At an inside corner an inset board runs on past the tile's
+            # corner station. Cut its extended blank to the actual mitre.
+            A = add(a, mul(dd,-ov-.12)) if joined[0] and not massing else a
+            B = add(b, mul(dd, ov+.12)) if joined[1] and not massing else b
+            fa = add(A, mul(outw, -0.05)); fb = add(B, mul(outw, -0.05))
             ztop = zt - R.COVER_T / pl.cos - 0.03 * pl.tan
             fas = [fa, fb, add(fb, mul(outw, -0.02)), add(fa, mul(outw, -0.02))]
             meta = M("roof_cover", "roof", self.Vt["structure"]["roof_structure"]["coverings"]["fascia"], cov["drawing"],
                      "exact" if cat == "new" else "assumed", "Fascia and soffit boards", False)
-            HP = _mitres(a, b)
+            edge_id = f"RE-{sid}-{pl.id}-{tile_a[0]:.2f}-{tile_a[1]:.2f}"
+            if not outside:
+                step=R.step_board(sysm,pl,a,b)
+                if step:out.append(atom(edge_id,'mesh','eaves',meta,sig=sig_of('eave-step',a,b,step[0]),mesh=step,mat='upvc_white',wing_cat=cat))
+                continue
             from hb_geom import poly_minus_convex
+            from hb_eaves import porch_trim
+            porch = porch_trim(self.S, pl, (a, b), soff) if sid == 'porch' else None
             fq = _cut(fas, HP)
             # a fascia gives way to the boards already laid at this level (No.21's traced wing eaves miss their corners by 225 mm)
             prev = [q for (q, qz) in SOFFITS if abs(qz - soff) < 0.02]
-            parts = [prism(Q, soff, max(soff + 0.05, ztop)) for Q in (poly_minus_convex(ccw(fq), prev) if prev else [fq])]
+            parts = [R.eave_solid(Q, soff, max(soff + 0.05, ztop), rakes) for Q in (poly_minus_convex(ccw(fq), prev) if prev else [fq])]
             SOFFITS.append((ccw(fq), soff))
-            ov = ws.get("overhang_by_plane", {}).get(pl.id.split(".")[-1], ws.get("overhang", 0.25))
             sof = [add(fa, mul(outw, -0.02)), add(fb, mul(outw, -0.02)), add(fb, mul(outw, -ov + 0.002)), add(fa, mul(outw, -ov + 0.002))]
             if ov > 0.08:
                 # a soffit gives way to the soffits already laid in this roof (No.21's traced eaves overlap by up to 40 mm)
@@ -1150,12 +1201,19 @@ class StateBuilder:
                 for Q in (poly_minus_convex(ccw(sq), [q for (q, qz) in SOFFITS if abs(qz - soff) < 0.02]) if SOFFITS else [sq]):
                     parts.append(prism(Q, soff, soff + 0.012))
                 SOFFITS.append((ccw(sq), soff))
-            out.append(atom(f"RE-{sid}-{pl.id}-{a[0]:.2f}-{a[1]:.2f}", "mesh", "eaves", meta, sig=sig_of("eave", a, b, soff), mesh=merge_meshes(parts),
-                            mat="upvc_white", wing_cat=cat))
+            if porch:
+                meta = M('roof_cover', 'roof', 'Anthracite fascia, boxed bargeboard and soffit return',
+                         ws['drawing'] + ' / measured porch verge, audit 4', 'scaled', 'Porch eaves and verge', False)
+                for suffix, mesh in porch:
+                    out.append(atom(edge_id + suffix, 'mesh', 'eaves', meta, sig=sig_of(edge_id, suffix, mesh[0]),
+                                    mesh=mesh, mat='anthracite_upvc', wing_cat=cat))
+            else:
+                out.append(atom(edge_id, "mesh", "eaves", meta, sig=sig_of("eave", a, b, soff), mesh=merge_meshes(parts),
+                                mat="upvc_white", wing_cat=cat))
             gut = [add(fa, mul(outw, 0.0)), add(fb, mul(outw, 0.0)), add(fb, mul(outw, 0.11)), add(fa, mul(outw, 0.11))]
             meta = M("roof_cover", "roof", "gutters 110mm half round black upvc", cov["drawing"], "exact" if cat == "new" else "assumed",
                      "Gutter", False)
-            out.append(atom(f"RG-{sid}-{pl.id}-{a[0]:.2f}-{a[1]:.2f}", "mesh", "eaves", meta, sig=sig_of("gut", a, b), mesh=prism(_cut(gut, HP), ztop - 0.07, ztop - 0.005),
+            out.append(atom(f"RG-{sid}-{pl.id}-{tile_a[0]:.2f}-{tile_a[1]:.2f}", "mesh", "eaves", meta, sig=sig_of("gut", a, b), mesh=R.eave_solid(_cut(gut, HP), ztop - 0.07, ztop - 0.005, rakes, gutter=True),
                             mat="black_upvc", wing_cat=cat))
         # abutment flashings (lean-to tops against a wall)
         for (wing, pl, a, b) in R.top_edges(sysm):

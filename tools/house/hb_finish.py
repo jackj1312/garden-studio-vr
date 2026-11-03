@@ -71,6 +71,56 @@ def _num(v, default):
     return float(m.group(1)) if m else default
 
 
+def opening_box_joint(bounds, head_z, surfaces):
+    """Join a boxed beam to a scheduled wall head. Return the boxing footprint
+    and the existing longitudinal head faces that need thicker backing."""
+    x0,y0,_,x1,y1=bounds
+    for head in surfaces:
+        if not head['soffit'] or abs(head['hi'][2]-head_z)>.006:continue
+        along=0 if head['hi'][0]-head['lo'][0]>head['hi'][1]-head['lo'][1] else 1
+        cross=1-along
+        lower=(x0,y0);upper=(x1,y1)
+        if min(upper[along],head['hi'][along])-max(lower[along],head['lo'][along])<.15:continue
+        mid=(lower[cross]+upper[cross])/2
+        if not head['lo'][cross]<=mid<=head['hi'][cross]:continue
+        ends=[head['lo'][along],head['hi'][along]]
+        for wall in surfaces:
+            if not wall['end'] or wall['lo'][2]>=bounds[2] or wall['hi'][2]<head_z-.006:continue
+            if min(wall['hi'][cross],upper[cross])-max(wall['lo'][cross],lower[cross])<=0:continue
+            if abs(wall['hi'][along]-ends[0])<.003:ends[0]=max(ends[0],wall['hi'][along])
+            if abs(wall['lo'][along]-ends[1])<.003:ends[1]=min(ends[1],wall['lo'][along])
+        if not lower[along]<=ends[0]<ends[1]<=upper[along]:continue
+        sides=[lower[cross],upper[cross]]; thickened=[]
+        for face in surfaces:
+            if face['carrier']!=head['carrier'] or not face['wall'] or abs(face['lo'][2]-head_z)>.006:continue
+            line=(face['lo'][cross]+face['hi'][cross])/2
+            side=1 if line>mid else -1
+            key='hi' if side==1 else 'lo'
+            old=face[key][cross];datum=old
+            # A retained pier still runs to the floor. Its room-side plane
+            # sets the outer face of the board over the adjoining opening.
+            for pier in surfaces:
+                if not pier['wall'] or pier['carrier']==head['carrier'] or pier['room']!=face['room']:continue
+                if pier['lo'][2]>=bounds[2] or pier['hi'][2]<head_z+.02:continue
+                if pier['hi'][cross]-pier['lo'][cross]>.035:continue
+                if min(abs(pier['lo'][along]-face['hi'][along]),abs(pier['hi'][along]-face['lo'][along]))>.003:continue
+                at=pier[key][cross]
+                if .002<side*(at-old)<.035 and side*(at-datum)>0:datum=at
+            if datum!=old:thickened.append((face,cross,old,datum))
+            i=int(side>0)
+            if side*(datum-sides[i])>.002:sides[i]=datum
+        # The designed fire enclosure at either bearing remains intact.
+        outline=[]
+        for i,(start,stop) in enumerate(((lower[along],upper[along]),(upper[along],lower[along]))):
+            edge=(lower,upper)[i][cross];run=[(start,edge)]
+            if sides[i]!=edge:
+                a,b=ends if i==0 else ends[::-1]
+                run.extend(((a,edge),(a,sides[i]),(b,sides[i]),(b,edge)))
+            run.append((stop,edge));outline.extend(run)
+        return (outline if along==0 else [(y,x) for x,y in outline]),thickened
+    return None,[]
+
+
 def rooms_blender(spec_rooms):
     """spec rooms -> [(id, poly in Blender xy, z0, z1, bbox)] (viewer (x, z) -> Blender (x, -z)); sloped / vaulted rooms
     reach up to their roof (the clear-ray test keeps the loft out)"""
@@ -403,6 +453,14 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         if ob.name.startswith("CL-") and p["props"].get("group") == "ceiling_joist":
             bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
             linings.append((ob.name, Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb))), Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))))
+    surfaces=[]
+    for ob,p in live_parts():
+        pr=p['props'];atom=p.get('atom',{});carrier=atom.get('carrier');face=pr.get('surface_id','').split('/')[-1]
+        wall=face in ('1','-1');end=face in ('end1','end-1');soffit=pr.get('plain_label')=='Painted opening soffit'
+        if not carrier or not (wall or end or soffit):continue
+        bb=[ob.matrix_world @ Vector(v) for v in ob.bound_box]
+        surfaces.append(dict(ob=ob,carrier=carrier,room=pr.get('room_id'),wall=wall,end=end,soffit=soffit,
+                             lo=tuple(min(v[j] for v in bb) for j in range(3)),hi=tuple(max(v[j] for v in bb) for j in range(3))))
     for bx_ in boxes:
         e = 0.0275
         x0, y0, z0, x1, y1 = bx_["lo"].x - e, bx_["lo"].y - e, bx_["lo"].z - e, bx_["hi"].x + e, bx_["hi"].y + e
@@ -424,7 +482,17 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         name = f"FS-boxing-{bx_['names'][0][:40]}"
         x0, y0, z0, x1, y1 = bx_["final"]
         if bx_.get("step"): log(f"finish: {name} made a boxed step with {bx_['step']} (row 214)")
-        me = box_mesh(name, x0, y0, z0, x1, y1, bx_["top"], fin.get("FIN-CEIL"))
+        outline,fur=opening_box_joint(bx_['final'],bx_['top'],surfaces)
+        for panel,axis,old,datum in fur:
+            ob=panel['ob'];world=ob.matrix_world;local=world.inverted()
+            if ob.data.users>1:ob.data=ob.data.copy()
+            for v in ob.data.vertices:
+                p=world @ v.co
+                if abs(p[axis]-old)<.00002:
+                    p[axis]=datum;v.co=local @ p
+            ob.data.update()
+        mat=fin.get('FIN-CEIL')
+        me = prism_mesh(name,outline,z0,bx_['top'],mat) if outline else box_mesh(name,x0,y0,z0,x1,y1,bx_['top'],mat)
         extra.append(new_obj(name, me, "FIN-CEIL", bx_["life"], f"plasterboard boxing round {', '.join(bx_['names'])} (12.5 mm board on battens, painted FIN-CEIL; typical)"))
         nbox += 1
     log(f"finish: {nbox} boxed beams; horizontal finishes constructed from the schedule")

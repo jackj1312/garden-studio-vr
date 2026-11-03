@@ -7,7 +7,7 @@ fascia/soffit/gutters, ridge and hip tiles. Distances in metres, drawing frame."
 import math
 from hb_geom import (clip_half, clip_convex, convex_minus, poly_halfplanes, clip_segment_convex, merge_intervals,
                      area, ccw, sub, add, mul, dot, cross, unit, length, slab3d, extrude_section, rect_section,
-                     frame_matrix, v3unit, v3sub, v3dot, v3len, hexa, merge_meshes, seg_point_dist, centroid)
+                     frame_matrix, v3unit, v3sub, v3dot, v3len, hexa, merge_meshes, seg_point_dist, centroid, prism, prism_varz)
 
 COVER = dict(tiles=0.030, battens=0.025, membrane=0.001)      # perpendicular thicknesses above the rafters
 COVER_T = COVER["tiles"] + COVER["battens"] + COVER["membrane"]
@@ -114,6 +114,9 @@ class RoofSystem:
                         s0, s1 = max(0, t0), min(La, t1)
                         if s1 - s0 < 0.005: continue
                         q0, q1 = add(a0, mul(ua, s0)), add(a0, mul(ua, s1))
+                        # A plan boundary may be a vertical step. Only a line
+                        # shared in XYZ can carry a hip, ridge or valley.
+                        if any(abs(pa.z(q)-pb.z(q)) > tol for q in (q0, q1)): continue
                         key = (pa.id, pb.id)
                         found.setdefault(key, []).append((q0, q1, pa, pb, A, B))
         out = []
@@ -246,6 +249,26 @@ def crease_member(pl_a, pl_b, q0, q1, w, d, cover_t=COVER_T):
     return linear_member(A, B, rect_section(w, d), plumb=True)
 
 
+def seated_crease(pa, pb, q0, q1, width):
+    """Plumb-cut the structural toe behind its enclosing fascia. The
+    weathering above it continues to the full measured roof perimeter."""
+    low, high = (q0,q1) if pa.z(q0)<pa.z(q1) else (q1,q0)
+    if not any(on_boundary(low,p.wing.footprint) for p in (pa,pb)):
+        return q0,q1
+    toward = unit(sub(high,low)); across = (-toward[1],toward[0]); cut = 0.
+    for plane in (pa,pb):
+        footprint = plane.wing.footprint
+        for i,a in enumerate(footprint):
+            edge = unit(sub(footprint[(i+1)%len(footprint)],a)); inside = (-edge[1],edge[0])
+            rate = dot(toward,inside)
+            if rate<=.001 or dot(plane.d,inside)>-.99: continue
+            setback = .070 + width*.5*abs(dot(across,inside)) - dot(sub(low,a),inside)
+            cut = max(cut,setback/rate)
+    if cut >= length(sub(high,low))-.02: return None
+    toe = add(low,mul(toward,cut))
+    return (toe,high) if low==q0 else (high,toe)
+
+
 def rafter_lines(system, pl, positions, trim_crease=0.032, trim_ridge=0.016, eave_back=0.07):
     """rafters on plane pl at plan positions along pl.e: [(p_hi, p_lo, s, end_types)]"""
     pieces = system.plane_pieces(pl)
@@ -321,6 +344,104 @@ def eave_edges(system):
             if pl.z(add(m, mul(unit(inward), 0.05))) > pl.z(m):
                 out.append((pl.wing, pl, a, b))
     return out
+
+
+def board_edges(system):
+    """Runs of fabricated fascia/soffit, including a short rake at a hip toe.
+
+    The plane patch of a hipped roof can run out just before the physical
+    footprint corner. The adjoining plane covers the remaining part of the
+    same edge. Continue the board there to meet the next board on the actual
+    corner, carrying the original tile-plane run separately for its identity.
+    """
+    edges = eave_edges(system)
+    out = []
+    for wing, plane, a, b in edges:
+        ends = []
+        for p, other in ((a,b),(b,a)):
+            along = unit(sub(p,other))
+            projection = wing.spec.get('overhang_by_plane',{}).get(plane.id.split('.')[-1],wing.spec.get('overhang',.25))
+            tip = p
+            for corner in wing.footprint:
+                delta = sub(corner,p)
+                # Only the short rake within the roof covering depth can be
+                # formed on the same board. A longer side is a distinct verge.
+                if not .001 < dot(delta,along) <= min(projection,COVER_T/plane.cos) or abs(cross(delta,along)) > .001: continue
+                if not any(w is wing and q is not plane and (length(sub(c,corner)) < .001 or length(sub(d,corner)) < .001)
+                           for w,q,c,d in edges): continue
+                mid = mul(add(p,corner),.5)
+                if not on_boundary(mid,wing.footprint) or abs(system.z(mid)-wing.z(mid)) > .002: continue
+                tip = corner; break
+            ends.append(tip)
+        out.append((wing,plane,*ends,a,b))
+    return out
+
+
+def step_board(system,plane,a,b):
+    """Scribe the fascia of an upper roof to the tile plane below it.
+    There is no horizontal soffit or gutter through the lower roof."""
+    mid=add(mul(add(a,b),.5),mul(plane.d,.002))
+    below=system.z(mid)
+    if below is None: return None
+    lower=next((p for p,Q in system.pieces if p is not plane and _inside(mid,Q) and abs(p.z(mid)-below)<.002),None)
+    if lower is None:return None
+    P=ccw([a,b,add(b,mul(plane.d,-.018)),add(a,mul(plane.d,-.018))])
+    top_drop=COVER['tiles']/plane.cos
+    # Clip to the zero-depth intersection. A triangular end must terminate
+    # on that line rather than turn inside out behind the lower tiles.
+    Q=clip_half(P,lower.diff(plane,-top_drop))
+    if not Q:return None
+    # A vertical prism tapers to zero at the scribe. Weld that edge here
+    # so the closed component has triangles in place of collapsed quads.
+    vv,ff=prism_varz(Q,lower.z,lambda p:plane.z(p)-top_drop)
+    ids={}; verts=[]; remap=[]
+    for v in vv:
+        key=tuple(round(x,8) for x in v)
+        if key not in ids:ids[key]=len(verts);verts.append(v)
+        remap.append(ids[key])
+    faces=[tuple(dict.fromkeys(remap[i] for i in f)) for f in ff]
+    return verts,[f for f in faces if len(f)>=3]
+
+
+def end_rakes(wing,plane,a,b,tile_a,tile_b,mitres):
+    """Develop the few millimetres of raking top across a hip-end mitre.
+    The station is measured back from the cut line, so both sides of the
+    gutter reach the adjoining run's level across its full width."""
+    ramps=[]
+    for corner,old,away in ((a,tile_a,b),(b,tile_b,a)):
+        gap=length(sub(corner,old))
+        if gap<.001:continue
+        toward=unit(sub(corner,away))
+        change=wing.z(corner)-plane.z(corner)
+        for nx,ny,c in mitres:
+            rate=dot((nx,ny),toward)
+            if rate<=.001 or abs(nx*corner[0]+ny*corner[1]+c)>.002:continue
+            ramps.append(((-nx/rate,-ny/rate,-c/rate-gap),-change/gap));break
+    return ramps
+
+
+def eave_solid(poly,bottom,top,ramps,gutter=False):
+    if not ramps:return prism(poly,bottom,top)
+    pieces=[ccw(poly)]
+    for line,_ in ramps:
+        pieces=[q for piece in pieces for q in (clip_half(piece,line),clip_half(piece,line,False)) if q]
+    verts=[]; ids={}; faces=[]; sides={}
+    def vertex(p,z):
+        key=tuple(round(v,8) for v in (*p,z))
+        if key not in ids:ids[key]=len(verts);verts.append((*p,z))
+        return ids[key]
+    for piece in pieces:
+        lower=[]; upper=[]
+        for x,y in piece:
+            dz=sum(min(0.,nx*x+ny*y+c)*gain for (nx,ny,c),gain in ramps)
+            lower.append(vertex((x,y),bottom+(dz if gutter else 0.)))
+            upper.append(vertex((x,y),top+dz))
+        faces.extend((tuple(reversed(lower)),tuple(upper)))
+        for i in range(len(lower)):
+            j=(i+1)%len(lower);key=tuple(sorted((lower[i],lower[j])))
+            if key in sides:del sides[key]
+            else:sides[key]=(lower[i],lower[j],upper[j],upper[i])
+    return verts,faces+list(sides.values())
 
 
 def verge_edges(system):

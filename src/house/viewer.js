@@ -89,9 +89,10 @@ const AO = LOOK_PROFILE === "on" ? {radius:.30, distanceExponent:1.3, thickness:
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 let pixelScale=1,frameSamples=0,lateFrames=0;
 function desktopRatio(){return Math.min(devicePixelRatio,1.25,pixelScale*Math.sqrt(900000/Math.max(1,innerWidth*innerHeight)));}
-renderer.setPixelRatio(desktopBalanced?desktopRatio():Math.min(devicePixelRatio,IS_PHONE?1.25:2));
+const displayRatio=()=>Math.min(devicePixelRatio,IS_PHONE?1.25:2);
+renderer.setPixelRatio(displayRatio());
 renderer.setSize(innerWidth, innerHeight);
-const gardenDesktop=gardenDesktopRender(renderer,renderer.getPixelRatio());
+const gardenDesktop=gardenDesktopRender(renderer);
 renderer.localClippingEnabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;         // Khronos PBR Neutral: keeps the brick and tile colours sampled from Jack's frames
@@ -325,6 +326,23 @@ orbit.screenSpacePanning = true;
 /* desktop / phone post: GTAO at a small radius makes wall junctions, joists and rafters read; the headset
    renders straight (WebXR's own framebuffer; the ORM ambient occlusion carries it there) */
 let composer = null, gtao = null, blurPass = null;
+// Movement has its own reusable colour buffer. Keep the canvas and stationary
+// colour pass at display resolution even after a slow walk lowers the budget.
+const motionTarget = desktopBalanced ? new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,samples:4}) : null;
+const motionOutput = desktopBalanced ? new OutputPass() : null;
+if (motionOutput) motionOutput.renderToScreen = true;
+function renderDesktopMotion() {
+  const ratio = desktopRatio();
+  motionTarget.setSize(Math.max(1,Math.floor(innerWidth*ratio)),Math.max(1,Math.floor(innerHeight*ratio)));
+  const previous = renderer.getRenderTarget();
+  try {
+    renderer.setRenderTarget(motionTarget);
+    renderer.render(scene,camera);
+    motionOutput.render(renderer,null,motionTarget);
+  } finally {
+    renderer.setRenderTarget(previous);
+  }
+}
 const xrBlur = createXRBlur(renderer, player);     // the headset's motion blur (src/house/motionblur.js)
 /* the rule (Jack, 1 Nov): motion blur must never take the Quest below a steady 72 fps. While it is drawing, every
    36 frames are timed against the frames without it; if they average slower than 68 fps (and slower than without
@@ -350,6 +368,7 @@ function blurGovernor(now, blurred) {
 if (!LITE) {
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(),
     { type: THREE.HalfFloatType, samples: 4 }));
+  composer.setSize(innerWidth,innerHeight);
   composer.addPass(new RenderPass(scene, camera));
   gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
   if(desktopBalanced){
@@ -3487,7 +3506,7 @@ function layoutPanels() {                    // the panels sit under the toolbar
 new ResizeObserver(layoutPanels).observe($("top"));
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  if(desktopBalanced&&!inVR()&&!gardenDesktop.active){renderer.setPixelRatio(desktopRatio());composer?.setPixelRatio(desktopRatio());}
+  if(!inVR()){renderer.setPixelRatio(displayRatio());composer?.setPixelRatio(displayRatio());}
   renderer.setSize(innerWidth, innerHeight);
   composer?.setSize(innerWidth, innerHeight);
 });
@@ -3742,12 +3761,12 @@ function loop(fakeNow) {
   const now = Math.max(last, fakeNow ?? performance.now());
   if(document.hidden&&!inVR()&&V&&visitReady){last=now;return;}
   const frameInterval=now-last;
-  // Reduce the desktop drawing buffer only after sustained missed refreshes while moving.
+  // Reduce the walking render target only after sustained missed refreshes while moving.
   // Keep the chosen size through room transitions instead of reallocating on each doorway.
-  if(desktopBalanced&&visitReady&&!inVR()&&!gardenDesktop.active&&desktopRender.mode==='moving'&&pixelScale>.73){
+  if(desktopBalanced&&visitReady&&!inVR()&&desktopRender.mode==='moving'&&pixelScale>.73){
     frameSamples++;if(frameInterval>24)lateFrames++;
     if(frameSamples===24){
-      if(lateFrames>=5){pixelScale=Math.max(.72,pixelScale*.86);renderer.setPixelRatio(desktopRatio());}
+      if(lateFrames>=5){pixelScale=Math.max(.72,pixelScale*.86);}
       frameSamples=lateFrames=0;
     }
   }
@@ -3808,22 +3827,29 @@ function loop(fakeNow) {
   deskMoving = !inVR() && deskMove.moving;
   if ((garden?.bird || furnisher?.bird) && !inVR()) { workPrev = performance.now() - now; return; }
   let display='contact';
-  if(desktopBalanced && !inVR() && !gardenDesktop.active){
+  if(desktopBalanced && !inVR()){
     display=desktopRender.choose({now,camera,view:V,key:[stageValue,timeOfDay,roomLights.status().allOn,V.model.asBuilt,unfurnished,doorsHidden,xray,section.active,...Object.values(storeyState)].join('|'),
       active:!!(V.doors?.moving||roomLights.transitioning||playing||tween||marks?.drawing||furnisher?.dragging),
-      cacheable:SIMPLE&&!marks?.active&&!card.mesh.visible&&!hoverPart&&!furnisher?.dragging&&!perf.hud.visible,
+      cacheable:!gardenDesktop.active&&SIMPLE&&!marks?.active&&!card.mesh.visible&&!hoverPart&&!furnisher?.dragging&&!perf.hud.visible,
       shadow:renderer.shadowMap.needsUpdate,exposure:renderer.toneMappingExposure});
     if(display==='held'){workPrev=performance.now()-now;return;}
   }
   if (renderer.xr.isPresenting || SIM.on || !composer || gardenDesktop.active || display==='moving') {
     const t0 = performance.now();
     const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
-    if (!blurred) renderer.render(scene, camera);
+    if (!blurred) {
+      if (display === "moving" && !inVR()) renderDesktopMotion();
+      else renderer.render(scene, camera);
+    }
     if (inVR()) { xrBlur.track(); if (blurred) perf.tag("motion blur"); }
     renderMs = performance.now() - t0;
     if (renderer.xr.isPresenting) blurGovernor(now, blurred);
   } else {
-    if (blurPass) blurPass.amount = blurFade * BLUR.deskShutter;
+    if (blurPass) {
+      blurPass.amount = blurFade * BLUR.deskShutter;
+      blurPass.enabled = blurPass.amount > .001;
+      if (!blurPass.enabled) blurPass.reset();
+    }
     composer.render();
   }
   workPrev = performance.now() - now;
@@ -3834,7 +3860,7 @@ renderer.setAnimationLoop(() => loop());
 /* a hook for tests from the console; not a user-facing API */
 window.__house = {
   THREE, scene, camera, renderer, player, orbit, measure, section, walker, feet, yawPitch, vrBoard, requests, regs: () => regs,
-  desktop:{get mode(){return gardenDesktop.active?"garden":desktopRender.mode;},get ratio(){return renderer.getPixelRatio();}},
+  desktop:{get mode(){return desktopRender.mode;},get ratio(){return renderer.getPixelRatio();}, get movementSize(){return motionTarget && [motionTarget.width,motionTarget.height];}, get inspectionSize(){return composer && [composer.readBuffer.width,composer.readBuffer.height];}},
   look:{snapshot:()=>({...roomLights.snapshot(),profile:LOOK_PROFILE,gtao:{...AO,enabled:!!gtao&&!inVR()},toneMapping:renderer.toneMapping}),switch: switchLamps},presentation,
   get V() { return V; }, get stage() { return stageValue; }, get tool() { return tool; }, get target() { return target; },
   get walk() { return walk; }, get xray() { return xray; }, get boardTab() { return boardTab; }, set boardTab(t) { boardTab = t; refreshBoard(); },

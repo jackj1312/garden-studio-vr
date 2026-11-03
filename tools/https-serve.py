@@ -42,6 +42,7 @@ Room planner (planner.html, src/planner/) — its own section near the end; noth
     Files live in assets/sites/<name>/spec/changes/; the site needs assets/sites/<name>/spec/spec_v*.json.
 """
 import http.server, ssl, os, sys, functools, json, re, math, urllib.parse, threading, subprocess
+from layout_store import handle_layout
 from datetime import datetime, timezone
 
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8443
@@ -252,6 +253,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if urllib.parse.urlsplit(self.path).path == "/layout":
+            return handle_layout(self, root)
         if urllib.parse.urlsplit(self.path).path.startswith("/scan/"):
             return scan_get(self)
         if urllib.parse.urlsplit(self.path).path.startswith("/house/"):
@@ -269,6 +272,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(200, read_marks(os.path.join(d, "marks.json"), site))
 
     def do_POST(self):
+        if urllib.parse.urlsplit(self.path).path == "/layout":
+            return handle_layout(self, root)
         path = urllib.parse.urlsplit(self.path).path
         if path.startswith("/scan/"):
             return scan_post(self)
@@ -737,6 +742,9 @@ def spec_post(h):
         return h._json(400, {"error": str(e)})
 
 
+if "--garden-lan" in sys.argv[3:]:
+    from garden_network import garden_handler
+    Handler = garden_handler(Handler, root, sys.argv[2])
 handler = functools.partial(Handler, directory=root)
 httpd = http.server.ThreadingHTTPServer((sys.argv[2] if len(sys.argv) > 2 else "0.0.0.0", port), handler)
 ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

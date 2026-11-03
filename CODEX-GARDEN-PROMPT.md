@@ -25,6 +25,12 @@ everything by mouse, with clean shapes:
   wall/edge/path, a closed loop becomes a patio or bed, a trigger-and-drag outward makes a perfect circle or square. Then grab
   points or handles with the ray to adjust, and raise or sink a selected shape with the thumbstick. Everything I make in the
   headset is the same design file as on the computer, and the reverse.
+- **Bird's-eye view (essential), on the computer and in the Quest:** look straight down on the whole garden from above, to
+  draw and edit the layout like a plan, then drop back to standing height to see it at eye level. Same tools in both.
+- **Keep the headset smooth in garden mode:** while I'm designing the garden in the Quest, the indoors can drop to a lighter
+  quality (simpler materials, fewer furnishings, lower texture detail) to protect the frame rate. I must still be able to walk
+  inside and look out through the windows and doors at the garden; the indoors only needs to look right enough for that.
+  The garden itself keeps full quality.
 - It saves the design to a file in the project, so I can come back and keep editing.
 
 ## Later, not now

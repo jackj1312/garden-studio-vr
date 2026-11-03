@@ -102,6 +102,7 @@ async function retainOwnerModels(site,def,registry,owner,sourceRow,items){
 }
 async function floorPNG(def){
   const recipe=floorRecipe(def),{n,base,lines,motifs}=recipe,colour=new T.Color(base).convertLinearToSRGB().toArray().map(x=>Math.round(x*255));
+  if(recipe.photo)return {image:await sharp(path.join(kitRoot,'maps',recipe.source)).png().toBuffer(),repeat:recipe.repeat};
   const bytes=Buffer.alloc(n*n*3),photo=recipe.source?await sharp(path.join(kitRoot,'maps',recipe.source)).resize(n,n,{fit:'fill'}).removeAlpha().toColourspace('srgb').raw().toBuffer():null;
   for(let i=0;i<bytes.length;i++)bytes[i]=Math.round(colour[i%3]*(photo ? .67+.33*photo[i]/255 : 1));
   const coords=pts=>pts.map(([x,y])=>x.toFixed(4)+','+y.toFixed(4)).join(' ');
@@ -150,7 +151,7 @@ async function applyFinishes(doc,layout,defs){
         if(!floors.has(key)){
           const {image,repeat}=await floorPNG(defs.get(key));
           const texture=doc.createTexture(key).setImage(image).setMimeType('image/png');
-          const material=doc.createMaterial('Client floor · '+key).setBaseColorTexture(texture).setRoughnessFactor(.82).setMetallicFactor(0);
+          const material=doc.createMaterial('Client floor · '+key).setBaseColorTexture(texture).setRoughnessFactor(floorRecipe(defs.get(key)).roughness??.82).setMetallicFactor(0);
           material.getBaseColorTextureInfo().setWrapS(10497).setWrapT(10497);
           floors.set(key,{material,repeat});
         }

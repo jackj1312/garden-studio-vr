@@ -319,7 +319,7 @@ def normalise_stock(root, record):
 
 
 EDITABLE_ITEM_FIELDS = set("id kind style variant catalogueId room position rotation size host hostOffset "
-                           "hostRotation hostContact finishes lampOn name label".split())
+                           "heightAdjustment hostRotation hostContact finishes lampOn name label".split())
 
 
 def retain_item_extensions(previous, incoming):

@@ -39,7 +39,8 @@ export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
    let choices=[],perPage=5,top=150;
    if(page==='catalogue'){
     half('Kind',143,0,()=>go('kind'));half('Style',143,1,()=>go('style'));half('Room type',211,0,()=>go('roomType'));half('Select item',211,1,()=>action('select'));
-    top=283;perPage=4;choices=s.filtered.map(i=>[i.name,()=>{action('add',i.id);go('home');},i.thumbnail]);
+    half('Raise 1 cm',277,0,()=>action('PageUp'));half('Lower 1 cm',277,1,()=>action('PageDown'));
+    top=345;perPage=3;choices=s.filtered.map(i=>[i.name,()=>{action('add',i.id);go('home');},i.thumbnail]);
    }else if(page==='rooms')choices=s.rooms.map(r=>[r.label||r.id,()=>{action('room',r.id);go('home');}]);
    else if(page==='faces')choices=(s.room?.wallFaces||[]).map((f,i)=>[f.label||'Wall '+(i+1),()=>{action('face',f.id);go('colour');}]);
    else if(page==='floors')choices=[['Original covering',()=>{action('floor','');go('home');}],...s.floors.map(f=>[f.name,()=>{action('floor',f.id);go('home');}])];

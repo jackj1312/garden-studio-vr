@@ -102,7 +102,7 @@ async function profile(browser,name) {
       return {a,b,overlap:[1.8,-2.35],door:door[0]};
     },{STOCK,ROOM});
   }
-  async function blocked(from,to,expected) {
+  async function advisory(from,to,expected) {
     const p=await screen([from.position[0],from.position[2]]),q=await screen(to);await start(p);await move(q);
     const report=await page.evaluate(()=>{
       const s=__house.furnishing.state(),c=document.getElementById('furnish-plan'),ctx=c.getContext('2d');
@@ -111,9 +111,9 @@ async function profile(browser,name) {
       return {reasons:s.verdict?.reasons,ok:s.verdict?.ok,redPixels,panel:document.querySelector('[data-furnish-panel] [data-status]').classList.contains('fu-blocked')};
     });
     await end();
-    assert.equal(report.ok,false,JSON.stringify(report));assert.ok(report.redPixels>10 && report.panel,JSON.stringify(report));
+    assert.equal(report.ok,true,JSON.stringify(report));assert.equal(report.redPixels,0);assert.equal(report.panel,false);
     assert.match(report.reasons.join(' '),expected);
-    const after=await current();assert.deepEqual(after.selected.position,from.position);return report;
+    const after=await current();assert.notDeepEqual(after.selected.position,from.position);await click(cmd('undo'));assert.deepEqual((await current()).selected.position,from.position);return report;
   }
   let itemId=null,faceId=null,initial=null,chosenPaint=null,chosenFloor=null;
   try {
@@ -149,7 +149,7 @@ async function profile(browser,name) {
       await touchEvent('touchEnd',[]);
     }
     const turned=(await current()).selected;assert.ok(Math.abs(angle(turned.rotation,moved.rotation)-(touch?30:15))<2,'Rotation gesture lost its measured angle');
-    result.rotation=turned.rotation; result.overlap=await blocked(turned,places.overlap,/overlap/i);result.door=await blocked(turned,places.door,/Blocks the /);
+    result.rotation=turned.rotation; result.overlap=await advisory(turned,places.overlap,/overlap/i);result.door=await advisory(turned,places.door,/Blocks the /);
     await click(cmd('delete'));assert.ok(!(await current()).ids.includes(itemId));await click(cmd('undo'));assert.ok((await current()).ids.includes(itemId));
     await click(cmd('redo'));assert.ok(!(await current()).ids.includes(itemId));await click(cmd('undo'));assert.ok((await current()).ids.includes(itemId));
     faceId=await page.$eval(sel('face'),select=>[...select.options].find(o=>o.value)?.value);

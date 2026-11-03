@@ -2,8 +2,8 @@
 const pages = {
   planner: ["Room planner", [
     ["Choose a room", "Choose Before or After and the storey, then click or tap a room. Use Floor to return. Scroll or pinch to zoom. Drag empty space to pan."],
-    ["Place furniture", "Use + Add and filter by room type, kind and style. Drag a piece on the plan. A red footprint cannot be dropped. Snap uses a 50 mm grid, walls and nearby furniture. Hold Shift or Alt to move freely."],
-    ["Turn and edit", "Drag the rotation handle on screen or touch. Q/E or bracket keys turn 15°. R turns a quarter turn. Arrow keys move 50 mm, or 10 mm with Shift. D duplicates and Delete removes the selected piece."],
+    ["Place furniture", "Use + Add and filter by room type, kind and style. Drag a piece on the plan. You can keep overlapping placements. Snap uses a 50 mm grid, walls and nearby furniture. Hold Shift or Alt to move freely."],
+    ["Turn and edit", "Drag the rotation handle on screen or touch. Q/E or bracket keys turn 15°. R turns a quarter turn. Arrows move 10 mm, or 1 mm with Shift. Page Up and Page Down adjust furniture height. D duplicates and Delete removes the selected piece."],
     ["Review changes", "Use Undo or Redo, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z. Show 3D preview to inspect the actual furniture. Choose a wall face to repaint, or a covering for the room floor. Save layout shares these changes with the walkthrough. Changes and Send to build record architectural requests for the next build."],
   ]],
   site: ["Garden and site review", [
@@ -22,9 +22,9 @@ const pages = {
   ]],
   furnish: ["Furnish a room", [
     ["Choose a piece", "Choose a room. Filter the catalogue by room type, kind or style and click a thumbnail. Point at the floor, wall, ceiling or compatible supporting piece. Place with a click or tap."],
-    ["Move and turn", "Select and drag a piece. A green outline can be placed. A red outline shows why the position is blocked and releasing keeps the original placement. Use Q/E, the two rotation buttons, or twist with two fingers. Hold Shift or Alt to bypass snapping."],
-    ["Change a finish", "Choose one measured wall face and a colour. Choose a floor covering for the current room. Original wall colour or Original covering restores its signed finish."],
-    ["Walking and overhead", "Bird’s-eye shows this room from directly above. Switch to Walking or select another room to inspect the same layout. Copy, Delete, Undo and Redo act on the selected version. Save layout to share it with the planner and other devices."],
+    ["Move and turn", "Select and drag a piece. Arrows move 10 mm, or 1 mm with Shift. Page Up and Page Down raise or lower by the same amount. Release to keep your position, including overlaps. Wall snapping helps align pieces. Use Q/E, the two rotation buttons, or twist with two fingers. Hold Shift or Alt to bypass snapping."],
+    ["Change a finish", "Click a wall in Bird’s-eye. The cyan line identifies the face that will receive the colour. Choose a floor covering for the current room. Original wall colour or Original covering restores its signed finish."],
+    ["Walking and overhead", "Minimise the tools to walk. Click the scene for mouse look, use WASD to walk, and press Tab to restore the tools. Bird’s-eye shows this room from directly above. Switch to Walking or select another room to inspect the same layout. Copy, Delete, Undo and Redo act on the selected version. Save layout to share it with the planner and other devices."],
     ["Quest", "Choose tools and thumbnails on the left wrist. Point the right ray and hold the trigger to move furniture, then release to place it. Push the right stick sideways to turn a selected piece. Bird’s-eye brings the measured room plan into reach."],
   ]],
   garden: ["Garden design", [

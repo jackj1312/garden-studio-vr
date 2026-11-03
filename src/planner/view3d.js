@@ -8,6 +8,7 @@ import { bbox, dot2, sub2, add2, scale2, len2, norm2, segDist, hexToRgb, mix } f
 import { sizeM, shapeOf, mountOf, partColour, roomWalls, roomFloor } from "./data.js?v=p8";
 import { mainPart } from "./plan.js?v=p8";
 import {createFurnitureModels} from '../furnish/models.js';
+import {floorRecipe} from '../furnish/floor-recipe.mjs';
 import {wallFaces} from './shared.mjs';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
@@ -112,8 +113,10 @@ export class Preview3D {
     const g = new THREE.ShapeGeometry(shape); g.rotateX(-Math.PI / 2);
     const uv = g.attributes.uv, pos = g.attributes.position;
     for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i));
-    const tex = floorTexture(fl);
-    const fm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+    const recipe=floorRecipe(fl);
+    const tex=recipe.photo?new THREE.TextureLoader().load(new URL('../../tools/library/kit/maps/'+recipe.source,import.meta.url).href,()=>this.request()):floorTexture(fl);
+    if(recipe.photo){tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1/recipe.repeat[0],1/recipe.repeat[1]);tex.colorSpace=THREE.SRGBColorSpace;}
+    const fm = new THREE.MeshStandardMaterial({ map: tex, roughness: recipe.roughness??.75 });
     const floor = new THREE.Mesh(g, fm); floor.position.y = f; this.room.add(floor);
     /* walls: one slab outside each edge of the room polygon, cut where an opening sits on that edge */
     const wc = roomWalls(db, st, room), acc = st.rooms.get(room.id)?.accent;

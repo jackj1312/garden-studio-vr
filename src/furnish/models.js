@@ -126,7 +126,7 @@ export function createFurnitureModels({THREE:T,scene,site,version,variants={},ca
   }
   function set(items,{visible=true,stage=Infinity,room=null,rooms=null}={}){
     if(dead)return Promise.resolve();
-    const token=++generation;group.visible=visible;visibleItems=new Map();
+    const previous=visibleItems;const token=++generation;group.visible=visible;visibleItems=new Map();
     if(visible)for(const item of items){
       if(room && item.room!==room || rooms && !rooms.has(item.room))continue;
       const inc=progress(stage,item.stageIn??item.stage_in??1,item.seq??0);
@@ -136,7 +136,10 @@ export function createFurnitureModels({THREE:T,scene,site,version,variants={},ca
       if(!visibleItems.has(key))visibleItems.set(key,[]);
       visibleItems.get(key).push({item,lift:.6*(1-inc)**3});
     }
-    for(const key of batches.keys())refresh(key);
+    for(const key of batches.keys()){
+      const before=previous.get(key)||[],after=visibleItems.get(key)||[];
+      if(before.length!==after.length||after.some((r,i)=>r.item!==before[i].item||r.lift!==before[i].lift))refresh(key);
+    }
     let jobs;
     try{jobs=[...visibleItems.keys()].filter(key=>!prototypes.has(key)).map(load);}
     catch(e){return Promise.reject(e);}

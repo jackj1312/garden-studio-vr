@@ -289,7 +289,26 @@ function parentShape(ctx,items,host) {
     poly:[[a[0],a[2]],[b[0],a[2]],[b[0],b[2]],[a[0],b[2]]],item:null};
 }
 
+export function fineMove(item, key, precise=false) {
+  const step=precise ? .001 : .01;
+  const axis={ArrowLeft:[0,-1],ArrowRight:[0,1],ArrowUp:[2,-1],ArrowDown:[2,1],PageUp:[1,1],PageDown:[1,-1]}[key];
+  if (!axis) return null;
+  const [i,sign]=axis, result={...item,position:[...item.position]};
+  result.position[i]+=sign*step;
+  if (i===1 && item.host.type!=='wall') result.heightAdjustment=(item.heightAdjustment||0)+sign*step;
+  return result;
+}
+
+function fitsSupport(item,owner) {
+  if (['table_lamp','bowl','vase','plant'].includes(item.kind))
+    return contains(flat(item.position),owner.poly,0) && contains(flat(item.hostContact||item.position),owner.poly,0);
+  return isSoft(item)?contains(flat(item.position),owner.poly,.015):fullFootprint(polyOf(item),owner.poly,.024);
+}
+
 function supportHeight(ctx,candidate,owner) {
+  return baseSupportHeight(ctx,candidate,owner)+(candidate.heightAdjustment||0);
+}
+function baseSupportHeight(ctx,candidate,owner) {
   // Reviewed kit seats/cloth may sit below an owner's overall top. Use the
   // exported local seat datum, never an arbitrary child-supplied world height.
   const signed=ctx.seedItems.find(it=>it.id===candidate.id&&it.host?.id===owner.id);
@@ -319,19 +338,26 @@ export function snapPlacement(ctx,items,candidate,{free=false}={}) {
   const out={...candidate,position:[...candidate.position],host:{...candidate.host}};
   function translate(v) { out.position[0]+=v[0]; out.position[2]+=v[1]; }
   const host=out.host;
+  if (host.type==='free') return out;
+  function detach() {
+    out.host={type:'free',id:'room/'+room.id};
+    delete out.hostOffset;delete out.hostRotation;delete out.hostContact;
+    return out;
+  }
   if (host.type==='floor'||host.type==='ground') {
-    out.position[1]=room.floorY; host.id='floor/'+room.id;
+    out.position[1]=room.floorY+(out.heightAdjustment||0); host.id='floor/'+room.id;
   } else if (host.type==='ceiling') {
-    out.position[1]=room.ceilingY-out.size[2]; host.id='ceiling/'+room.id;
+    out.position[1]=room.ceilingY-out.size[2]+(out.heightAdjustment||0); host.id='ceiling/'+room.id;
   } else if (isSurface(host)) {
     const owner=parentShape(ctx,items,host);
-    if (owner) out.position[1]=supportHeight(ctx,out,owner);
+    if (!owner || !contains(flat(out.position),owner.poly,.02)) return detach();
+    out.position[1]=supportHeight(ctx,out,owner);
     return out;
   } else if (host.type==='wall') {
     // Prefer the face near the pointing position, switching at a room corner.
     const faces=faceCandidates(ctx,out), first=faces[0], old=faces.find(f=>f.face.id===host.id);
     const face=(old && (!first||old.distance<=first.distance+.035)?old:first)?.face;
-    if (!face) return out;
+    if (!face || first.distance>out.size[1]/2+SNAP+.05) return detach();
     host.id=face.id; out.rotation=wrap(Math.atan2(-face.normal[0],-face.normal[1])*180/Math.PI);
     const t=norm2(sub2(face.b,face.a)), length=len2(sub2(face.b,face.a));
     const along=dot2(sub2(flat(out.position),face.a),t);
@@ -490,7 +516,7 @@ function geometryReasons(ctx,items,item) {
   if (!fullFootprint(fp,room.polygon)) reasons.push('The footprint crosses the room boundary');
   if (bottom<room.floorY-.015||top>room.ceilingY+.018) reasons.push('Outside the finished floor or ceiling');
   if (h.type==='floor'||h.type==='ground') {
-    if (h.id!=='floor/'+room.id||Math.abs(bottom-room.floorY)>.012) reasons.push('The base must sit on this room’s floor');
+    if (h.id!=='floor/'+room.id||Math.abs(bottom-room.floorY-(item.heightAdjustment||0))>.012) reasons.push('The base must sit on this room’s floor');
     if (backed(item)) {
       const front=axes(item.rotation).f;
       for (const {face:f} of faceCandidates(ctx,item)) {
@@ -499,7 +525,7 @@ function geometryReasons(ctx,items,item) {
       }
     }
   } else if (h.type==='ceiling') {
-    if (h.id!=='ceiling/'+room.id||Math.abs(top-room.ceilingY)>.018) reasons.push('Seat the fitting on this room’s ceiling');
+    if (h.id!=='ceiling/'+room.id||Math.abs(top-room.ceilingY-(item.heightAdjustment||0))>.018) reasons.push('Seat the fitting on this room’s ceiling');
   } else if (h.type==='wall') {
     const segments=room.wallFaces.filter(f=>f.id===h.id&&f.a), f=segments.find(f=>{
       const t=norm2(sub2(f.b,f.a)), span=projectRange([f.a,f.b],t), range=projectRange(fp,t);
@@ -523,9 +549,9 @@ function geometryReasons(ctx,items,item) {
     if (!owner||owner.room&&owner.room!==room.id||descendants(items,item.id).has(h.id)) reasons.push('Choose an existing support in this room');
     else {
       if (Math.abs(bottom-supportHeight(ctx,item,owner))>.018) reasons.push('Seat the base on its support');
-      if (isSoft(item)?!contains(flat(p),owner.poly,.015):!fullFootprint(fp,owner.poly,.024)) reasons.push('The item extends beyond its support');
+      if (!fitsSupport(item,owner)) reasons.push('The item extends beyond its support');
     }
-  } else reasons.push('Unknown host surface');
+  } else if(h.type!=='free') reasons.push('Unknown host surface');
   if (overlapsWall(ctx,item,fp)) reasons.push('The footprint hits a wall');
   for (const o of ctx.obstacles) {
     if (o.id===h.id||o.room&&o.room!==room.id||!overlapY(bottom,top,o.y0,o.y1)) continue;
@@ -569,6 +595,11 @@ export function checkGroup(ctx,items,candidate) {
   return changedChecks(ctx,items,[...items.filter(it=>!ids.has(it.id)),...group],group);
 }
 export const checkPlacement=checkGroup;
+// The planner shows spatial advice; only the record and attachment graph constrain saving.
+export function assessDesign(ctx,items,candidate) {
+  const advice=checkGroup(ctx,items,candidate);
+  return {ok:true,reasons:advice.reasons};
+}
 
 const idOK=s=>typeof s==='string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}$/.test(s);
 const colourOK=s=>typeof s==='string' && /^#[\da-f]{6}$/i.test(s);
@@ -583,11 +614,14 @@ function itemContract(ctx,item) {
     return 'Invalid item identity, kind, style or variant';
   if (!xyz(item.position)||item.position.some(n=>Math.abs(n)>10000)||!xyz(item.size)||item.size.some(n=>n<=0||n>100)||
       !finite(item.rotation)||Math.abs(item.rotation)>36000||!ctx.rooms.some(r=>r.id===item.room)) return 'Invalid item dimensions, position or room';
-  if (!dict(item.host)||!['floor','ceiling','wall','ground','surface','item'].includes(item.host.type)||
+  if (!dict(item.host)||!['floor','ceiling','wall','ground','surface','item','free'].includes(item.host.type)||
       typeof item.host.id!=='string'||!item.host.id.length||item.host.id.length>192) return 'Invalid host surface';
+  const expected={floor:'floor',ground:'floor',ceiling:'ceiling',free:'room'}[item.host.type];
+  if(expected && item.host.id!==expected+'/'+item.room)return 'Unknown host in this room';
   if ('lampOn' in item&&typeof item.lampOn!=='boolean') return 'Invalid lamp switch';
   if ('finishes' in item&&(!dict(item.finishes)||Object.keys(item.finishes).length>32||
       Object.entries(item.finishes).some(([k,v])=>!idOK(k)||!colourOK(v)))) return 'Invalid item finish';
+  if ('heightAdjustment' in item&&(!finite(item.heightAdjustment)||Math.abs(item.heightAdjustment)>100)) return 'Invalid height adjustment';
   if ('hostOffset' in item&&(!xyz(item.hostOffset)||item.hostOffset.some(n=>Math.abs(n)>100))) return 'Invalid attachment offset';
   if ('hostRotation' in item&&!finite(item.hostRotation)) return 'Invalid attachment rotation';
   const stock=ctx.catalogue.find(c=>c.id===item.catalogueId), variant=Object.hasOwn(ctx.variants,item.variant)?ctx.variants[item.variant]:null;
@@ -599,7 +633,7 @@ function itemContract(ctx,item) {
       normaliseVariant(item,ctx.catalogue).variant!==stock.id||!dimEqual(item.size,stock.size_m))
     return 'Unknown catalogue item or altered dimensions';
   const mount=stock?.host, actual=item.host.type;
-  if (mount&&actual!==mount&&!(mount==='surface'&&isSurface(item.host))&&!(actual==='ground'&&mount==='floor')&&
+  if (mount&&actual!=='free'&&actual!==mount&&!(mount==='surface'&&isSurface(item.host))&&!(actual==='ground'&&mount==='floor')&&
       !(signed&&signed.host.type===actual)&&!(mount==='floor'&&isSurface(item.host)&&item.kind==='plant')) return 'Incompatible mounting surface';
   return null;
 }
@@ -622,6 +656,7 @@ export function validateFurnishDelta(ctx,previous,next) {
     const was=old.get(it.id);
     if (old.has(it.host.id)&&!current.has(it.host.id)) throw new Error(it.id+': its supporting furniture was removed');
     const owner=current.get(it.host.id),oldOwner=old.get(it.host.id);
+    if(!owner&&!ctx.hosts.some(h=>h.id===it.host.id))throw new Error(it.id+': unknown supporting item');
     const ownerMoved=owner&&oldOwner&&(!closePose(owner.position,oldOwner.position)||!angleNear(owner.rotation,oldOwner.rotation)||owner.room!==oldOwner.room);
     if (was&&same(was,it)&&!ownerMoved) continue;
     if (ownerMoved && was?.host?.id===it.host.id && samePose(was,it) &&
@@ -637,12 +672,7 @@ export function validateFurnishDelta(ctx,previous,next) {
       if (seen.has(at.host.id)) throw new Error(it.id+': cyclic support');
       seen.add(at.host.id);at=current.get(at.host.id);
     }
-    if (!changed.includes(it) && changed.some(c=>c.id===it.host.id)&&!samePose(old.get(it.host.id),current.get(it.host.id))) {
-      const owner=parentShape(ctx,next.items,it.host);
-      if (!owner||Math.abs(it.position[1]-supportHeight(ctx,it,owner))>.018||
-          !(isSoft(it)?contains(flat(it.position),owner.poly,.015):fullFootprint(polyOf(it),owner.poly,.024)))
-        throw new Error(it.id+': an edit would leave the item off its support');
-    }
+
   }
   const walls=new Set(ctx.rooms.flatMap(r=>r.wallFaces.map(f=>f.id))), rooms=new Set(ctx.rooms.map(r=>r.id));
   for (const [key,value] of Object.entries(next.wallColours))
@@ -650,6 +680,5 @@ export function validateFurnishDelta(ctx,previous,next) {
   for (const [key,value] of Object.entries(next.roomFloors))
     if (value!==previous.roomFloors[key]&&(!rooms.has(key)||!ctx.floorKeys.includes(value))) throw new Error('Unknown room or floor covering');
   const result=changedChecks(ctx,previous.items,next.items,changed);
-  if (!result.ok) throw new Error(result.reasons.join('. '));
-  return result;
+  return {ok:true,reasons:result.reasons};
 }

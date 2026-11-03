@@ -20,6 +20,46 @@
       "licence": "CC0-1.0",
       "source_url": "https://polyhaven.com/a/white_plaster_02",
       "licence_url": "https://polyhaven.com/license"
+    },
+    {
+      "asset": "Concrete030",
+      "path": "maps/FLR-CONCRETE-photo.jpg",
+      "sha256": "ae6f538c7f3951138851902f1e8dd5d1da74a5a54011cfba807d1b1c8c668cf8",
+      "bytes": 352417,
+      "licence": "CC0-1.0",
+      "source_url": "https://ambientcg.com/a/Concrete030",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+    },
+    {
+      "asset": "wool_boucle",
+      "path": "maps/FLR-CARPET-OAT-photo.jpg",
+      "sha256": "5434e894848688d4a857b4ea73d0247295c3df2382441bbc8efda696a953337b",
+      "bytes": 462878,
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/wool_boucle",
+      "licence_url": "https://polyhaven.com/license",
+      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+    },
+    {
+      "asset": "wool_boucle",
+      "path": "maps/FLR-CARPET-GREY-photo.jpg",
+      "sha256": "0a7293acc0014b3173f0a1c77fb9bd69f9c8ebc93a39d79aea271d98f98c8a32",
+      "bytes": 457168,
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/wool_boucle",
+      "licence_url": "https://polyhaven.com/license",
+      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+    },
+    {
+      "asset": "hessian_380",
+      "path": "maps/FLR-SISAL-photo.jpg",
+      "sha256": "85c3cc809bbc74419fd62b37b90f742a0a5ac681c505c45c887783d709cdc650",
+      "bytes": 537438,
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/hessian_380",
+      "licence_url": "https://polyhaven.com/license",
+      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
     }
   ],
   "tile": {

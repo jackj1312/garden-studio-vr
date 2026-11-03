@@ -9,7 +9,7 @@ import { checkRoom, fitsAt } from "./checks.js?v=p8";
 import { renderOverview, renderRoom, renderItem, openCatalogue, openChanges } from "./panel.js?v=p8";
 import { plannerEntry, projectRoomState, wallFaces } from './shared.mjs';
 import { FurnitureLayout } from '../furnish/layout.mjs';
-import { buildRoomContext, snapPlacement, checkGroup, validateFurnishDelta, moveGroup } from '../furnish/placement.mjs';
+import { buildRoomContext, fineMove, snapPlacement, assessDesign, validateFurnishDelta, moveGroup } from '../furnish/placement.mjs';
 
 const params = new URLSearchParams(globalThis.location?.search || '');
 const SITE = params.get("site") || "house-wip";
@@ -36,6 +36,7 @@ export class App {
     this.store.on(r => { if (r === "offline") this.toast("Lost the studio server: changes now stay on this device until it is back."); if (String(r).startsWith("uploaded")) this.toast(`Uploaded ${r.split(":")[1]} change(s) made on this device.`); });
     await this.store.load();
     this.plan = new PlanView($("plan"), { db: this.db, onSelect: id => this.select(id), onOpenRoom: (r, it) => this.openRoom(r, it), onCommit: c => this.commitDrag(c),
+      wallId:()=>this.ui.wallId,pickWall:id=>{this.ui.wallId=id;this.select(null);},
       onPose:(it,position,yaw,free)=>this.assessPose(it,position,yaw,free), onDrop:row=>this.putFurniture(row), onBlocked:r=>this.toast(r) });
     this.plan.o.placeAt=p=>{if (!this.pendingEntry) return false; const {entry,room}=this.pendingEntry; this.placeEntry(entry,room,p); return true;};
     this.bindUI();
@@ -142,7 +143,7 @@ export class App {
     for (const b of $("storeySeg").children) { b.setAttribute("aria-pressed", String(b.dataset.s === this.storey)); b.hidden = !H.storeys.includes(b.dataset.s); }
     $("roomCard").hidden = !room; $("roomTools").hidden = !room;
     $("roomTitle").textContent = room ? cap(room.name) : "";
-    $("hint").textContent = this.pendingEntry?'Tap a position for '+this.pendingEntry.entry.name+' · Esc cancels':room ? "Drag to move · handle to turn · red blocks the drop" : "Tap a room to open it";
+    $("hint").textContent = this.pendingEntry?'Tap a position for '+this.pendingEntry.entry.name+' · Esc cancels':room ? "Drag to move · handle to turn · arrows fine-adjust" : "Tap a room to open it";
     $("main").classList.toggle("nosel", !room);
     this.plan.show({ state: this.state, storey: this.storey, mode: room ? "room" : "overview", roomId: this.roomId, selected: this.selected, warnings: this.warnings, keepView });
     this.refreshPanel();
@@ -224,10 +225,10 @@ export class App {
     row.room=room?.id || it.room;
     if (row.host.type==='floor'||row.host.type==='ceiling') row.host={type:row.host.type,id:row.host.type+'/'+row.room};
     const snapped=snapPlacement(context,layout.items,row,{free});
-    return {row:snapped,...checkGroup(context,layout.items,snapped)};
+    return {row:snapped,...assessDesign(context,layout.items,snapped)};
   }
   putFurniture(row) {
-    const {context,layout}=this.session, check=checkGroup(context,layout.items,row);
+    const {context,layout}=this.session, check=assessDesign(context,layout.items,row);
     if (!check.ok) { this.toast(check.reasons[0]); this.render(true); return false; }
     this.selected=row.id; return this.changeFurniture(s=>s.put(row));
   }
@@ -261,10 +262,11 @@ export class App {
         points.unshift({p:center,host,y});
       }
     }
+    if(!points.length)points.push({p:point||center,host:{type:'free',id:'room/'+room.id},y:room.floor});
     let reason='Choose a suitable host in this room.';
     for (const {p,host,y,rot=0} of points) {
       const row=snapPlacement(context,layout.items,{...base,host:{type:host.type,id:host.id},position:[p[0],y,p[1]],rotation:rot},{free:false});
-      const check=checkGroup(context,layout.items,row);
+      const check=assessDesign(context,layout.items,row);
       if (check.ok) { this.pendingEntry=null; return this.putFurniture(row); }
       reason=check.reasons[0] || reason;
     }
@@ -450,7 +452,7 @@ export class App {
     const row={...it.shared,catalogueId:entry.id,variant:entry.id,kind:entry.kind,style:entry.style,size:entry.size_m.slice(),
       position:this.swapPose(it,entry),finishes:{}};
     const candidate=snapPlacement(context,layout.items,row,{free:true});
-    return {row:candidate,...checkGroup(context,layout.items,candidate)};
+    return {row:candidate,...assessDesign(context,layout.items,candidate)};
   }
   swap(it, entry, sizeOverride) {
     if (it.shared) {
@@ -576,7 +578,9 @@ export class App {
       if (e.key === "Escape") { if (this.pendingEntry) {this.pendingEntry=null;this.render(true);} else if (this.selected) this.select(null); else if (this.roomId) this.back(); return; }
       const it = this.selected && this.state.items.get(this.selected);
       if (!it || !this.room) return;
-      const step = e.shiftKey ? 0.01 : 0.05;
+      const fine=it.shared && fineMove(it.shared,e.key,e.shiftKey);
+      if(fine){e.preventDefault();this.putFurniture(fine);return;}
+      const step = e.shiftKey ? 0.001 : 0.01;
       const k = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
       if (k) { e.preventDefault(); this.nudge(it, k[0], k[1]); return; }
       if (e.key === "r" || e.key === "R") this.rotateBy(it, e.shiftKey ? 90 : -90);

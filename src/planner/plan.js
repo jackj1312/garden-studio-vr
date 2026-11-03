@@ -1,3 +1,4 @@
+import {floorRecipe} from '../furnish/floor-recipe.mjs';
 /* Room planner: the top-down plan (SVG, world units = metres; screen x = x, screen y = z, so the road is at the bottom
  * and the garden at the top, as on the architect's plans). Overview = a whole storey, tap a room to open it.
  * Room view = that room large, items draggable with snapping (50 mm grid, walls, other items), a rotate handle,
@@ -69,7 +70,7 @@ export class PlanView {
     clear(this.root);
     const L = n => this.root.appendChild(s("g", { class: "layer-" + n }));
     const gRooms = L("rooms"), gBands = L("bands"), gStairs = L("stairs"), gFix = L("fixtures"), gItems = L("items"),
-          gWalls = L("walls"), gOpen = L("openings"), gBadges = L("badges"), gLabels = L("labels"), gGuides = L("guides"), gSel = L("sel");
+          gWalls = L("walls"), gOpen = L("openings"), gBadges = L("badges"), gLabels = L("labels"), gGuides = L("guides"), gFaces = L("wall-faces"), gSel = L("sel");
     this.layers = { gItems, gBadges, gGuides, gSel, gLabels };
     const rooms = H.rooms.filter(r => r.storey === storey);
     const focus = this.mode === "room" ? this.roomId : null;
@@ -79,11 +80,14 @@ export class PlanView {
       const fl = roomFloor(db, st, r), wc = roomWalls(db, st, r);
       const dim = focus && r.id !== focus;
       const pts = r.polygon.map(p => p.join(",")).join(" ");
+      const recipe=floorRecipe(fl),pat='photo-'+r.id;
+      if(recipe.photo)gRooms.append(s('pattern',{id:pat,patternUnits:'userSpaceOnUse',width:recipe.repeat[0],height:recipe.repeat[1]},s('image',{href:new URL('../../tools/library/kit/maps/'+recipe.source,import.meta.url).href,width:recipe.repeat[0],height:recipe.repeat[1]})));
       gRooms.append(s("polygon", { points: pts, class: "room" + (dim ? " dim" : "") + (focus === r.id ? " focus" : ""), "data-room": r.id,
-        style: `--floor:${fl.hex}` }, s("title", { text: `${r.name} · ${r.area.toFixed(1)} m²` })));
+        style: `--floor:${fl.hex};${recipe.photo?"fill:url(#"+pat+")":""}` }, s("title", { text: `${r.name} · ${r.area.toFixed(1)} m²` })));
       if (!dim) {
         gBands.append(s("polygon", { points: pts, class: "band", style: `stroke:${wc.hex}`, "stroke-width": this.mode === "room" ? 7 : 3 }));
         for (const f of wallFaces(st,r.id)) {
+          if(focus===r.id&&f.a&&f.b)gFaces.append(s('line',{x1:f.a[0],y1:f.a[1],x2:f.b[0],y2:f.b[1],stroke:this.o.wallId?.()===f.id?'#26cfea':'transparent','stroke-width':10,'vector-effect':'non-scaling-stroke','pointer-events':'stroke','data-face':f.id}));
           const colour=st.wallColours?.[f.id];
           if (f.a && colour) gBands.append(s('line',{x1:f.a[0],y1:f.a[1],x2:f.b[0],y2:f.b[1],class:'band accent',style:'stroke:'+colour,'stroke-width':this.mode==='room'?9:4}));
         }
@@ -260,6 +264,7 @@ export class PlanView {
     const itEl = ev.target.closest(".it.mine, .badge");
     const roomEl = ev.target.closest("[data-room]");
     if (this.mode==='room' && !rotEl && this.o.placeAt?.(w)) {this.drag=null;ev.preventDefault();return;}
+    if(ev.target.dataset.face){this.o.pickWall(ev.target.dataset.face);ev.preventDefault();return;}
     if (this.mode === "room" && rotEl) {
       const it = this.state.items.get(rotEl.dataset.rot);
       this.drag = { kind: "rotate", it, start: w, yaw0: it.yaw_deg || 0, carried: carriedBy(this.db, this.state, it).map(c => ({ it: c, p0: c.position_m.slice(), y0: c.yaw_deg || 0 })) };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {buildRoomContext,loadRoomContext,checkPlacement,checkGroup,snapPlacement,moveGroup,validateFurnishDelta} from '../../src/furnish/placement.mjs';
+import {buildRoomContext,loadRoomContext,fineMove,assessDesign,checkPlacement,checkGroup,snapPlacement,moveGroup,validateFurnishDelta} from '../../src/furnish/placement.mjs';
 import {FurnitureLayout} from '../../src/furnish/layout.mjs';
 
 const root=new URL('../../',import.meta.url);
@@ -180,6 +180,21 @@ test('the issued sofa and coffee table keep every accessory and restore the revi
       layout.put(candidate);const edited={...seed,items:layout.items};
       assert.ok(layout.undo());assert.deepEqual(layout.items,seed.items);assert.equal(layout.dirty,false);
       assert.ok(validateFurnishDelta(ctx,edited,{...seed,items:layout.items}).ok);
+    }
+  }
+});
+
+test('both alcove accessories can be nudged, raised and saved, even beyond the shelf',async()=>{
+  const c=await loadRoomContext({site:'house',version:'approved_2b',fetcher:async url=>({ok:true,json:()=>json(url.slice(1))})});
+  const prior={items:c.seedItems,wallColours:{},roomFloors:{}};
+  for(const id of ['LIV-TLAMP','LIV-DEC-3']){
+    const initial=c.seedItems.find(it=>it.id===id),raised=fineMove(fineMove(initial,'ArrowRight',true),'PageUp');
+    assert.ok(Math.abs(raised.position[0]-initial.position[0]-.001)<1e-8);
+    for(const row of [raised,snapPlacement(c,c.seedItems,{...raised,position:[-9,raised.position[1],-8]})]){
+      const carried=moveGroup(c.seedItems,row),after={...prior,items:c.seedItems.map(i=>carried.find(j=>i.id===j.id)||i)};
+      assert.ok(assessDesign(c,c.seedItems,row).ok);
+      assert.ok(validateFurnishDelta(c,prior,after).ok);
+      assert.equal(row.position[1],initial.position[1]+.01);
     }
   }
 });

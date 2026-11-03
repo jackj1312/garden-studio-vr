@@ -8,11 +8,11 @@ function floorSwatch(def){
   const recipe=floorRecipe(def),c=document.createElement('canvas');c.width=c.height=recipe.n;
   const ctx=c.getContext('2d'),tile=recipe.repeat;
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
-  const material=new THREE.MeshStandardMaterial({map:texture,roughness:.82,metalness:0});
+  const material=new THREE.MeshStandardMaterial({map:texture,roughness:recipe.roughness??.82,metalness:0});
   material.name='Client floor · '+def.id;
   const paint=image=>{
     const n=c.width;ctx.fillStyle=recipe.base;ctx.fillRect(0,0,n,n);
-    if(image){ctx.globalAlpha=.33;ctx.globalCompositeOperation='multiply';ctx.drawImage(image,0,0,n,n);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;}
+    if(image){ctx.globalAlpha=recipe.photo?1:.33;ctx.globalCompositeOperation=recipe.photo?'source-over':'multiply';ctx.drawImage(image,0,0,n,n);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;}
     ctx.lineWidth=1.3;ctx.strokeStyle='#4039326b';ctx.fillStyle='#86766f88';
     for(const line of recipe.lines){ctx.beginPath();line.forEach(([x,y],i)=>ctx[i?'lineTo':'moveTo'](x,y));ctx.stroke();}
     for(const p of recipe.motifs){ctx.beginPath();p.forEach(([x,y],i)=>ctx[i?'lineTo':'moveTo'](x,y));ctx.closePath();ctx.fill();}

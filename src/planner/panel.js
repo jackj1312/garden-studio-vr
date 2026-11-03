@@ -2,6 +2,7 @@
  * Every control calls an action on `app` (app.js), which records a change; nothing here edits the state directly. */
 import { h, clear, fmtSize, esc, cap, compassOf, len2, sub2, norm2, segDist, add2, scale2, luminance } from "./util.js?v=p8";
 import { entryOf, slotOf, sizeM, partColour, roomWalls, roomFloor, resolveColour, mountOf } from "./data.js?v=p8";
+import {fineMove} from '../furnish/placement.mjs';
 import { catalogueMatch, roomTypes, styleName, wallFaces } from './shared.mjs';
 import { fitsAt } from "./checks.js?v=p8";
 
@@ -78,7 +79,7 @@ export function renderRoom(app, el, room) {
     const name=f.a ? compassOf(-f.normal[0],-f.normal[1])+' wall · '+len2(sub2(f.b,f.a)).toFixed(2)+' m' : 'Return';
     return [f.id,name+' · '+f.wall];
   })];
-  const selector=selectEl(options,face?.id || '',id=>{app.ui.wallId=id;app.refreshPanel();});
+  const selector=selectEl(options,face?.id || '',id=>{app.ui.wallId=id;app.render(true);});
   selector.setAttribute('aria-label','Wall face to paint');
   el.append(h('div.sec',null,h('h3',{text:'Wall paint'}),selector,!face && colours.size>1 ? h('p.tiny',{text:'These faces have different colours.'}) : null,
     h('div.seg',{style:{marginTop:'8px'}},STYLES.map(sty=>h('button',{'aria-pressed':String(app.ui.wallStyle===sty),text:sty,
@@ -178,11 +179,13 @@ export function renderItem(app, el, it) {
   el.append(h("div.sec", null, h("div.actions", null,
     h("button", { text: "⟲ 15°", title: "Turn left 15° ([)", onclick: () => app.rotateBy(it, 15) }),
     h("button", { text: "15° ⟳", title: "Turn right 15° (])", onclick: () => app.rotateBy(it, -15) }),
+    it.shared ? h("button",{text:"Raise 1 cm",onclick:()=>app.putFurniture(fineMove(it.shared,"PageUp"))}) : null,
+    it.shared ? h("button",{text:"Lower 1 cm",onclick:()=>app.putFurniture(fineMove(it.shared,"PageDown"))}) : null,
     h("button", { text: "Turn 90°", title: "R", onclick: () => app.rotateBy(it, -90) }),
     h("button", { text: "Duplicate", title: "D", onclick: () => app.duplicate(it) }),
     it.category === "lighting" ? h("button", { "aria-pressed": String(!!it.lampOn), text: it.lampOn ? "Lamp on" : "Lamp off", onclick: () => app.toggleLamp(it) }) : null,
     h("button.danger", { text: "Delete", title: "Delete / Backspace", onclick: () => app.remove(it) })),
-    h("p.tiny", { style: { margin: "8px 0 0" }, text: "Drag it on the plan · arrows nudge 50 mm (Shift 10 mm) · R turns 90° · Shift or Alt while dragging = no snapping" }),
+    h("p.tiny", { style: { margin: "8px 0 0" }, text: "Drag it on the plan · arrows nudge 10 mm (Shift 1 mm) · R turns 90° · Shift or Alt while dragging = no snapping" }),
     fixed && it.asset?.source === "elements" ? h("p.tiny", { text: "Drawn on the architect's plans: moving it here records a request to the architect, not a free change." }) : null));
 
   /* what it is */

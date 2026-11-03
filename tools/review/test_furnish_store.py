@@ -96,7 +96,7 @@ class FurnishStoreTests(unittest.TestCase):
         self.assertEqual(loaded["items"][0]["futureColourSpace"], "retain")
         self.assertEqual(loaded["items"][1]["future"], self.seed["future"])
         for change in [{"size": [1, .6, .7]}, {"variant": "site-missing"}, {"catalogueId": "wrong"},
-                       {"kind": "wrong"}, {"position": [80, 0, 2]}, {"position": [2, .3, 2]},
+                       {"kind": "wrong"}, {"position": [0, 0]},
                        {"host": {"type": "floor", "id": "floor/elsewhere"}},
                        {"host": {"type": "surface", "id": "missing"}}, {"lampOn": "yes"}]:
             with self.subTest(change=change):
@@ -104,6 +104,13 @@ class FurnishStoreTests(unittest.TestCase):
         self.invalid(lambda: self.furnish([dict(legacy, variant="site-measured", size=[.7, .6, .7])], 1))
         self.invalid(lambda: self.furnish([legacy, legacy], 1))
         self.assertEqual(self.read(), loaded)
+
+    def test_free_positions_round_trip_including_height_and_overlap(self):
+        loose = dict(chair(x=4,z=3), position=[80,.3,2], host={"type":"free","id":"room/room"})
+        first = self.furnish([loose], 0)
+        second = dict(loose,id="overlapping-copy")
+        self.furnish([first["items"][0], second], 1)
+        self.assertEqual([i["position"] for i in self.read()["items"]], [[80,.3,2]]*2)
 
     def test_shared_cas_preserves_both_sections_and_unknown_legacy_fields(self):
         garden = self.garden(0)

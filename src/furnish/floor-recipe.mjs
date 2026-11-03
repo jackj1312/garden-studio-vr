@@ -19,5 +19,8 @@ export function floorRecipe(def){
     const x=i*n/2,y=j*n/2;rect(x,y,n/2,n/2);
     if(pattern==='pattern')motifs.push([[x+n/4,y+n/12],[x+n*5/12,y+n/4],[x+n/4,y+n*5/12],[x+n/12,y+n/4]]);
   }
+  const photo=['FLR-CARPET-OAT','FLR-CARPET-GREY','FLR-SISAL','FLR-CONCRETE'].includes(def.id);
+  if(photo)return {n,repeat:pattern==='concrete'?[1.6,1.6]:[.32,.32],source:def.id+'-photo.jpg',photo:true,
+    roughness:pattern==='concrete' ? .3 : .97,base:def.hex,lines,motifs};
   return {n,repeat,source,base:def.hex||'#aa9983',lines,motifs};
 }

@@ -20,6 +20,21 @@ def payload(site, manifest):
             if row.get(key):
                 paths.add(Path(row[key]))
         paths.update(p.relative_to(site) for p in site.glob(row['id']+'_*.json'))
+        runtime=row.get('furnish_runtime') or {}
+        for field in ('seed','variants'):
+            if runtime.get(field):paths.add(Path(runtime[field]))
+        if runtime.get('variants'):
+            variants=json.loads((site/runtime['variants']).read_text())['variants']
+            for item in variants.values():
+                for field in ('url','questUrl'):
+                    if not item.get(field):continue
+                    model=Path(item[field]);paths.add(model)
+                    if model.suffix=='.gltf':
+                        document=json.loads((site/model).read_text())
+                        for resource in document.get('buffers',[])+document.get('images',[]):
+                            uri=resource.get('uri')
+                            if uri and not uri.startswith('data:'):
+                                paths.add((site/model.parent/uri).resolve().relative_to(site.resolve()))
     paths.update(Path(name) for name in ('materials.json','regs_map.json','regs.json','summary.json',
                                          'setting_front.glb','setting_front_lod.glb','spec_check.json'))
     paths.update(Path('spec')/name for name in SPEC_FILES if (site/'spec'/name).is_file())
@@ -64,6 +79,8 @@ def promote(site,destination):
         for row in manifest['versions']:
             for field in MODEL_FIELDS:
                 if row.get(field):row[field]=(Path('releases')/key/row[field]).as_posix()
+            for field,value in (row.get('furnish_runtime') or {}).items():
+                if field in ('seed','variants'):row['furnish_runtime'][field]=(Path('releases')/key/value).as_posix()
         manifest['furnish_release']=key
         with tempfile.TemporaryDirectory(prefix='.publish-',dir=dest) as tmp:
             rollback=Path(tmp)/'previous';rollback.mkdir()

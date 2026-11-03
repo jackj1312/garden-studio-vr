@@ -6,8 +6,10 @@
 Generic: every house fact comes from the traced drawings (house_drawn.json, tools/plan/trace_drawing.py format) and the
 version spec (versions, packages, roof wings, temporary works, stage notes). Per version it writes <id>.glb,
 <id>_elements.json, <id>.json (stages sidecar) and versions.json, plus <id>_check.json (supports and clashes per
-stage). Light work only: no render, no bake (8 GB Mac)."""
-import sys, os, json, math, time, argparse, re
+stage). On a runtime-enabled site (or --runtime-furnish for its first build), the finished
+sources are partitioned and the saved client layout is compiled into a separate GLB. The
+background process hands its memory slot to Node. No lighting or texture baking is involved."""
+import sys, os, json, math, time, argparse, re, shutil, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import bpy, bmesh
@@ -31,6 +33,7 @@ ap.add_argument("--spec-v1", default=os.path.join(os.path.dirname(HERE), "..", "
 ap.add_argument("--spec-tex", default=os.path.join(os.path.dirname(HERE), "..", "master", "phototex", "spec"))
 ap.add_argument("--polyhaven", default=os.path.join(os.path.dirname(HERE), "..", "master", "polyhaven"))
 ap.add_argument("--no-items", action="store_true", help="leave out the signed spec's interior (items, floor finishes, skirting)")
+ap.add_argument("--runtime-furnish", action="store_true", help="enable separate fixed house, editable items and a saved-layout GLB; future builds detect the site's existing runtime manifest")
 ap.add_argument("--versions", default=""); ap.add_argument("--no-check", action="store_true"); ap.add_argument("--blend", default="")
 args = ap.parse_args(argv)
 DATA = json.load(open(args.data)); SPEC = json.load(open(args.spec))
@@ -2082,6 +2085,21 @@ def stages_json(vb):
 
 # ======================================================================================== main
 def main():
+    manifest_file=os.path.join(OUT,'versions.json')
+    previous={}
+    if os.path.isfile(manifest_file):
+        with open(manifest_file) as stream:
+            previous={v['id']:v for v in json.load(stream).get('versions',[])}
+    want=[v for v in args.versions.split(',') if v]
+    runtime_ids=[v['elements'] for v in (SPEC_V1 or {}).get('versions',{}).values()
+                 if v.get('elements') and (not want or v['elements'] in want) and
+                 (args.runtime_furnish or previous.get(v['elements'],{}).get('furnish_runtime'))]
+    if args.runtime_furnish and not SPEC_V1:
+        raise ValueError('--runtime-furnish requires a signed room specification')
+    if runtime_ids and (args.no_items or not bpy.app.background):
+        raise ValueError('Runtime furnishing needs a full background generator run including the signed items')
+    node=shutil.which('node') if runtime_ids else None
+    if runtime_ids and not node:raise ValueError('Node is required for the existing runtime furnishing site')
     if SPEC_V1 and not args.no_items:
         from prepare_kit import prepare
         prepare(OUT,args.spec_v1)
@@ -2089,7 +2107,6 @@ def main():
     MAT = make_materials()
     global MAT_BASE, TILE_BASE
     MAT_BASE = dict(MAT); TILE_BASE = dict(TILE)
-    want = [v for v in args.versions.split(",") if v]
     versions = [v for v in SPEC["versions"] if not want or v["id"] in want]
     manifest = dict(contract=1, name=SPEC["name"], as_built_now=SPEC["as_built_now"], default=SPEC["default"], versions=[])
     summary = {}
@@ -2098,7 +2115,9 @@ def main():
                   glb=f"{vs['id']}.glb", glb_quest=f"{vs['id']}_quest.glb", elements=f"{vs['id']}_elements.json", stages=f"{vs['id']}.json")
         if vs.get("customer_description"): mv["customer_description"] = vs["customer_description"]
         if vs.get("staging"): mv["stage_set"] = vs.get("stages")
-        manifest["versions"].append(mv)
+        # A partial rebuild must preserve a registered sibling's fixed/Quest
+        # paths and release identity until that sibling is regenerated too.
+        manifest["versions"].append(previous.get(vs['id'],mv) if want and vs['id'] not in want else mv)
     SPEC["_staging_default"] = SPEC["staging"]
     HD.SPEC_REF["spec"] = SPEC
     for vs in versions:
@@ -2231,11 +2250,6 @@ def main():
             if mt.users == 0 and mt.name not in keep_m and mt.name not in MATS: bpy.data.materials.remove(mt)
         for im in list(bpy.data.images):
             if im.users == 0: bpy.data.images.remove(im)
-    if not want:
-        json.dump(manifest, open(os.path.join(OUT, "versions.json"), "w"), indent=1)
-    else:
-        mp = os.path.join(OUT, "versions.json")
-        json.dump(manifest, open(mp, "w"), indent=1)
     json.dump(summary, open(os.path.join(OUT, "summary.json"), "w"), indent=1)
     # for the viewer: real tile sizes per material (UVs are metres / tile; walls: v = (y_viewer + 0.032) / tile_v + v_joint)
     mats = {}
@@ -2250,6 +2264,21 @@ def main():
         log(f"BUILD FAILED: {len(FAULTS)} cross-stage bearing faults (something appears before what carries it):")
         for f in FAULTS[:60]: log("  ", f)
         sys.exit(2)
+    if runtime_ids:
+        # Retain the current live manifest until the fixed assets and private
+        # bake have both succeeded. Replacing background Blender with Node
+        # releases its memory before the model conversion starts on the M1.
+        with tempfile.NamedTemporaryFile('w',dir=OUT,prefix='.runtime-source-',suffix='.json',delete=False) as stream:
+            json.dump(manifest,stream);source_manifest=stream.name
+        spec_path=os.path.abspath(args.spec_v1)
+        log('handoff to saved-layout build',runtime_ids)
+        sys.stdout.flush();sys.stderr.flush()
+        os.execv(node,[node,os.path.join(HERE,'bake_layout.mjs'),OUT,'--split','--source-manifest',source_manifest,
+                       '--spec-root',os.path.dirname(spec_path),'--spec-file',spec_path,*runtime_ids])
+    else:
+        with tempfile.NamedTemporaryFile('w',dir=OUT,prefix='.versions-',delete=False) as stream:
+            json.dump(manifest,stream,indent=1);new_manifest=stream.name
+        os.replace(new_manifest,manifest_file)
 
 
 def sanitize_images(objs):

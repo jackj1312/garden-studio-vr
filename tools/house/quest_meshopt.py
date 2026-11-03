@@ -20,6 +20,6 @@ for v in V["versions"]:
     if not v.get("glb_quest") or not os.path.exists(src): continue
     out = src.replace("_quest.glb", "_quest_mo.glb")
     subprocess.run([a.gt, "meshopt", src, out, "--level", "medium"], check=True, capture_output=True)
-    v["glb_quest_meshopt"] = os.path.basename(out)
+    v["glb_quest_meshopt"] = os.path.relpath(out,a.site)
     print(f"{v['id']}: {os.path.getsize(src) / 1e6:.1f} MB -> {os.path.getsize(out) / 1e6:.1f} MB")
 json.dump(V, open(vp, "w"), indent=1)

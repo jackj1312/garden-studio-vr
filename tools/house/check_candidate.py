@@ -35,6 +35,7 @@ def check(site,round_name,only):
             if source:args+=['--garden',source]
         run(version+'-'+name+extra,args,report)
     if only in ('all','model'):
+        if any(v.get('furnish_runtime') for v in manifest['versions']):run('runtime-assets',['node','tools/house/runtime_assets.mjs','--check',site])
         for version in versions:
             geometry('integrity',version,'on')
             geometry('integrity',version,'off')
@@ -50,7 +51,7 @@ def check(site,round_name,only):
         run('spec',[sys.executable,'tools/house/check_spec.py','--site',site,'--spec',site/'spec/spec_v1.json'])
     if only in ('all','compressed'):
         run('meshopt',[sys.executable,'tools/house/quest_meshopt.py',site])
-        twins=sorted(site.glob('*_quest_mo.glb'))
+        twins=sorted({site/v['glb_quest_meshopt'] for v in json.loads((site/'versions.json').read_text())['versions'] if v.get('glb_quest_meshopt')})
         if not twins:failed.append('missing compressed twins')
         else:run('texture-repair',[sys.executable,'tools/house/fix_glb_textures.py',*twins])
         run('export',[sys.executable,'tools/house/check_house_export.py',site,'--finished'])

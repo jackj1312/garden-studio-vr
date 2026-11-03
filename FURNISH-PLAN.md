@@ -30,3 +30,4 @@ The current published build already fails gates. Keep its baseline separate from
 - 2026-11-03 · Jack selected the independent conservatory for Stage 2. Fit its frame, glazing, roof and junctions to the measured studio building in each applicable version.
 - 2026-11-03 · Jack added individually placeable plants and trees. Give each specimen its own ID, transform, undo history and terrain/support contact, including in saved patio and garden experiments.
 - 2026-11-03 · Jack requested a clickable How to use panel in every editor. Maintain context-specific mouse, touch and Quest controls as each furnishing, garden and planner mode ships.
+- 2026-11-03 · The shared garden layout now also has a concrete outbuilding base with measured arbitrary geometry. Later structure design will reference its stable ID and dimensions.

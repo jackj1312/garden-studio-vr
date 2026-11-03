@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   circle, rectangle, arc, point, isClosed, fitStroke, sampleGeometry, validateGeometry,
-  measureGeometry, centerOf, handlesOf, moveHandle, transformGeometry,
+  measureGeometry, outlineMeasurements, centerOf, handlesOf, moveHandle, transformGeometry,
 } from '../../src/garden/geometry.mjs';
 
 const TAU = 2 * Math.PI;
@@ -87,6 +87,51 @@ test('closing a Bezier path measures its analytic area including curvature',()=>
   closePoint(centerOf(g),[.5,1]);
   close(m.perimeter,3+Math.sqrt(17)/2+Math.asinh(4)/8, .0001);
   close(measureGeometry(transformGeometry(g,{offset:[14,-3]})).area,m.area);
+});
+
+test('outline dimensions report intrinsic rectangle sides, the circle radius and signed arc midpoint',()=>{
+  const r=outlineMeasurements(rectangle([1,3],4,2,Math.PI/2));
+  close(r.width,4);close(r.depth,2);close(r.area,8);close(r.perimeter,12);
+  assert.deepEqual(r.segments.map(s=>s.label),['Side 1','Side 2','Side 3','Side 4']);
+  [4,2,4,2].forEach((n,i)=>close(r.segments[i].length,n));
+  [[2,3],[1,5],[0,3],[1,1]].forEach((p,i)=>closePoint(r.segments[i].at,p));
+  const c=outlineMeasurements(circle([2,3],2));
+  close(c.radius,2);close(c.width,4);close(c.depth,4);close(c.area,Math.PI*4);
+  assert.equal(c.segments.length,1);assert.equal(c.segments[0].label,'Circumference');
+  close(c.segments[0].length,4*Math.PI);closePoint(c.segments[0].at,[2,1]);
+  const a=outlineMeasurements(arc([4,1],2,Math.PI,-Math.PI/2));
+  close(a.radius,2);close(a.segments[0].length,Math.PI);assert.equal(a.segments[0].label,'Arc');
+  closePoint(a.segments[0].at,[4-Math.SQRT2,1+Math.SQRT2]);
+});
+
+test('concave and curved outline lengths follow the controlled path and label its measured halfway point',()=>{
+  const concave=outlineMeasurements(poly([[0,0],[4,0],[4,1],[2,1],[2,3],[0,3]]));
+  close(concave.area,8);close(concave.perimeter,14);close(concave.width,4);close(concave.depth,3);
+  assert.deepEqual(concave.segments.map(s=>s.length),[4,1,2,2,2,3]);
+  const arch={type:'curve',closed:true,knots:[
+    corner([0,0]),corner([1,0]),{...corner([1,1]),out:[2/3,7/3]},
+    {...corner([0,1]),in:[1/3,7/3]},
+  ]};
+  const m=outlineMeasurements(arch),s=m.segments[2];
+  close(m.area,5/3);close(m.width,1);close(m.depth,2);
+  close(m.perimeter,m.segments.reduce((v,e)=>v+e.length,0));
+  assert.equal(s.label,'Curve 3');close(s.length,Math.sqrt(17)/2+Math.asinh(4)/8,.00002);
+  closePoint(s.at,[.5,2],.000001);
+
+  // Cubic x=t³,z=t has nonuniform speed. Use an independent fine polyline
+  // to find the halfway station and distinguish it from the point at t=.5.
+  const asymmetric={type:'curve',closed:false,knots:[
+    {...corner([0,0]),out:[0,1/3]},{...corner([1,1]),in:[0,2/3]},
+  ]};
+  const measured=outlineMeasurements(asymmetric).segments[0];
+  const cumulative=[0],steps=10000;
+  for(let i=1;i<=steps;i++){
+    const t=i/steps,last=(i-1)/steps;
+    cumulative.push(cumulative[i-1]+Math.hypot(t**3-last**3,t-last));
+  }
+  const half=cumulative.at(-1)/2,k=cumulative.findIndex(s=>s>=half);
+  const t=((k-1)+(half-cumulative[k-1])/(cumulative[k]-cumulative[k-1]))/steps;
+  close(measured.length,cumulative.at(-1),.00002);closePoint(measured.at,[t**3,t],.000005);
 });
 
 test('knot movement translates both controls and dragging a smooth handle preserves its opposite tangent',()=>{

@@ -1,5 +1,5 @@
 import {arc, circle, rectangle, point, fitStroke, measureGeometry, transformGeometry, centerOf, handlesOf, moveHandle, isClosed, sampleGeometry, validateGeometry} from './geometry.mjs';
-import {KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES, createFeature} from './catalogue.mjs';
+import {KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES, newFeatureId, createFeature} from './catalogue.mjs';
 
 const rad = Math.PI / 180;
 const distance = (a,b) => Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -33,7 +33,7 @@ export function drawnGeometry(kind,method,coords,finish=false) {
 // Transient gestures generate previews. A completed gesture enters the shared layout history exactly once.
 export function createDrawing({store,pick,ground,changed}) {
   const state={tool:'draw',kind:'patio',method:'circle',selectedId:null,status:'',conflict:false};
-  let gesture=null,draft=null,corners=[],cornerY=0;
+  let gesture=null,draft=null,corners=[],cornerY=0,cornerId=null,hoverPoint=null;
   const selected=()=>store().get(state.selectedId);
   const show=(feature=null,points=null)=>{draft=feature; changed(points);};
   const set=(feature,label)=>{state.selectedId=feature.id; return store().put(feature,label);};
@@ -45,17 +45,38 @@ export function createDrawing({store,pick,ground,changed}) {
     }
     return found?[...found]:p.map(round);
   }
+  function basePreview(coords,drawingMethod,base,id){
+    if(state.kind!=='outbuilding-base'||coords.length<2)return null;
+    try {
+      const shape=drawnGeometry(state.kind,drawingMethod,coords,true),feature=createFeature(state.kind,shape,base);
+      feature.id=id;return feature;
+    }catch{return null;}
+  }
+  function hover(pos){
+    if(!corners.length||!pos||state.kind!=='outbuilding-base')return;
+    const p=groundPoint(pos);
+    if(hoverPoint&&distance(hoverPoint,p)<.004)return;
+    hoverPoint=p;const coords=[...corners,p];show(basePreview(coords,'corners',cornerY,cornerId),coords);
+  }
+  function readout(){
+    if(state.kind!=='outbuilding-base'||state.tool!=='draw')return '';
+    const coords=gesture?.coords||(corners.length&&hoverPoint?[...corners,hoverPoint]:corners);
+    if(!coords?.length)return '';
+    const last=coords.at(-1),edge=coords.length>1?distance(last,coords.at(-2)):0;
+    const length=coords.reduce((n,p,i)=>i?n+distance(p,coords[i-1]):n,0);
+    return 'X '+last[0].toFixed(3)+' m · Z '+last[1].toFixed(3)+' m'+(coords.length>1?' · Last segment '+edge.toFixed(3)+' m · Drawn '+length.toFixed(3)+' m':'');
+  }
   function begin(pos,{screenY=0,tolerance=.25,free=false}={}) {
     if(gesture) return;
     const p=groundPoint(pos);
     if(state.tool==='draw') {
       const first=free?p:snap(p,null);
       if(state.method==='corners'&&KINDS[state.kind].form!=='point'){
-        if(!corners.length)cornerY=ground(first[0],first[1])??pos.y;
+        if(!corners.length){cornerY=ground(first[0],first[1])??pos.y;cornerId=newFeatureId(state.kind);}hoverPoint=null;
         if(corners.length>=3 && distance(first,corners[0])<tolerance){ finishCorners(); return; }
-        corners.push(first); show(null,corners); return;
+        corners.push(first);show(basePreview(corners,'corners',cornerY,cornerId),corners);return;
       }
-      gesture={start:first,coords:[first],base:ground(first[0],first[1])??pos.y,free};show(null,[first]);return;
+      gesture={start:first,coords:[first],base:ground(first[0],first[1])??pos.y,id:newFeatureId(state.kind),free};show(null,[first]);return;
     }
     let f=selected(),handle=null;
     if(f && state.tool!=='level'){
@@ -74,9 +95,9 @@ export function createDrawing({store,pick,ground,changed}) {
     if(!gesture.original){
       if(distance(p,gesture.coords.at(-1))>=.012 && gesture.coords.length<4096)gesture.coords.push(p);
       if(['circle','rectangle','square'].includes(state.method) && KINDS[state.kind].form!=='point') {
-        try { const geometry=drawnGeometry(state.kind,state.method,gesture.coords); const feature=gesture.preview||createFeature(state.kind,geometry,gesture.base);feature.geometry=geometry;gesture.preview=feature;show(feature); }
+        try { const geometry=drawnGeometry(state.kind,state.method,gesture.coords); const feature=gesture.preview||createFeature(state.kind,geometry,gesture.base);feature.geometry=geometry;feature.id=gesture.id;gesture.preview=feature;show(feature); }
         catch {show(null,gesture.coords);}
-      } else show(null,gesture.coords);
+      } else show(basePreview(gesture.coords,state.method,gesture.base,gesture.id),gesture.coords);
       return;
     }
     const f=structuredClone(gesture.original);
@@ -109,19 +130,20 @@ export function createDrawing({store,pick,ground,changed}) {
     if(stroke.invalid){state.status=stroke.invalid;show();return;}
     try {
       if(stroke.original){ if(preview)set(preview,state.tool==='level'?'Change level':'Move or resize'); }
-      else {const geometry=drawnGeometry(state.kind,state.method,stroke.coords);set(createFeature(state.kind,geometry,stroke.base),'Draw '+KINDS[state.kind].label);state.tool='select';}
+      else {const geometry=drawnGeometry(state.kind,state.method,stroke.coords);const f=createFeature(state.kind,geometry,stroke.base);f.id=stroke.id;set(f,'Draw '+KINDS[state.kind].label);state.tool='select';}
       state.status='';
     }catch(e){state.status=e.message;}
     show();
   }
   function finishCorners(){
     if(!corners.length)return;
-    try{set(createFeature(state.kind,drawnGeometry(state.kind,'corners',corners,true),cornerY),'Draw corners'); corners=[];state.tool='select';state.status='';}
+    try{const f=createFeature(state.kind,drawnGeometry(state.kind,'corners',corners,true),cornerY);f.id=cornerId;set(f,'Draw corners'); corners=[];cornerId=null;hoverPoint=null;state.tool='select';state.status='';}
     catch(e){state.status=e.message;}
     show(null,corners);
   }
-  function cancel(){gesture=null;corners=[];show();}
+  function cancel(){gesture=null;corners=[];cornerId=null;hoverPoint=null;show();}
   function changeField(f,key,value){
+    if(f.kind==='outbuilding-base' && ((key==='material' && value!=='concrete') || (key==='coping' && value!=='') || (key==='height' && !(value>0))))throw Error('An outbuilding base needs concrete and a positive slab thickness.');
     const options={material:MATERIALS,coping:MATERIALS,pattern:PATTERNS,palette:PALETTES,species:SPECIES};
     if(key in options && (key!=='coping'||value!=='' ) && !Object.hasOwn(options[key],value))throw Error('Unknown '+key);
     if(!['label','level','width','height','material','coping','pattern','palette','species','steps','geometry'].includes(key)) throw Error('Unknown field');
@@ -132,7 +154,7 @@ export function createDrawing({store,pick,ground,changed}) {
     const f=selected();
     try{
       state.status='';
-      if(name==='kind'){if(!KINDS[value])throw Error('Unknown feature');cancel();state.kind=value;state.tool='draw';state.selectedId=null;if(KINDS[value].form==='line'&&['circle','square','rectangle'].includes(state.method))state.method='auto';}
+      if(name==='kind'){if(!KINDS[value])throw Error('Unknown feature');cancel();state.kind=value;state.tool='draw';state.selectedId=null;if(value==='outbuilding-base')state.method='corners';if(KINDS[value].form==='line'&&['circle','square','rectangle'].includes(state.method))state.method='auto';}
       else if(name==='method'){cancel();state.method=value;state.tool='draw';}
       else if(name==='tool'){cancel();state.tool=value;}
       else if(name==='select'){cancel();state.selectedId=value;state.tool='select';}
@@ -149,6 +171,7 @@ export function createDrawing({store,pick,ground,changed}) {
         set(f,'Resize');
       }
       else if(name==='steps'&&f){
+        if(f.kind==='outbuilding-base')throw Error('Use the Steps tool beside this concrete base.');
         if(!isClosed(f.geometry))throw Error('Select an enclosed area for perimeter steps.');
         if(Math.abs(f.level)<.02 && f.kind!=='raised-bed'){state.status='Set a raised or sunken level first.';}
         else {if(f.steps)delete f.steps;else f.steps={at:0,count:Math.max(1,Math.min(32,Math.ceil(Math.abs(f.level||f.height)/.16))),width:1};set(f,'Change steps');}
@@ -156,6 +179,6 @@ export function createDrawing({store,pick,ground,changed}) {
     }catch(e){state.status=e.message;}
     changed(corners.length?corners:null);
   }
-  return {state,begin,move,end,cancel,command,finishCorners,get draft(){return draft;},get drawing(){return !!gesture;},get corners(){return corners;}};
+  return {state,begin,move,end,cancel,command,finishCorners,hover,readout,get draft(){return draft;},get drawingId(){return gesture?.id||cornerId;},get drawing(){return !!gesture;},get corners(){return corners;}};
 }
 

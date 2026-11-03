@@ -1,4 +1,4 @@
-import {sampleGeometry, handlesOf, centerOf, isClosed} from './geometry.mjs';
+import {sampleGeometry, handlesOf, centerOf, isClosed, outlineMeasurements} from './geometry.mjs';
 import {KINDS,MATERIALS,SPECIES} from './catalogue.mjs';
 
 const cssColour=(m, fallback='#a38f74')=>m?.color??fallback;
@@ -46,6 +46,20 @@ export function createGardenPlan(T,{renderer,scene,canvas,terrain}) {
       if(sel){
         if(f.geometry.type==='curve')for(const k of f.geometry.knots){const a=xy(k.in),q=xy(k.p),c=xy(k.out);ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...q);ctx.lineTo(...c);ctx.strokeStyle='#ffecca';ctx.lineWidth=1;ctx.stroke();}
         for(const h of handlesOf(f.geometry)){const [x,y]=xy(h.point);ctx.beginPath();ctx.arc(x,y,h.kind==='tangent'?3.4:5,0,Math.PI*2);ctx.fillStyle=h.kind==='tangent'?'#8cd2da':h.kind==='rotate'?'#efad66':'#fff5d3';ctx.fill();ctx.lineWidth=1.4;ctx.strokeStyle='#433c2e';ctx.stroke();}
+      }
+      if(sel && f.kind==='outbuilding-base'){
+        const m=outlineMeasurements(f.geometry),placed=[];
+        const size=Math.max(11,Math.min(18,width/64));
+        ctx.font='600 '+size+'px system-ui';ctx.textBaseline='middle';ctx.textAlign='center';
+        const label=(p,text)=>{
+          const [x,y]=xy(p),w=ctx.measureText(text).width+8,h=size+6;
+          if(x<0||x>width||y<0||y>height||placed.some(b=>Math.abs(b.x-x)<(b.w+w)/2+2&&Math.abs(b.y-y)<h+2))return;
+          ctx.fillStyle='#17251ee8';ctx.fillRect(x-w/2,y-h/2,w,h);ctx.fillStyle='#fff3c9';ctx.fillText(text,x,y);placed.push({x,y,w});
+        };
+        const centre=centerOf(f.geometry);
+        if(m.radius!=null)label(centre,'Ø '+(2*m.radius).toFixed(3)+' m');
+        else label(centre,m.area.toFixed(3)+' m²');
+        for(const edge of m.segments)label(edge.at,edge.length.toFixed(3)+' m');
       }
       ctx.restore();
     }

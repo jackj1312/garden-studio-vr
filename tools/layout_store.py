@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlsplit
 NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 OBJECT_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}")
 KINDS = set("patio path lawn gravel decking wall retaining-wall raised-bed sunken-area "
-            "fire-pit steps fence edging planting-bed plant tree".split())
+            "fire-pit steps fence edging planting-bed plant tree outbuilding-base".split())
 MAX_BODY = 2 * 1024 * 1024
 MAX_LAYOUT = 12 * 1024 * 1024
 CATALOGUE = Path(__file__).resolve().parents[1] / "src/garden/catalogue.mjs"
@@ -131,6 +131,11 @@ def validate_garden(garden):
         for key in ("baseY", "level", "width", "height"):
             if not number(obj.get(key), -1000 if key in ("baseY", "level") else 0, 1000):
                 invalid("invalid " + key)
+        if obj["kind"] == "outbuilding-base":
+            if obj["material"] != "concrete" or obj["height"] <= 0:
+                invalid("An outbuilding base needs concrete and a positive slab thickness")
+            if obj["coping"] or "steps" in obj:
+                invalid("An outbuilding base cannot have garden coping or fitted steps")
         if "steps" in obj:
             s = obj["steps"]
             if (not isinstance(s, dict) or not number(s.get("at"), 0, 1)

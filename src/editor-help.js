@@ -23,6 +23,7 @@ const pages = {
     ["Adjust the drawing", "Choose Select. Drag the feature to move it, or drag a point, tangent or edge handle. Use the size and angle fields for exact dimensions. Copy, delete, undo and redo act on the current design."],
     ["Levels and planting", "A positive level raises a shape and a negative level sinks it. Add steps to connect the two levels. Choose a material, paving pattern or bed palette. Place each tree or plant with its own click."],
     ["iPad and Apple Pencil", "Use Apple Pencil to draw, select and drag handles. After the first Pencil stroke, a finger pans the plan; two fingers pinch to zoom. Without a Pencil, one finger draws and two fingers navigate."],
+    ["Outbuilding base", "Choose Outbuilding base, click each corner and finish, or choose a circle, rectangle or smooth outline. Read edge or curved lengths, area and perimeter in metres. Set slab thickness and top level. Save, then Copy base reference for a later design session."],
     ["Plan and walkthrough", "Bird’s-eye looks straight down on the plot. Standing returns to the house and garden. Save writes the design for this house version. Open the same site and version on your other device."],
     ["Quest", "Aim the right ray at the left wrist to choose a tool. Hold the right trigger and sweep, or drag out a perfect shape. In Select, grab a point or the shape. Push the right stick up or down to change the selected level. The wrist switches between Bird’s-eye and Standing."],
   ]],

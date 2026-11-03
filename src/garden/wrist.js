@@ -1,8 +1,9 @@
 import { helpPage } from '../editor-help.js';
 import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs';
-import { measureGeometry } from './geometry.mjs';
+import { measureGeometry, outlineMeasurements } from './geometry.mjs';
 import { angleOf } from './drawing.mjs';
 
+const BASE = 'outbuilding-base';
 const W = 704, H = 816, WRIST_W = .265, WRIST_H = WRIST_W * H / W;
 const METHODS = {
   auto: 'Fit my stroke', straight: 'Straight run', curve: 'Smooth curve', arc: 'Circular arc',
@@ -12,7 +13,7 @@ const fields = { material: MATERIALS, pattern: PATTERNS, palette: PALETTES, copi
 const titles = {
   home: 'Garden design', draw: 'Drawing tools', kinds: 'Choose a feature', methods: 'Drawing method',
   edit: 'Edit selection', finish: 'Materials & planting', levels: 'Levels & steps', objects: 'Garden objects',
-  options: 'Choose a finish', value: 'Enter a number', help: 'How to use',
+  options: 'Choose a finish', value: 'Enter a number', help: 'How to use', measures: 'Slab measurements',
 };
 const display = n => Number(n.toFixed(3)).toString();
 const titleCase = t => t[0].toUpperCase() + t.slice(1);
@@ -134,12 +135,20 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
     else send(cmd, v);
     go(back);
   }
+  function outline(feature, isDraft) {
+    if (feature?.kind !== BASE) return null;
+    try { return outlineMeasurements(feature.geometry); }
+    catch (error) { if (isDraft) return null; throw error; }
+  }
   function draw(s) {
     const item = s.selected;
+    const base = s.draft?.kind === BASE ? s.draft : item?.kind === BASE ? item : null;
+    const isBase = item?.kind === BASE;
     // The compact signature avoids uploading wrist pixels when only the tracked hand moves.
     const signature = JSON.stringify([page, listPage, optionKey, valuePage?.value, localNotice,
       s.tool, s.method, s.kind, s.bird, s.dirty, s.saving, s.undo, s.redo, s.status, !!s.conflict,
-      item, page === 'objects' ? s.objects.map(o => [o.id, o.label]) : s.objects.length]);
+      item, base === s.draft ? s.draft : null, s.drawingReadout,
+      page === 'objects' ? s.objects.map(o => [o.id, o.label]) : s.objects.length]);
     if (key === signature) return;
     key = signature; buttons = [];
     ctx.fillStyle = '#13271f'; ctx.fillRect(0, 0, W, H);
@@ -159,7 +168,8 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
         row(456, op('Save layout', 'save', undefined, { enabled: dirty && !s.saving && !s.conflict }),
                  op('Reload', 'reload', undefined, { enabled: !s.saving }));
         row(524, nav('Materials', 'finish', hasItem), op('Close editor', 'close'));
-        if (s.bird) row(592, input('Centre plan', () => { recenter = true; }));
+        if (s.bird || base) row(592, ...(base ? [nav('Slab measurements','measures')] : []),
+          ...(s.bird ? [input('Centre plan', () => { recenter = true; })] : []));
         break;
       case 'draw':
         row(184, op('Select', 'tool', 'select', { selected: s.tool === 'select' }),
@@ -169,6 +179,14 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
                  nav('Method · ' + (METHODS[s.method] || 'Auto'), 'methods'));
         row(320, op('Finish stroke', 'finish'), op('Cancel stroke', 'cancel'));
         row(388, op(s.bird ? 'Standing view' : 'Bird’s-eye', 'view'), nav('Edit selection', 'edit', hasItem));
+        if (s.kind === BASE || base) {
+          const m = outline(base, base === s.draft);
+          if (m) {
+            text('Width ' + display(m.width) + ' m · Depth ' + display(m.depth) + ' m', 24, 490, 27);
+            text('Area ' + display(m.area) + ' m² · Perimeter ' + display(m.perimeter) + ' m', 24, 533, 26);
+          } else if (s.drawingReadout) wrapped(s.drawingReadout, 24, 490, W - 48, 25, 34);
+          if (base) row(607, nav('Slab measurements', 'measures'));
+        }
         break;
       case 'kinds':
         list(Object.entries(KINDS).map(([k, f]) => input(f.label, () => {
@@ -195,14 +213,20 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
           row(320, nav('Materials', 'finish'), nav('Garden objects', 'objects'));
           row(388, op('Copy', 'copy'), op('Delete', 'delete'));
           row(456, op('Undo', 'undo', undefined, { enabled: s.undo }), op('Redo', 'redo', undefined, { enabled: s.redo }));
+          if (isBase) row(524, nav('Slab measurements', 'measures'),
+            input('Slab thickness ' + display(item.height) + ' m', () => numberPad('Slab thickness (metres)', item.height, 'field', 'height')));
         }
         break;
       case 'levels':
         if (!item) { row(184, nav('Choose an object', 'objects')); break; }
-        row(184, input('Level ' + display(item.level) + ' m', () => numberPad('Level above host (metres)', item.level, 'field', 'level')),
-                 input('Height ' + display(item.height) + ' m', () => numberPad('Height (metres)', item.height, 'field', 'height')));
+        {
+          const top = isBase ? 'Slab top offset' : 'Level', thick = isBase ? 'Slab thickness' : 'Height';
+          row(184, input(top + ' ' + display(item.level) + ' m', () => numberPad(top + ' (metres)', item.level, 'field', 'level')),
+                   input(thick + ' ' + display(item.height) + ' m', () => numberPad(thick + ' (metres)', item.height, 'field', 'height')));
+        }
         row(252, op('Lower 10 cm', 'field', { key: 'level', value: +(item.level - .1).toFixed(3) }),
                  op('Raise 10 cm', 'field', { key: 'level', value: +(item.level + .1).toFixed(3) }));
+        if (isBase) { row(320, nav('Slab measurements', 'measures')); break; }
         row(320, op('Fit steps', 'steps'), nav('Materials', 'finish'));
         if (item.steps) row(388, input(item.steps.count + ' treads', () => numberPad('Tread count', item.steps.count, 'stepField', 'count')),
           input('Stair width ' + display(item.steps.width), () => numberPad('Stair width (metres)', item.steps.width, 'stepField', 'width')));
@@ -210,6 +234,10 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
         break;
       case 'finish':
         if (!item) { row(184, nav('Choose an object', 'objects')); break; }
+        if (isBase) {
+          text('Concrete slab', 24, 220, 32);
+          row(272, nav('Slab measurements', 'measures'), nav('Levels & thickness', 'levels')); break;
+        }
         row(184, input('Material', () => options('material')), input('Pattern', () => options('pattern')));
         row(252, input('Palette', () => options('palette')), input('Coping', () => options('coping')));
         if (item.kind === 'plant' || item.kind === 'tree') row(320, input('Species', () => options('species')));
@@ -219,6 +247,30 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
         if (optionKey === 'coping') choices.unshift(['', { label: 'None' }]);
         list(choices.map(([k,v]) => input(v.label, () => { send('field', { key: optionKey, value: k }); go('finish'); },
                                         { selected: item?.[optionKey] === k, enabled })));
+        break;
+      }
+      case 'measures': {
+        const m = outline(base, base === s.draft);
+        if (!m) { wrapped(s.drawingReadout || 'Select a base or finish its footprint.', 24, 218, W - 52); break; }
+        text('Width ' + display(m.width) + ' m', 24, 208, 28);
+        text('Depth ' + display(m.depth) + ' m', W / 2, 208, 28);
+        text('Area ' + display(m.area) + ' m²', 24, 254, 27);
+        text('Perimeter ' + display(m.perimeter) + ' m', W / 2, 254, 27);
+        if (m.radius !== undefined) {
+          text('Radius ' + display(m.radius) + ' m', 24, 302, 27);
+          text('Diameter ' + display(2 * m.radius) + ' m', W / 2, 302, 27);
+        }
+        const count = Math.max(1, Math.ceil(m.segments.length / 5));
+        listPage = Math.max(0, Math.min(listPage, count - 1));
+        m.segments.slice(listPage * 5, listPage * 5 + 5).forEach((segment, i) => {
+          text(segment.label + ' · ' + display(segment.length) + ' m', 24, 354 + i * 37, 25);
+        });
+        if (count > 1) row(544,
+          input('Previous edges', () => { listPage--; key = ''; }, { enabled: listPage > 0 }),
+          input('Next edges', () => { listPage++; key = ''; }, { enabled: listPage < count - 1 }));
+        if (isBase && item.id === base.id) row(612,
+          input('Slab thickness ' + display(item.height) + ' m', () => numberPad('Slab thickness (metres)', item.height, 'field', 'height')),
+          input('Slab top offset ' + display(item.level) + ' m', () => numberPad('Slab top offset (metres)', item.level, 'field', 'level')));
         break;
       }
       case 'value':

@@ -7,7 +7,7 @@ import {createGardenPlan} from './plan.js';
 import {createGardenWrist} from './wrist.js';
 import {createDrawing,angleOf} from './drawing.mjs';
 import {createFeature} from './catalogue.mjs';
-import {fitStroke,handlesOf} from './geometry.mjs';
+import {fitStroke,handlesOf,outlineMeasurements} from './geometry.mjs';
 
 export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,indoor,occlusion,normalPass}) {
   const canvas=document.createElement('canvas');canvas.id='garden-plan';canvas.hidden=true;canvas.setAttribute('aria-label','Measured garden drawing plan');document.body.append(canvas);
@@ -20,7 +20,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   const draw=createDrawing({store:()=>store,pick:(x,z,t)=>garden.pick(x,z,t),ground:terrain.ground,changed:sync});
   function state(){
     const selected=store?.get(draw.state.selectedId)||null;
-    return {...draw.state,active,bird,site,version,selected,angle:selected?angleOf(selected.geometry):0,objects:cacheObjects,dirty:store?.dirty,saving:store?.saving,undo:store?.canUndo,redo:store?.canRedo,status:draw.state.status||status,conflict:draw.state.conflict};
+    return {...draw.state,draft:draw.draft,drawingId:draw.drawingId,drawingReadout:draw.readout(),active,bird,site,version,selected,angle:selected?angleOf(selected.geometry):0,objects:cacheObjects,dirty:store?.dirty,saving:store?.saving,undo:store?.canUndo,redo:store?.canRedo,status:draw.state.status||status,conflict:draw.state.conflict};
   }
   const panel=createGardenPanel({action}),wrist=createGardenWrist({THREE:T,scene,camera,action,state,planImage:()=>plan.image,bounds:()=>plan.full});
   function sync(points){
@@ -29,7 +29,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     const draft=draw.draft,objects=draft?[...cacheObjects.filter(f=>f.id!==draft.id),draft]:cacheObjects;
     const id=active?draw.state.selectedId:null;
     garden.set(objects,id);terrain.cuts(garden.cuts());
-    plan.update(objects,id,strokes,active);
+    plan.update(objects,active && draft?.kind==='outbuilding-base'?draft.id:id,strokes,active);
     for(const o of [...overlay.children]){overlay.remove(o);if(o.isLine)o.geometry.dispose();}
     const f=objects.find(f=>f.id===id);
     if(active&&f)for(const h of handlesOf(f.geometry)){const mesh=new T.Mesh(handleGeo,handleMat);mesh.scale.setScalar(.052);mesh.position.set(h.point[0],f.baseY+f.level+.085,h.point[1]);mesh.renderOrder=991;overlay.add(mesh);}
@@ -84,6 +84,20 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     for(const row of ref){const b=document.createElement('button');b.textContent=row.label;b.onclick=()=>{try{const g=fitStroke(row.p.map(([x,y,z])=>[x,z]),{closed:row.closed});const f=createFeature(row.closed?'patio':'path',g,row.p[0][1]);draw.state.selectedId=f.id;draw.state.tool='select';store.put(f,'Use proposal mark');}catch(e){status=e.message;}box.close();sync();};box.append(b);}
     const close=document.createElement('button');close.textContent='Cancel';close.onclick=()=>box.close();box.append(close);box.onclose=()=>box.remove();document.body.append(box);box.showModal();
   }
+  async function copyBase(){
+    const f=store.get(draw.state.selectedId);if(f?.kind!=='outbuilding-base')throw Error('Select an outbuilding base first.');
+    const m=outlineMeasurements(f.geometry),top=f.baseY+f.level;
+    const reference=['Garden Studio · outbuilding base',f.label+' · '+f.id,
+      'Layout file: assets/sites/'+site+'/layout/'+version+'.json',store.dirty?'Unsaved draft':'Saved revision '+store.revision,
+      'Footprint '+m.width.toFixed(3)+' × '+m.depth.toFixed(3)+' m; area '+m.area.toFixed(3)+' m²; perimeter '+m.perimeter.toFixed(3)+' m.',
+      ...m.segments.map(s=>s.label+' '+s.length.toFixed(3)+' m'),
+      'Concrete slab: top Y '+top.toFixed(3)+' m, underside '+(top-f.height).toFixed(3)+' m, thickness '+f.height.toFixed(3)+' m.',
+      'Measured footprint in house X/Z metres: '+JSON.stringify(f.geometry)].join('\n');
+    if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(reference);status='Base reference copied.';return;}catch{}}
+    const box=document.createElement('dialog'),t=document.createElement('textarea'),b=document.createElement('button');
+    box.className='garden-mark-choice';t.setAttribute('aria-label','Base reference');t.value=reference;t.readOnly=true;t.rows=12;t.cols=45;
+    b.textContent='Close';b.onclick=()=>box.close();box.onclose=()=>box.remove();box.append(t,b);document.body.append(box);box.showModal();t.focus();t.select();
+  }
   async function action(name,value){
     try{
       if(name==='vr'){document.getElementById('vr').click();return;}
@@ -92,7 +106,8 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
       else if(name==='reload'){
         if(store.dirty && !window.confirm('Discard this unsaved garden draft and load the saved design?'))return;
         await store.load({discard:true});loaded=true;status='Loaded revision '+store.revision;draw.state.conflict=false;
-      }else if(name==='import')await importMark();
+      }else if(name==='base-reference')await copyBase();
+      else if(name==='import')await importMark();
       else{draw.command(name,value);return;}
       draw.state.status='';
     }catch(e){status=e.message;draw.state.status='';if(e.status===409){draw.state.conflict=true;status='Another device saved a newer revision. Your draft is still here. Reload to use the saved version.';}}
@@ -132,7 +147,8 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
       draw.begin(p,{screenY:e.clientY,free:e.altKey||e.shiftKey,tolerance:el===canvas?Math.max(.08,plan.metres(e.pointerType==='mouse'?8:13)):.22});
     },true);
     el.addEventListener('pointermove',e=>{
-      if(!active||inVR()||!pointers.has(e.pointerId))return;consume(e);
+      if(!active||inVR())return;
+      if(!pointers.has(e.pointerId)){if(draw.corners.length)draw.hover(at(e,el));return;}consume(e);
       pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
       if(pan){const next=pair();if(el===canvas){const a=plan.at(pan.x,pan.y),b=plan.at(next.x,next.y);plan.pan(a[0]-b[0],a[1]-b[1]);if(pan.d&&next.d)plan.zoom(pan.d/next.d,plan.at(next.x,next.y));}else look(next.x-pan.x,next.y-pan.y);
         pan=next;return;}
@@ -162,7 +178,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   addEventListener('focus',()=>{if(store&&!store.dirty)store.refresh().catch(()=>{});});
   addEventListener('beforeunload',e=>{if([...stores.values()].some(s=>s.dirty)){e.preventDefault();e.returnValue='';}});
   document.querySelectorAll('[data-garden-open]').forEach(b=>b.addEventListener('click',enter));
-  const consumer={project:surface,begin(h){draw.begin(h.point,{tolerance:bird ? .30 : .21});},move(h){draw.move(h.point,{deltaY:h.verticalDelta});},end(){draw.end();},cancel(){draw.cancel();}};
+  const consumer={project:surface,hover(h){draw.hover(h?.point);},begin(h){draw.begin(h.point,{tolerance:bird ? .30 : .21});},move(h){draw.move(h.point,{deltaY:h.verticalDelta});},end(){draw.end();},cancel(){draw.cancel();}};
   function frame(left,now){
     const vr=inVR();document.body.classList.toggle('garden-immersive',active&&vr);if(vr!==vrWas){vrWas=vr;canvas.hidden=!active||!bird||vr;indoor(active&&vr);}
     if(!active){wrist.update(left,false,vr);return;}

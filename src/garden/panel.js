@@ -1,5 +1,5 @@
 import { KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES } from './catalogue.mjs';
-import { centerOf, measureGeometry, transformGeometry } from './geometry.mjs';
+import { centerOf, measureGeometry, outlineMeasurements, transformGeometry } from './geometry.mjs';
 import { angleOf } from './drawing.mjs';
 
 const methods = {
@@ -8,9 +8,10 @@ const methods = {
 };
 const groups = {
   Surfaces: ['patio','path','lawn','gravel','decking'],
-  Structures: ['wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging'],
+  Structures: ['outbuilding-base','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging'],
   Planting: ['planting-bed','plant','tree'],
 };
+const precise = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 const numberFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 2 });
 const display = n => Number.isFinite(n) ? String(Math.round(n * 1000) / 1000) : '';
 
@@ -103,6 +104,16 @@ export function createGardenPanel({ action }) {
         <div class="gd-fields gd-tool-fields"></div>
         <div class="gd-drawing-actions"></div>
       </section>
+      <section class="gd-section gd-slab" data-base-measurements hidden aria-label="Outbuilding base measurements">
+        <div class="gd-section-heading"><h3 class="gd-heading">Base measurements</h3><span class="gd-slab-state"></span></div>
+        <p class="gd-slab-readout"></p>
+        <dl class="gd-slab-summary"></dl>
+        <details class="gd-slab-edges" open><summary>Edges</summary>
+          <table aria-label="Measured lengths of the base edges"><thead><tr><th scope="col">Edge</th><th scope="col">Length</th></tr></thead><tbody></tbody></table>
+        </details>
+        <div class="gd-base-id"><span class="gd-caption">Base ID</span><code></code></div>
+        <button type="button" class="gd-reference" data-cmd="base-reference">Copy base reference</button>
+      </section>
       <section class="gd-section gd-selection">
         <div class="gd-section-heading"><h3 class="gd-heading">Objects</h3><span class="gd-count"></span></div>
         <select class="gd-object-list" aria-label="Select a garden object"></select>
@@ -123,6 +134,10 @@ export function createGardenPanel({ action }) {
   const context = find('.gd-context'), status = find('.gd-status-text'), list = find('.gd-object-list');
   const inspector = find('.gd-inspector'), count = find('.gd-count');
   navigator.xr?.isSessionSupported('immersive-vr').then(ok => { find('[data-cmd=vr]').hidden=!ok; }).catch(()=>{});
+  const slabCard = find('[data-base-measurements]');
+  const slabSummary = find('.gd-slab-summary'), edgeList = find('.gd-slab-edges');
+  const edgeBody = edgeList.querySelector('tbody'), slabId = find('.gd-base-id code');
+  let measuredKey = '';
   const toolFields = find('.gd-tool-fields');
   const kind = field(toolFields, 'kind', 'Object type', { choices: {} });
   for (const [groupName, ids] of Object.entries(groups)) {
@@ -136,6 +151,43 @@ export function createGardenPanel({ action }) {
   const collapse = find('[data-cmd=collapse]');
   const siteQuery = new URLSearchParams(location.search);
   let state, inspectorKey = '', listKey = '', collapsed = false;
+
+  function updateSlab() {
+    const preview = state.draft?.kind === 'outbuilding-base' ? state.draft : null;
+    const picked = state.selected?.kind === 'outbuilding-base' ? state.selected : null;
+    const drawing = state.tool === 'draw' && state.kind === 'outbuilding-base';
+    const base = preview || picked;
+    slabCard.hidden = !base && !drawing;
+    if (slabCard.hidden) return;
+    find('.gd-slab-state').textContent = drawing ? 'Drawing' : preview ? 'Editing' : 'Selected';
+    find('.gd-slab-readout').textContent = state.drawingReadout || (base ? '' : 'Draw a closed footprint to measure the base.');
+    slabId.textContent = base?.id || state.drawingId || 'Assigned on finish';
+    find('[data-cmd=base-reference]').hidden = !picked || !!preview;
+    const key = base ? JSON.stringify([base.geometry, base.height, base.level]) : '';
+    if (key !== measuredKey) {
+      measuredKey = key;
+      slabSummary.replaceChildren(); edgeBody.replaceChildren();
+      if (base) {
+        const m = outlineMeasurements(base.geometry);
+        const totals = [['Width',m.width,'m'],['Depth',m.depth,'m'],['Area',m.area,'m²'],['Perimeter',m.perimeter,'m']];
+        if (Number.isFinite(m.radius)) totals.push(['Radius',m.radius,'m']);
+        totals.push(['Slab thickness',base.height,'m'],['Slab top offset',base.level,'m']);
+        for (const [label, value, unit] of totals) {
+          const pair = el('div');
+          pair.append(el('dt','',label), el('dd','',precise.format(value) + ' ' + unit));
+          slabSummary.append(pair);
+        }
+        for (const segment of m.segments) {
+          const row = el('tr'), label = el('th','',segment.label);
+          label.scope = 'row';
+          row.append(label, el('td','',precise.format(segment.length) + ' m'));
+          edgeBody.append(row);
+        }
+      }
+    }
+    slabSummary.hidden = !base;
+    edgeList.hidden = !base;
+  }
 
   function setupInspector(f) {
     inspector.replaceChildren();
@@ -163,16 +215,22 @@ export function createGardenPanel({ action }) {
     field(dims, 'positionX', 'Centre X', { unit: 'm' });
     field(dims, 'positionZ', 'Centre Z', { unit: 'm' });
     const elevation = box(section(inspector, 'Level and construction'));
-    field(elevation, 'level', 'Level offset', { unit: 'm', min: -1000, max: 1000 });
+    const isBase = f.kind === 'outbuilding-base';
+    field(elevation, 'level', isBase ? 'Slab top offset' : 'Level offset', { unit: 'm', min: -1000, max: 1000 });
     const isPlant = f.kind === 'plant' || f.kind === 'tree';
     if (f.width > 0 || KINDS[f.kind].width > 0) field(elevation, 'width', isPlant ? 'Spread' : 'Width', { unit: 'm', min: .001 });
-    if (f.height > 0 || KINDS[f.kind].height > 0) field(elevation, 'height', isPlant ? 'Specimen height' : 'Height', { unit: 'm', min: .001 });
+    if (f.height > 0 || KINDS[f.kind].height > 0) field(elevation, 'height', isBase ? 'Slab thickness' : isPlant ? 'Specimen height' : 'Height', { unit: 'm', min: .001 });
     const finish = box(section(inspector, 'Finish'));
-    field(finish, 'material', 'Material', { choices: MATERIALS });
-    field(finish, 'pattern', 'Pattern', { choices: PATTERNS });
-    field(finish, 'palette', 'Palette', { choices: PALETTES });
-    if (!isPlant) field(finish, 'coping', 'Coping', { choices: { '': 'None', ...MATERIALS } });
-    if (f.steps || ['patio','decking','raised-bed','sunken-area'].includes(f.kind)) {
+    if (isBase) {
+      field(finish, 'material', 'Slab material', { choices: { concrete: MATERIALS.concrete } }).disabled = true;
+      field(finish, 'coping', 'Coping', { choices: { '': 'None' } }).disabled = true;
+    } else {
+      field(finish, 'material', 'Material', { choices: MATERIALS });
+      field(finish, 'pattern', 'Pattern', { choices: PATTERNS });
+      field(finish, 'palette', 'Palette', { choices: PALETTES });
+      if (!isPlant) field(finish, 'coping', 'Coping', { choices: { '': 'None', ...MATERIALS } });
+    }
+    if (!isBase && (f.steps || ['patio','decking','raised-bed','sunken-area'].includes(f.kind))) {
       const stair = section(inspector, 'Steps');
       if (f.kind !== 'steps') stair.append(button(f.steps ? 'Remove steps' : 'Add steps', 'steps'));
       if (f.steps) {
@@ -258,6 +316,7 @@ export function createGardenPanel({ action }) {
     method.disabled = KINDS[state.kind]?.form === 'point';
     drawActions.hidden = state.tool !== 'draw';
     find('[data-cmd=finish]').hidden = state.method !== 'corners';
+    updateSlab();
     const signature = JSON.stringify([selected?.id, selected?.kind, selected?.geometry.type, !!selected?.steps]);
     if (signature !== inspectorKey) { inspectorKey = signature; setupInspector(selected); }
     if (selected) {

@@ -39,7 +39,25 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     const touch=(type,p)=>client.send('Input.dispatchTouchEvent',{type,touchPoints:p?[{x:p.x,y:p.y,id:0}]:[]});
     await touch('touchStart',points[0]);for(const p of points.slice(1))await touch('touchMove',p);await touch('touchEnd');
   }
-  if(!xr){
+  if(stage==='base'){
+    await page.select('[data-garden-panel] [data-field=kind]','outbuilding-base');
+    for(const f of await g(()=>__house.garden.objects.filter(o=>o.kind==='outbuilding-base').map(o=>o.id))){await action('select',f);await action('delete');}
+    await action('kind','outbuilding-base');const vertices=[[1,10],[5,10],[5,12],[3,12],[3,13],[1,13]];
+    let reserved;
+    for(const [x,z] of vertices){
+      const hit=await xy(x,z);await page.mouse.click(hit.x,hit.y);
+      const st=await g(()=>({id:__house.garden.state().drawingId,preview:__house.garden.state().draft?.id,readout:__house.garden.state().drawingReadout}));if(!reserved)reserved=st.id;assert.equal(st.id,reserved);assert.match(st.readout,/ m/);
+    }
+    await page.click('[data-garden-panel] [data-cmd=finish]');const base=await g(()=>__house.garden.state().selected);assert.equal(base.id,reserved);assert.equal(base.geometry.knots.length,6);
+    await action('field',{key:'height',value:.22});await action('field',{key:'level',value:.18});await action('save');
+    const details=await page.$eval('[data-base-measurements]',el=>el.innerText);assert.match(details,/14\.00/);assert.match(details,/10\.00/);console.log('base readout',details.replaceAll('\n',' ').slice(0,270));
+    const support=await g(id=>{const a=__house.garden,f=a.store.get(id);return {top:a.garden.heightAt(2,11),expected:f.baseY+f.level,dirty:a.store.dirty};},reserved);
+    assert(Math.abs(support.top-support.expected)<.001&&!support.dirty);
+    await page.screenshot({path:path.join(out,'outbuilding-base.png')});
+    const ref=await g(async()=>{const r=await fetch('/layout?site='+__house.garden.state().site+'&version='+__house.garden.state().version);return await r.json();});
+    assert(ref.garden.objects.some(v=>v.id===reserved && v.height===.22 && v.geometry.knots.length===6));
+    console.log('slab panel checks',await g(async()=>{const m=await import('/tools/review/garden_slab_panel.test.mjs');return m.runSlabPanelChecks();}));
+  }else if(!xr){
     await page.click('[data-garden-panel] [data-editor-help=garden]');assert.match(await page.$eval('#studio-help-dialog',e=>e.innerText),/Apple Pencil/);await page.keyboard.press('Escape');
     for(const f of await g(()=>__house.garden.objects.filter(f=>f.label.startsWith('qa-')).map(f=>f.id))){await action('select',f);await action('delete');}
     await action('kind','sunken-area');await action('method','circle');

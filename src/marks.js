@@ -164,6 +164,7 @@ export function createEditorStroke() {
       if (trigger && !held && h) { startY = ray.direction.y; consumer.begin(h); drawing = true; }
       else if (trigger && drawing && h) { h.verticalDelta = (ray.direction.y - startY) * 2; consumer.move(h); }
       else if (!trigger && drawing) { if (h) { h.verticalDelta = (ray.direction.y - startY) * 2; consumer.move(h); } drawing = false; consumer.end(); }
+      if(!trigger&&!drawing&&h)consumer.hover?.(h);
       held = trigger;
       return h;
     },

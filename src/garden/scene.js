@@ -89,7 +89,7 @@ function makeSwatch(T,materialName,patternName,paletteName) {
   const pattern=PATTERNS[patternName]?patternName:'plain',size=192;
   const module=pat.unit,width=pattern==='plain'?mat.scale:4*module[0],depth=pattern==='plain'?mat.scale:4*module[1];
   const pixels=new Uint8Array(size*size*4),rng=randomFrom(seedFrom(materialName+pattern+paletteName));
-  const stone=['paving','limestone','slate','stone','brick','gravel'].includes(materialName);
+  const stone=['concrete','paving','limestone','slate','stone','brick','gravel'].includes(materialName);
   const wood=['sleepers','decking'].includes(materialName);
   for(let j=0;j<size;j++) for(let i=0;i<size;i++){
     const x=(i+.5)*width/size,z=(j+.5)*depth/size;
@@ -148,12 +148,12 @@ class Batch {
     this.uvs.push(...(uv||[a[0],a[2],b[0],b[2],c[0],c[2]]));
     if(color)this.colors.push(...color,...color,...color);
   }
-  top(poly,y){
+  top(poly,y,upward=true){
     if(poly.length<3)return;
     const ts=this.T.ShapeUtils.triangulateShape(poly.map(p=>new this.T.Vector2(...p)),[]);
     for(const ids of ts){
       const [a,b,c]=ids.map(i=>poly[i]);
-      if(cross(minus(b,a),minus(c,a))>0)this.tri(xyz(a,y),xyz(c,y),xyz(b,y));
+      if((cross(minus(b,a),minus(c,a))>0)===upward)this.tri(xyz(a,y),xyz(c,y),xyz(b,y));
       else this.tri(xyz(a,y),xyz(b,y),xyz(c,y));
     }
   }
@@ -460,6 +460,18 @@ function attachedSteps(batch,entry,info,gate,base,floor){
 
 }
 
+function slabObject({T,material},e){
+  const f=e.feature,top=f.baseY+f.level,bottom=top-f.height;
+  if(!Number.isFinite(bottom) || f.height<=0)throw new RangeError('A concrete base needs positive thickness');
+  const block=new Batch(T);
+  block.top(e.points,top);
+  block.top(e.points,bottom,false);
+  block.sides(e.points,bottom,top);
+  const mesh=block.mesh(material(f.material,f.pattern,f.palette),'Concrete outbuilding base',e.group,true);
+  mesh.userData.gardenSupport=true;
+  e.floor=top;e.outlineY=top;
+  if(top<f.baseY)e.cuts.push({id:f.id,points:e.points,baseY:f.baseY});
+}
 function areaObject(state,e) {
   const f=e.feature,p=e.points,info=pathInfo(p,true),base=f.baseY,surface=base+f.level;
   const {T,material,vegetation}=state;
@@ -594,7 +606,7 @@ export function createGardenScene(THREE, scene){
     if(!materials.has(id)){
       const m=makeSwatch(T,key,pattern,palette);
       const source=({brick:'red_brick',sleepers:'weathered_plank_siding',decking:'wood_floor_deck',
-                     lawn:'grass_ground',paving:'brushed_concrete',limestone:'brushed_concrete',
+                     lawn:'grass_ground',concrete:'brushed_concrete',paving:'brushed_concrete',limestone:'brushed_concrete',
                      slate:'brushed_concrete',stone:'brushed_concrete'})[key];
       if(source && typeof document!=='undefined'){
         if(!normals.has(source)){
@@ -613,10 +625,11 @@ export function createGardenScene(THREE, scene){
   }
   function build(f,signature){
     const group=new T.Group();group.name=f.label;group.userData.gardenFeatureId=f.id;
-    const points=sampleGeometry(f.geometry,.008),box=bounds2(points);
+    const points=sampleGeometry(f.geometry,f.kind==='outbuilding-base'?.0005:.008),box=bounds2(points);
     const e={feature:f,group,points,signature,box,closed:isClosed(f.geometry),form:KINDS[f.kind].form,
              center:[(box.x+box.X)/2,(box.z+box.Z)/2],treads:[],cuts:[],cap:null,floor:null};
-    if(e.form==='area')areaObject(state,e);
+    if(f.kind==='outbuilding-base')slabObject(state,e);
+    else if(e.form==='area')areaObject(state,e);
     else if(e.form==='line')lineObject(state,e);
     else{
       const s=SPECIES[f.species]||SPECIES[f.kind==='tree'?'apple':'lavender'],plants=new Batch(T);
@@ -635,7 +648,7 @@ export function createGardenScene(THREE, scene){
       if(within(p,t.box)&&(inside(p,t.poly)||nearLine(p,t.poly,true)<.00005))return t.y;
     }
     for(const list of [cutAreas,uncutAreas])for(const e of list){
-      if(!within(p,e.box)||!inside(p,e.points))continue;
+      if(!within(p,e.box)||(!inside(p,e.points)&&nearLine(p,e.points,true)>.00005))continue;
       if(e.cap && !inside(p,e.cap.inner)){
         const gate=e.gate,local=gate?minus(p,gate.center):null;
         if(!gate || Math.abs(dot(local,gate.tangent))>gate.width/2 || Math.abs(dot(local,gate.inner))>e.rimWidth*1.5) return e.cap.y;

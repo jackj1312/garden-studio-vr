@@ -157,6 +157,47 @@ class GardenStoreTests(unittest.TestCase):
         self.assertFalse(self.file.exists())
         self.assertEqual(self.save(tree)["garden"]["objects"], [tree])
 
+    def test_outbuilding_concrete_thickness_closed_outline_and_later_handoff(self):
+        self.layout.mkdir()
+        original = {"revision": 5, "items": [{"id": "bed"}], "future": {"building": ["keep"]}}
+        self.file.write_text(json.dumps(original))
+        corners = [[1, 1], [5, 1], [5, 2], [3, 2], [3, 4], [1, 4]]
+        footprint = {"type": "curve", "closed": True, "knots": [
+            {"p": q, "in": q, "out": q, "mode": "corner"} for q in corners]}
+        base = dict(patio("outbuilding-base-key"), kind="outbuilding-base", label="Studio slab",
+                    geometry=footprint, level=.10, height=.15, material="concrete", pattern="plain",
+                    coping="", handoff={"futureFloorId": "studio-01"})
+        del base["steps"]
+        self.save(base, revision=5)
+        reopened = self.read()
+        self.assertEqual((reopened["revision"], reopened["items"], reopened["future"]),
+                         (6, original["items"], original["future"]))
+        self.assertEqual(reopened["garden"]["objects"], [base])
+        modified = dict(base, height=.22)
+        self.error(lambda: self.save(modified, revision=5), 409)
+        self.save(modified, revision=6)
+        new = self.read()["garden"]["objects"][0]
+        self.assertEqual((new["id"], new["height"], new["geometry"], new["handoff"]),
+                         (base["id"], .22, footprint, base["handoff"]))
+        valid_circle = dict(base, geometry={"type": "circle", "center": [1.5, 3], "radius": 1.2})
+        self.save(valid_circle, revision=7)
+        self.assertEqual(self.read()["garden"]["objects"], [valid_circle])
+        k = .552285
+        beziers = [([1,0], [1,-k], [1,k]), ([0,1], [k,1], [-k,1]),
+                   ([-1,0], [-1,k], [-1,-k]), ([0,-1], [-k,-1], [k,-1])]
+        curved = dict(base, geometry={"type": "curve", "closed": True, "knots": [
+            {"p": p, "in": a, "out": b, "mode": "smooth"} for p,a,b in beziers]})
+        self.save(curved, revision=8)
+        for changes in [{"material": "paving"}, {"height": 0}, {"height": -.001}, {"height": 1001},
+                        {"height": True}, {"height": float("nan")}, {"coping": "stone"},
+                        {"steps": {"count": 2, "at": .5, "width": 1}},
+                        {"geometry": dict(footprint, closed=False)},
+                        {"geometry": {"type": "arc", "center": [0, 0], "radius": 1,
+                                      "startAngle": 0, "sweepAngle": 1.5}}]:
+            with self.subTest(changes=changes):
+                self.error(lambda: self.save(dict(base, **changes), revision=9), 400)
+        self.assertEqual(self.read()["garden"]["objects"], [curved])
+
     def test_symlinked_sites_manifest_layout_files_and_history(self):
         outside = self.root / "protected"
         outside.mkdir()

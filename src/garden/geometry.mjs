@@ -54,9 +54,9 @@ function segments(g) {
   }
   return out;
 }
-function split([a,b,c,d]) {
-  const p=lerp(a,b,.5),q=lerp(b,c,.5),r=lerp(c,d,.5);
-  const s=lerp(p,q,.5),t=lerp(q,r,.5),m=lerp(s,t,.5);
+function split([a,b,c,d],fraction=.5) {
+  const p=lerp(a,b,fraction),q=lerp(b,c,fraction),r=lerp(c,d,fraction);
+  const s=lerp(p,q,fraction),t=lerp(q,r,fraction),m=lerp(s,t,fraction);
   return [[a,p,s,m],[m,t,r,d]];
 }
 function cubicAt([a,b,c,d],t) {
@@ -66,6 +66,18 @@ function cubicAt([a,b,c,d],t) {
 function cubicDerivative([a,b,c,d],t) {
   const s=1-t;
   return [0,1].map(i=>3*(s*s*(b[i]-a[i])+2*s*t*(c[i]-b[i])+t*t*(d[i]-c[i])));
+}
+function extremaTimes([p,q,r,s]){
+  const times=[];
+  for(let i=0;i<2;i++){
+    // Roots of each coordinate derivative are exact plan extrema.
+    const a=-p[i]+3*q[i]-3*r[i]+s[i],b=2*(p[i]-2*q[i]+r[i]),c=q[i]-p[i];
+    const disc=b*b-4*a*c;
+    const roots=Math.abs(a)<EPS ? (Math.abs(b)<EPS?[]:[-c/b]) :
+      (disc<0?[]:[(-b-Math.sqrt(disc))/(2*a),(-b+Math.sqrt(disc))/(2*a)]);
+    for(const t of roots)if(t>EPS && t<1-EPS && !times.some(n=>Math.abs(t-n)<EPS))times.push(t);
+  }
+  return times.sort((a,b)=>a-b);
 }
 function sampleCubic(seg,tol,out,level=0) {
   const [a,b,c,d]=seg;
@@ -81,7 +93,15 @@ export function sampleGeometry(g,tolerance=.02) {
   if(g.type==='rectangle') return corners(g);
   if(g.type==='curve'){
     const out=[[...g.knots[0].p]];
-    for(const segment of segments(g)) sampleCubic(segment,tolerance,out);
+    for(const original of segments(g)){
+      // Keep measured extrema on the rendered footprint, even between knots.
+      let remainder=original,previous=0;
+      for(const t of extremaTimes(original)){
+        const [piece,rest]=split(remainder,(t-previous)/(1-previous));
+        sampleCubic(piece,tolerance,out);remainder=rest;previous=t;
+      }
+      sampleCubic(remainder,tolerance,out);
+    }
     if(g.closed) out.pop();
     return out;
   }
@@ -89,7 +109,8 @@ export function sampleGeometry(g,tolerance=.02) {
   const closed=g.type==='circle',start=closed?0:g.startAngle,sweep=closed?TAU:g.sweepAngle;
   // Limit sagitta error to tolerance. The asin form is stable for small tolerances.
   const step=4*Math.asin(Math.sqrt(Math.min(1,tolerance/(2*g.radius))));
-  const count=Math.max(closed?8:2,Math.ceil(Math.abs(sweep)/step));
+  const needed=Math.ceil(Math.abs(sweep)/step);
+  const count=closed?Math.max(8,4*Math.ceil(needed/4)):Math.max(2,needed);
   check(count<=65536,'Sampling tolerance is too small for this arc');
   return Array.from({length:count+(closed?0:1)},(_,i)=>atAngle(g,start+sweep*i/count));
 }
@@ -103,16 +124,8 @@ function pointsOnBounds(g) {
   }
   const pts=[];
   for(const seg of segments(g)){
-    const [p,q,r,s]=seg;
-    pts.push(p,s);
-    for(let i=0;i<2;i++){
-      // Real derivative roots give exact plan extents between knots.
-      const a=-p[i]+3*q[i]-3*r[i]+s[i],b=2*(p[i]-2*q[i]+r[i]),c=q[i]-p[i];
-      const discriminant=b*b-4*a*c;
-      const roots=Math.abs(a)<EPS ? (Math.abs(b)<EPS?[]:[-c/b]) :
-        (discriminant<0?[]:[(-b-Math.sqrt(discriminant))/(2*a),(-b+Math.sqrt(discriminant))/(2*a)]);
-      for(const t of roots) if(t>0 && t<1) pts.push(cubicAt(seg,t));
-    }
+    pts.push(seg[0],seg[3]);
+    for(const t of extremaTimes(seg))pts.push(cubicAt(seg,t));
   }
   return pts;
 }
@@ -147,6 +160,44 @@ export function measureGeometry(g) {
     }
   }
   return {area:Math.abs(signed),perimeter,width,depth};
+}
+
+function measuredMidpoint(seg,length) {
+  // A knot's handles can make parameter t=.5 very far from half its length.
+  let lo=0,hi=1;
+  for(let i=0;i<24;i++){
+    const t=(lo+hi)/2;
+    if(lengthOf(split(seg,t)[0])<length/2)lo=t;else hi=t;
+  }
+  return cubicAt(seg,(lo+hi)/2);
+}
+
+/** Exact plan dimensions; lengths are metres, area is square metres.
+ * Segment labels sit halfway along measured geometry, suitable for a plan or wrist. */
+export function outlineMeasurements(g) {
+  const summary=measureGeometry(g);
+  if(g.type==='circle'||g.type==='arc'){
+    const circle=g.type==='circle';
+    return {...summary,radius:g.radius,segments:[{label:circle?'Circumference':'Arc',
+      length:summary.perimeter,at:atAngle(g,circle?-Math.PI/2:g.startAngle+g.sweepAngle/2)}]};
+  }
+  if(g.type==='rectangle'){
+    const pts=corners(g);
+    return {...summary,segments:pts.map((p,i)=>{
+      const q=pts[(i+1)%4];
+      return {label:'Side '+(i+1),length:dist(p,q),at:lerp(p,q,.5)};
+    })};
+  }
+  if(g.type==='curve'){
+    const labels=segments(g).map((seg,i)=>{
+      const [p,a,b,q]=seg,length=lengthOf(seg);
+      const straight=segmentDistance(a,p,q)<EPS && segmentDistance(b,p,q)<EPS;
+      return {label:(straight?'Side ':'Curve ')+(i+1),length,
+              at:straight?lerp(p,q,.5):measuredMidpoint(seg,length)};
+    });
+    return {...summary,segments:labels};
+  }
+  return {...summary,segments:[]};
 }
 
 function intersects(a,b,c,d) {

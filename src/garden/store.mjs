@@ -26,6 +26,7 @@ function checkedFeature(value) {
   measurable(f.width, 0, 1000, 'width');
   measurable(f.height, 0, 1000, 'height');
   validateFeatureGeometry(f.kind, f.geometry);
+  if(f.kind==='outbuilding-base' && (f.material!=='concrete'||f.coping!==''||f.height<=0||f.steps!=null))throw new TypeError('An outbuilding base needs concrete and a positive slab thickness.');
   if (f.species !== undefined && (typeof f.species !== 'string' || !f.species || f.species.length > 96 || /[\x00-\x1f\x7f]/u.test(f.species))) {
     throw new TypeError('Invalid planting species');
   }

@@ -2,6 +2,7 @@ import { isClosed, validateGeometry } from './geometry.mjs';
 
 // Colours are sRGB. Scale and pattern units are metres in the garden frame.
 export const MATERIALS = {
+  concrete:  { label: 'Cast concrete', color: '#b5b6ac', scale: .60, roughness: .86 },
   paving:    { label: 'Sandstone paving', color: '#bda990', scale: .60, roughness: .84 },
   limestone: { label: 'Pale limestone', color: '#c8c1a8', scale: .60, roughness: .78 },
   slate:     { label: 'Blue slate', color: '#59656b', scale: .60, roughness: .76 },
@@ -53,6 +54,7 @@ function kind(label, form, material, pattern, palette, extras = {}) {
   return { label, form, material, pattern, palette, width: 0, height: 0, level: 0, coping: '', ...extras };
 }
 export const KINDS = {
+  'outbuilding-base': kind('Outbuilding base', 'area', 'concrete', 'plain', 'cool', { height: .15, level: .10 }),
   patio: kind('Patio', 'area', 'paving', 'laid-flags', 'natural'),
   path: kind('Path', 'line', 'paving', 'running-bond', 'natural', { width: .90 }),
   lawn: kind('Lawn', 'area', 'lawn', 'plain', 'green'),

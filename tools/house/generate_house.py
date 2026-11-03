@@ -86,6 +86,7 @@ MATS = {  # name: (sRGB, roughness, metallic, alpha, texture)
     "scaffold_board": ((0.80, 0.66, 0.40), 0.8, 0, 1, None), "earth": ((0.40, 0.30, 0.20), 1.0, 0, 1, None),
     "ground": ((0.36, 0.45, 0.25), 1.0, 0, 1, None), "existing_floor": ((0.70, 0.62, 0.52), 0.85, 0, 1, None),
     "stair": ((0.72, 0.58, 0.40), 0.7, 0, 1, None), "felt": ((0.15, 0.15, 0.16), 0.7, 0, 1, None),
+    "multiwall_skin": ((0.95,0.96,0.94),.14,0,.16,None), "multiwall_web": ((0.91,0.94,0.92),.20,0,.20,None),
     "polycarbonate": ((0.85, 0.88, 0.90), 0.2, 0, 0.5, None), "velux": ((0.25, 0.27, 0.28), 0.4, 0.2, 1, None),
     "existing_partition": ((0.88, 0.86, 0.82), 0.85, 0, 1, None),
 }
@@ -325,6 +326,13 @@ class VersionBuild:
         self.atoms += self.porch_vault() + self.steel_casings() + self.ceiling_slopes() + self.spec_finishes() + self.party_closers()
         abl, abq = AB.as_built(self, SPEC, self.notes)
         self.atoms += abl
+        key=SPEC_V1_MAP.get(self.v['id'])
+        if key and not args.no_items:
+            import hb_room_faces
+            scheduled=SPEC_V1['versions'][key]
+            linings=hb_room_faces.build(self,scheduled['rooms'],scheduled['items'])
+            SPEC_MATS.update(a['mat'][5:] for a in linings)
+            self.atoms.extend(linings)
         self.questions += abq
         if abl: log(vspec["id"], f"as-built layer: {len(abl)} records")
         log(vspec["id"], f"{len(atoms)} atoms")
@@ -433,7 +441,7 @@ class VersionBuild:
                          f"Floor: {fin.get('floor', '')[:60]}", True)
                 meta.update(stage_in=st_, seq=sqf, stage_out=None, seq_out=None, category=cat_)
                 a_ = atom(f"SPEC-FLR-{r['id']}", "slab", "existing", meta, sig=None, poly=G.ccw(P), z0=fy, z1=fy + 0.002,
-                          mat=f"spec_{fid}", clip_walls=True, clip_reach=0.05); a_["spec_id"] = f"FLOOR:{r['id']}"
+                          mat=f"spec_{fid}", clip_walls=True, clip_reach=0.05); a_["spec_id"] = f"FLOOR:{r['id']}"; a_["meta"].update(room_id=r["id"],surface_role="floor",surface_id="floor/"+r["id"])
                 out.append(a_)
             if "FIN-SKIRT" not in fin.get("skirting", "") or SKIRTING_HELD: continue
             # moulded skirting 150 x 18 (hb_joinery.SKIRT), one swept solid per continuous run: mitred at every corner, stopping
@@ -1069,6 +1077,9 @@ class VersionBuild:
             pieces = nxt
         pieces = [P for P in pieces if abs(G.area(P)) > 1e-5]
         if not pieces: return None
+        if a.get("mat")=="spec_FIN-FLR-OAK" and a.get('spec_id','').startswith('FLOOR:'):
+            from hb_oak import floor_mesh
+            return floor_mesh(pieces,z0,z1)
         if a.get("zfun"):
             zh, zr, ya, yb, t = a["zfun"]
             f = lambda p: zh + (zr - zh) * (p[1] - ya) / (yb - ya)
@@ -1988,6 +1999,9 @@ def stages_json(vb):
 
 # ======================================================================================== main
 def main():
+    if SPEC_V1 and not args.no_items:
+        from prepare_kit import prepare
+        prepare(OUT,args.spec_v1)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     MAT = make_materials()
     global MAT_BASE, TILE_BASE
@@ -2037,7 +2051,8 @@ def main():
         moved = push_foliage_clear(objs)
         if vkey:
             HI.QUESTIONS.clear(); HI.NOTES.clear(); HI.HELD.clear()
-            items = HI.build_items(SPEC_V1, vkey, vb.N, coll, FIN, args.polyhaven, objs, log)
+            import hb_kit
+            items = hb_kit.place_schedule(SPEC_V1, vkey, vb.N, coll, objs, OUT, args.spec_v1, log)
             for ob_, p_ in items: p_["spec"] = True
             objs += items
             ext, drop = HI.build_exterior(SPEC_V1, vkey, vb.N, coll, FIN, objs, log)
@@ -2183,6 +2198,16 @@ def glb_texture_guard(path):
     import struct, subprocess
     b = open(path, "rb").read(); j = json.loads(b[20:20 + struct.unpack("<I", b[12:16])[0]])
     def src(t): return t.get("source", next((e.get("source") for e in t.get("extensions", {}).values() if isinstance(e, dict) and "source" in e), None))
+    changed=False
+    for mat in j.get('materials',[]):
+        tint=mat.get('extras',{}).get('studio_tint');pbr=mat.get('pbrMetallicRoughness',{})
+        if tint and 'baseColorTexture' in pbr:
+            pbr['baseColorFactor']=[*tint,1.];changed=True
+    if changed:
+        old_len=struct.unpack('<I',b[12:16])[0];data=json.dumps(j,separators=(',',':')).encode()
+        data+=b' '*((-len(data))%4);rest=b[20+old_len:]
+        blob=b[:8]+struct.pack('<II',20+len(data)+len(rest),len(data))+b'JSON'+data+rest
+        with open(path,'wb') as file:file.write(blob)
     bad = [i for i, t in enumerate(j.get("textures", [])) if src(t) is None]
     if bad:
         log(f"EXPORT GUARD: {os.path.basename(path)} had {len(bad)} textures without an image source: stripped (row 190)")

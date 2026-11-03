@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "Signed FINISHES.json and ROOMS.csv; raw sources natively inspected, official licences rechecked2026-11-03",
+  "raw_images_edited": false,
+  "files": [
+    {
+      "asset": "Marble019",
+      "path": "maps/Marble019_1K-JPG_Color.jpg",
+      "sha256": "71648451058b5db8c36dc849cfdd36be9641cf8b9a7bb7ce5aa479d450567609",
+      "bytes": 768050,
+      "licence": "CC0-1.0",
+      "source_url": "https://ambientcg.com/a/Marble019",
+      "licence_url": "https://docs.ambientcg.com/license/"
+    },
+    {
+      "asset": "white_plaster_02",
+      "path": "maps/white_plaster_02_nor_gl_1k.jpg",
+      "sha256": "eb572ca3630d5bfde72e2601b1f02412da23ca005cd19384dced8690be4cb783",
+      "bytes": 652310,
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/white_plaster_02",
+      "licence_url": "https://polyhaven.com/license"
+    }
+  ],
+  "tile": {
+    "finish_id": "FIN-FLR-TILE",
+    "target_srgb": "#B9B1A6",
+    "roughness": 0.55,
+    "physical_repeat_m": 0.6,
+    "base_color_factor_linear": [
+      0.5897773725203495,
+      0.5332751809058239,
+      0.4631733932367069
+    ],
+    "calibrated_max_linear": [
+      0.5845295907352027,
+      0.5285301501345191,
+      0.4590521213642288
+    ],
+    "mean_calibrated_linear": [
+      0.4851499400560704,
+      0.43965717384091885,
+      0.38132601143253014
+    ],
+    "raw_colour_map": "project/master/ambientcg/Marble019/Marble019_1K-JPG_Color.jpg",
+    "normal_map": null,
+    "note": "Signed Marble019 colour; supplied normal is visually flat, omitted. Standard glTF baseColorFactor expected; no runtime albedo_gain extra."
+  },
+  "plaster": {
+    "normal_map": "project/master/polyhaven/tex/white_plaster_02/white_plaster_02_nor_gl_1k.jpg",
+    "physical_repeat_m": 1.5,
+    "wall_normal_strength": 0.1,
+    "ceiling_normal_strength": 0.05,
+    "colour_maps": false,
+    "roughness_maps": false,
+    "note": "Normal microtexture only; preserve exact signed base colours and constant matt roughness. No visible mottled diffuse repeat."
+  },
+  "polycarbonate": {
+    "source": "ROOMS.csv Before conservatory: clear multiwall, white uPVC bars700c/c typical",
+    "sheet_thickness_m": 0.016,
+    "skin_thickness_m": 0.0008,
+    "internal_web_thickness_m": 0.0004,
+    "internal_web_pitch_m": 0.01,
+    "bars_centre_pitch_m": 0.7,
+    "bar_depth_m": 0.075,
+    "internal_structure_status": "Plausible typical twin-wall construction; web/skin dimensions not measured. Exact roof outline/plane and75mm frame depth retained."
+  },
+  "oak": {
+    "schema": 1,
+    "source_image": "maps/oak_veneer_02_diff_1k.jpg",
+    "source_sha256": "69410573a965898d455f389ede7c0de5709de33430ad489786e5ba70b3e7ba81",
+    "licence": "CC0-1.0",
+    "source_url": "https://polyhaven.com/a/oak_veneer_02",
+    "target_srgb": "#B48C64",
+    "mean_source_linear": [
+      0.71513226952004,
+      0.4853037423485993,
+      0.3008168444159315
+    ],
+    "albedo_gain": [
+      0.6382190297281988,
+      0.5403845770085131,
+      0.42363877821762774
+    ],
+    "albedo_source_max_linear": [
+      0.8713671191987972,
+      0.6172065624196511,
+      0.41254261348390375
+    ],
+    "predicted_max_linear": [
+      0.5561230773521121,
+      0.3335289071600216,
+      0.17476904873902802
+    ],
+    "calibrated_mean_linear": [
+      0.4564110231804047,
+      0.26225065752969623,
+      0.12743768043564743
+    ],
+    "roughness_levels": [
+      0.45,
+      0.525,
+      0.6
+    ],
+    "physical_repeat_m": 1.0,
+    "grain_image_axis": "U",
+    "grain_world_axis": "Y",
+    "normal_strength": 0.28,
+    "method": "Full raw1K linear-sRGB mean, multiplied in viewer material; source image unchanged. Geometry supplies190x1900 board boundaries and1mm bevel.",
+    "status": "Source calibration only; serialized fixture and browser acceptance pending."
+  }
+}

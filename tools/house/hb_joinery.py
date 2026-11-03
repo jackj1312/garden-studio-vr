@@ -101,18 +101,35 @@ def skirting_run(P, prof_room_side, zf):
 
 def shaker_leaf(W, ua, ub, za, zb, c0, c1):
     """4-panel shaker leaf between u ua..ub, z za..zb, thickness c0..c1 (panels recessed 6 mm each face)"""
-    st, tr, br, mr, rec = 0.100, 0.100, 0.200, 0.070, 0.006
-    parts = []
-    W_ = ub - ua; H = zb - za
-    parts.append(box_uc(W, ua, ua + st, za, zb, c0, c1)); parts.append(box_uc(W, ub - st, ub, za, zb, c0, c1))
-    parts.append(box_uc(W, ua + st, ub - st, zb - tr, zb, c0, c1)); parts.append(box_uc(W, ua + st, ub - st, za, za + br, c0, c1))
-    ph = (H - tr - br - 3 * mr) / 4
-    z = za + br
-    for k in range(4):
-        parts.append(box_uc(W, ua + st, ub - st, z, z + ph, c0 + rec, c1 - rec))       # the panel (recessed both faces)
-        z += ph
-        if k < 3: parts.append(box_uc(W, ua + st, ub - st, z, z + mr, c0, c1)); z += mr
+    stile=.09; rail=.12; muntin=.07; mid=za+(zb-za)*.48
+    left,right=ua+stile,ub-stile;centre=(ua+ub)/2
+    parts=[box_uc(W,ua,left,za,zb,c0,c1),box_uc(W,right,ub,za,zb,c0,c1)]
+    for low,high in ((za,za+rail),(mid-rail/2,mid+rail/2),(zb-rail,zb)):
+        parts.append(box_uc(W,left,right,low,high,c0,c1))
+    for low,high in ((za+rail,mid-rail/2),(mid+rail/2,zb-rail)):
+        parts.append(box_uc(W,centre-muntin/2,centre+muntin/2,low,high,c0,c1))
+        for x0,x1 in ((left,centre-muntin/2),(centre+muntin/2,right)):
+            parts.append(box_uc(W,x0,x1,low,high,c0+.006,c1-.006))
     return parts
+
+def porch_leaf(w,lo,hi,z0,z1,c):
+    """Photo-led three-light composite leaf, constructed to this measured opening."""
+    from hb_porch_motif import stroke_mesh,motif_paths
+    width=hi-lo;height=z1-z0;middle=(lo+hi)/2;gw=.23*width;a,b=middle-gw/2,middle+gw/2
+    leaf=[box_uc(w,lo,a,z0,z1,c-.0225,c+.0225),box_uc(w,b,hi,z0,z1,c-.0225,c+.0225)]
+    glass=[];leading=[];last=z0
+    for low,high in ((.15,.245),(.30,.74),(.795,.895),(1,1)):
+        low=z0+height*low;high=z0+height*high
+        leaf.append(box_uc(w,a,b,last,low,c-.0225,c+.0225))
+        if high>low:
+            glass.append(box_uc(w,a,b,low,high,c-.006,c+.006))
+            for side in (-1,1):
+                yy=c+side*.024
+                for path in motif_paths(gw,high-low):
+                    stroke=stroke_mesh([(a+u*gw,yy,low+v*(high-low)) for u,v in path])
+                    leading.append(([( *w.point(u,t),z) for u,t,z in stroke['vertices']],stroke['faces']))
+        last=high
+    return leaf,glass,leading
 
 
 def door_ironmongery(W, ua, ub, za, hinge_u, c0, c1, zh_leaf):

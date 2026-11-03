@@ -453,8 +453,13 @@ class StateBuilder:
 
     def fitting_atoms(self, st, gsrc, fsrc):
         out = []
+        from hb_conservatory import elevations
+        roof=next((r for r in st.get('flat_roofs',[]) if r.get('mat')=='polycarbonate' and 'z_house' in r),None)
+        records=[r for r in gsrc['storeys']['ground']['fittings'] if 'conservatory' in r['name'].lower() and r['name'] not in st.get('exclude_fittings',[])]
+        if roof and records:out.extend(elevations(records,roof))
         for stn, V in (("ground", gsrc), ("first", fsrc)):
             for f in V["storeys"][stn]["fittings"]:
+                if roof and f in records:continue
                 if f["name"] in st.get("exclude_fittings", []): continue
                 out.extend(self._fitting(f, stn))
         for inc in st.get("add_fittings", []):
@@ -1167,6 +1172,9 @@ class StateBuilder:
     def flat_roof_atoms(self, fr):
         meta = M("roof_cover", "ground", fr["label"], fr.get("drawing", ""), fr.get("conf", "scaled"), fr.get("plain", "Flat roof"), False)
         P = fr["poly"]
+        if fr.get("mat")=="polycarbonate" and "z_house" in fr:
+            from hb_conservatory import canopy
+            return canopy(fr)
         if "z_house" in fr:            # lean-to (polycarbonate): plane through the two edge heights
             zh, zr = fr["z_house"], fr["z_rear"]; ya, yb = min(p[1] for p in P), max(p[1] for p in P)
             zf = (zh, zr, ya, yb, 0.016)

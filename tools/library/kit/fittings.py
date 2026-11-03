@@ -90,9 +90,9 @@ def _custom(kind,name,dims,collection,m,options):
         b.box('filter',(w*.72,d*.64,.004),(0,-d*.1,.003),'black',.002)
         for x in [-w*.34,w*.34]:b.lathe('worklight',[(.020,0),(.020,.003)],(x,-d*.30,.001),'bulb',20)
     elif kind=='kettle':
-        b.lathe('base',[(w*.42,0),(w*.45,.009),(w*.42,.016)],(0,0,0),'black',32)
-        b.lathe('body',[(w*.39,0),(w*.43,.020),(w*.40,h*.60),(w*.28,h*.80),(w*.24,h*.82),(0,h*.82)],(0,0,.016),'metal',48,ellipse=.88)
-        b.lathe('lid',[(w*.25,0),(w*.26,.007),(0,.014)],(0,0,h*.82+.016),'black',32)
+        b.lathe('base',[(w*.42,0),(w*.45,.009),(w*.42,.016)],(0,0,0),'black',32,ellipse=options.get('ellipse',1))
+        b.lathe('body',[(w*.39,0),(w*.43,.020),(w*.40,h*.60),(w*.28,h*.80),(w*.24,h*.82),(0,h*.82)],(0,0,.016),'metal',48,ellipse=.88*options.get('ellipse',1))
+        b.lathe('lid',[(w*.25,0),(w*.26,.007),(0,.014)],(0,0,h*.82+.016),'black',32,ellipse=options.get('ellipse',1))
         b.tube('handle',[(w*.28,0,h*.72),(w*.49,0,h*.70),(w*.52,0,h*.30),(w*.33,0,h*.20)],.012,'black',sides=12)
         b.tube('spout',[(-w*.29,0,h*.57),(-w*.46,0,h*.69),(-w*.49,0,h*.80)],.020,'metal',sides=16)
     else:_signed_custom(b,kind)

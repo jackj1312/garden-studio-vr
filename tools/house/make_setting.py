@@ -292,6 +292,9 @@ for ob in list(bpy.data.objects):
 for o in bpy.data.objects:
     if o.type == "MESH" and o.name.startswith(("island_tree", "Conifer")):
         o["lod_group"] = "apple_tree" if o.name.startswith("island_tree") else o.name.split(".")[0]; o["lod_role"] = "near"; o["lod_switch_m"] = 15.0
+sys.path.insert(0,str(__import__('pathlib').Path(__file__).resolve().parent))
+from hb_garden_kit import apply as apply_garden_kit
+apply_garden_kit()
 for ob in bpy.data.objects: ob.select_set(ob.type == "MESH")
 bpy.ops.export_scene.gltf(filepath=args.out, export_format="GLB", use_selection=True, export_extras=True, export_yup=True,
                           export_apply=True, export_image_format="WEBP", export_image_quality=80)

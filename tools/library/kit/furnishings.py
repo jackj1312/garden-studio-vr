@@ -546,7 +546,7 @@ def _sofa(b):
     for s in (-1,1):
         seats.append(b.soft("seat-cushion",(seatw-0.018,d*0.69,h*0.20),(s*(seatw/2+0.008),-d*0.075,seatz),puff=0.45))
         b.soft("back-cushion",(seatw-0.012,h*0.47,d*0.19),(s*(seatw/2+0.008),d*0.25,h*0.67),puff=0.7,rotation=(math.radians(73),0,0))
-    for s,mat in ((-1,"linen"),(1,"accent")):
+    for s,mat in (((-1,"linen"),(1,"accent")) if b.options.get("scatter",True) else ()):
         b.soft("scatter",(0.39,0.39,0.13),(s*(w/2-arm-0.24),-d*0.02,h*0.65),mat,puff=1.0,rotation=(math.radians(64),s*0.1,s*0.12))
     if b.options.get("throw",True):
         _supported_sofa_throw(b,seats[0],base,-seatw/2-.008+.045)

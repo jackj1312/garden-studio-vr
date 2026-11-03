@@ -51,6 +51,28 @@ class Finishes:
             m = self._flat("spec_MIRROR", "#E6E8EA", 0.03, 1.0); _MAT[key] = m; self.tile[m.name] = (1, 1); return m
         f = self.F.get(key)
         if f is None: raise KeyError(f"finish {key} not in the spec")
+        if key in {"FIN-WALL","FIN-WALL-CLAY","FIN-CEIL","FIN-FLR-OAK","FIN-FLR-TILE"}:
+            import hb_kit
+            cfg=json.loads((hb_kit.KIT/'room-materials.json').read_text())
+            m=self._flat("spec_"+key,f["colour_srgb"],.78 if key!="FIN-FLR-OAK" else .525,0.)
+            nt=m.node_tree;bs=nt.nodes.get('Principled BSDF');tile=(1.5,1.5)
+            def texture(filename,socket,normal=0):
+                tex=nt.nodes.new('ShaderNodeTexImage')
+                tex.image=bpy.data.images.load(str(hb_kit.KIT/'maps'/filename),check_existing=True)
+                output=tex.outputs['Color']
+                if normal:
+                    tex.image.colorspace_settings.name='Non-Color'
+                    nm=nt.nodes.new('ShaderNodeNormalMap');nm.inputs['Strength'].default_value=normal
+                    nt.links.new(output,nm.inputs['Color']);output=nm.outputs['Normal']
+                nt.links.new(output,bs.inputs[socket])
+            if key=='FIN-FLR-OAK':
+                tile=(1.,1.);texture('oak_veneer_02_diff_1k.jpg','Base Color')
+                texture('oak_veneer_02_nor_gl_1k.jpg','Normal',.22);m['studio_tint']=cfg['oak']['albedo_gain']
+            elif key=='FIN-FLR-TILE':
+                tile=(.6,.6);texture('Marble019_1K-JPG_Color.jpg','Base Color')
+                m['studio_tint']=cfg['tile']['base_color_factor_linear']
+            else:texture('white_plaster_02_nor_gl_1k.jpg','Normal',.05 if key=='FIN-CEIL' else .1)
+            m['finish_id']=key;self.tile[m.name]=tile;_MAT[key]=m;return m
         md = self.meta.get(key, {})
         rough, metal = md.get("rough", 0.6), md.get("metal", 0.0)
         files = md.get("files") or {}

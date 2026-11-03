@@ -1,0 +1,35 @@
+[
+  {
+    "asset": "Grass001",
+    "channel": "Color",
+    "file": "Grass001_1K-JPG_Color.jpg",
+    "source_page": "https://ambientcg.com/view?id=Grass001",
+    "licence": "CC0-1.0",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "physical_size_m": 1.4,
+    "bytes": 1764300,
+    "sha256": "b9b6d61bc3b6137b868a3447eef18737896acd26d58fe2f4b83ce8c0e9d3f8ad"
+  },
+  {
+    "asset": "Grass001",
+    "channel": "NormalGL",
+    "file": "Grass001_1K-JPG_NormalGL.jpg",
+    "source_page": "https://ambientcg.com/view?id=Grass001",
+    "licence": "CC0-1.0",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "physical_size_m": 1.4,
+    "bytes": 2338245,
+    "sha256": "eef0b56db5f00a6fcb3d0e0f8463e4e141e88aa85b26527a04d617b75a4ab5d2"
+  },
+  {
+    "asset": "Grass001",
+    "channel": "Roughness",
+    "file": "Grass001_1K-JPG_Roughness.jpg",
+    "source_page": "https://ambientcg.com/view?id=Grass001",
+    "licence": "CC0-1.0",
+    "licence_url": "https://docs.ambientcg.com/license/",
+    "physical_size_m": 1.4,
+    "bytes": 823623,
+    "sha256": "8810effd44756341170d551501b7d0c645dc2395dbce46a8c7f1e61045258a06"
+  }
+]

@@ -575,6 +575,8 @@ def contract_props(a, **over):
     if a.get("loft"): p["loft"] = True
     if a.get("no_regs") or a.get("loft"): p["no_regs"] = True       # owner's / as-built items: no drawing spec, no regs mapping
     if a.get("provenance"): p["provenance"] = a["provenance"]
+    for key in ("surface_id","room_id","surface_role"):
+        if key in m:p[key]=m[key]
     p.update(over)
     return p
 
@@ -761,7 +763,7 @@ def fixture_parts(a):
     def bx(ua, ub, za, zb, ca, cb):
         P = [W.point(ua, ca), W.point(ub, ca), W.point(ub, cb), W.point(ua, cb)]
         return prism(P, za, zb)
-    fr, gl = [], []
+    fr, gl, inner = [], [], []
     leaves = []                       # (meshes by material, hinge (u, c), swing sign, extra props)
     out_sign = 1 if W.out > 0 else -1          # +c is outside when out=+1
     zsill = None
@@ -783,7 +785,7 @@ def fixture_parts(a):
         if kind != "bifold":
             for i in range(1, n):
                 x = bays[i][0]; fr.append(bx(x - 0.035, x + 0.035, zb, z1 - f, c - dep / 2, c + dep / 2))     # mullions
-        glass = kind != "door"
+        glass = kind != "door" or a.get("conservatory") or pair
         sw_ = 0.05 if kind != "bifold" else 0.06                   # sash profile, stepped 15 mm proud of the frame
         cs = c + out_sign * 0.015
         for bi, (xa, xb) in enumerate(bays):
@@ -797,6 +799,14 @@ def fixture_parts(a):
                 tgt_f.append(bx(xa2, xb2, ya, ya + sw_, cs - 0.03, cs + 0.03)); tgt_f.append(bx(xa2, xb2, yb - sw_, yb, cs - 0.03, cs + 0.03))
                 tgt_f.append(bx(xa2, xa2 + sw_, ya + sw_, yb - sw_, cs - 0.03, cs + 0.03)); tgt_f.append(bx(xb2 - sw_, xb2, ya + sw_, yb - sw_, cs - 0.03, cs + 0.03))
                 tgt_g.append(bx(xa2 + sw_, xb2 - sw_, ya + sw_, yb - sw_, cs - 0.012, cs + 0.012))
+                if kind=="window":
+                    # White inner rebated casement, distinct from the anthracite exterior.
+                    face=cs-out_sign*.030;ca,cb=sorted((face,face-out_sign*.012))
+                    inner.extend([bx(xa2,xb2,ya,ya+sw_,ca,cb),bx(xa2,xb2,yb-sw_,yb,ca,cb),
+                                  bx(xa2,xa2+sw_,ya+sw_,yb-sw_,ca,cb),bx(xb2-sw_,xb2,ya+sw_,yb-sw_,ca,cb)])
+                    if yb-ya>.45:
+                        m=(ya+yb)/2;ca,cb=sorted((face-out_sign*.012,face-out_sign*.032))
+                        inner.append(bx(xa2+.018,xa2+.033,m-.045,m+.045,ca,cb))
             if is_door:
                 leaves.append(dict(lf=lf, lg=lg, ua=xa + gap, ub=xb - gap, cf=(cs - 0.03, cs + 0.03), bay=bi, n=n))
         if kind == "window" and not a.get("internal"):
@@ -844,6 +854,20 @@ def fixture_parts(a):
     leaf_mat = a.get("leaf_mat") or ("door_oak" if a.get("internal") else ("aluminium" if kind == "bifold" else "upvc_white"))
     props = contract_props(a, part="frame")
     res = [dict(name=a["id"] + "_frame", mat=frame_mat, props=props, mesh=merge_meshes(fr), uv=None)]
+    if inner:
+        res.append(dict(name=a["id"]+"_inner_sash",mat="upvc_white",props=contract_props(a,part="inner casement"),mesh=merge_meshes(inner),uv=None))
+    # The surveyed as-built layer owns its own jamb and lintel profiles. The
+    # drawn front openings receive the independent surround at their own span.
+    if kind=="window" and "front" in W.id.lower() and not a.get("as_built") and not a.get("internal") and not a.get("conservatory"):
+        surface=out_sign*(W.t/2)
+        ca,cb=sorted((surface,surface+out_sign*.055))
+        sa,sb=sorted((surface,surface+out_sign*.085))
+        lo,hi=u0-.065,u1+.065
+        zz=zsill if zsill is not None else z0
+        surround=[bx(lo,u0,zz,z1,ca,cb),bx(u1,hi,zz,z1,ca,cb),bx(lo-.015,hi+.015,zz-.055,zz,sa,sb)]
+        mat="ironmongery" if W.storey=="ground" and "bay" not in W.id.lower() else "cream_stone"
+        res.append(dict(name=a["id"]+"_surround",mat="cream_stone",props=contract_props(a,part="exterior surround"),mesh=merge_meshes(surround),uv=None))
+        res.append(dict(name=a["id"]+"_head",mat=mat,props=contract_props(a,part="exterior head"),mesh=bx(lo,hi,z1,z1+(.032 if mat=="ironmongery" else .08),ca,cb),uv=None))
     if a.get("_joinery"):
         jn = a["_joinery"]
         res.append(dict(name=a["id"] + "_stops", mat="joinery", props=contract_props(a, part="stops"), mesh=merge_meshes(jn["stops"]), uv=None))
@@ -887,6 +911,10 @@ def fixture_parts(a):
         if dnote and kind != "bifold": extra["swing_note"] = dnote
         if kind == "bifold": extra["swing_note"] = "bi-fold (typical — not drawn): opens outwards and stacks against the side wall at the dining end, keeping the kitchen side clear (Jack, 1 Nov 2026)"
         nm = a["id"] + (f"_leaf{k}" if len(leaves) > 1 else "_leaf")
+        if kind=="door" and not a.get("internal") and "porch" in W.id.lower() and n==1:
+            import hb_joinery as J
+            L["lf"],L["lg"],lead=J.porch_leaf(W,L["ua"],L["ub"],zb+.004,z1-f-.004,sum(L["cf"])/2)
+            res.append(dict(name=nm+"_leading",mat="ironmongery",props=contract_props(a,**dict(extra,part="lead motif")),mesh=merge_meshes(lead),uv=None,leaf=True))
         res.append(dict(name=nm, mat=leaf_mat, props=contract_props(a, **extra), mesh=merge_meshes(L["lf"]), uv=None, leaf=True))
         if L.get("shaker"):
             import hb_joinery as J

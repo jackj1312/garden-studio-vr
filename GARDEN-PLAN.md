@@ -18,3 +18,4 @@ Re-read this plan, FIRST-PASS and the relevant project rules before each stage, 
 
 **Change log**  
 2026-11-03 · Initial plan grounded in the live garden viewer, house editor, marks, planner and available git refs.
+2026-11-03 · Jack requested a clickable How to use panel in every editor. Add contextual controls to the garden, original site viewer and marking tools, house editor, furnishing editor and client planner. Test opening and closing by pointer, keyboard and on the garden wrist.

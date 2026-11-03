@@ -223,6 +223,8 @@
   .sheet-grip button { width: 56px; min-height: 18px; height: 18px; padding: 0; border-radius: 9px; background: var(--line-2); border: 0; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
+<link rel="stylesheet" href="src/editor-help.css">
+<script type="module" src="src/editor-help.js"></script>
 </head>
 <body>
 <div id="app">
@@ -240,6 +242,7 @@
     <span id="conn" title=""><i></i><span class="wide-only">Connecting…</span></span>
     <button class="icon ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="ico" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
     <button class="icon ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="ico" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+    <button type="button" data-editor-help="planner">How to use</button>
     <button id="changesBtn" title="Everything you have changed and not sent yet"><span class="wide-only">Changes</span><span class="count zero" id="changeCount">0</span></button>
     <button class="primary" id="sendBtn" title="Make these changes the next spec version (one rebuild)">Send<span class="wide-only"> to build</span></button>
     <button class="icon ghost" id="themeBtn" title="Light / dark" aria-label="Switch light or dark"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg></button>

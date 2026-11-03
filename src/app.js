@@ -614,24 +614,24 @@ function updatePointer() {
   updatePanelVisibility();
   const right = hands.right;
   if (rayLine) rayLine.visible = false;
-  if (marks.active || refs.active) {          // Mark mode / Reference view own the trigger: no panel, no placing
-    if (cursorUV) uiDirty = true;
-    cursorUV = null; dragging = false;
-    triggerWasDown = !!right?.userData.source?.gamepad?.buttons?.[0]?.pressed;
-    if (marks.active) marks.updateXR(right, triggerWasDown);
-    else refs.updateXR(right, triggerWasDown);
-    return;
+  const trigger=!!right?.userData.source?.gamepad?.buttons?.[0]?.pressed;
+  let hit=null;
+  if(right && panel.visible && panelWanted){
+    const origin=right.getWorldPosition(new THREE.Vector3());
+    const dir=new THREE.Vector3(0,0,-1).applyQuaternion(right.getWorldQuaternion(new THREE.Quaternion()));
+    raycaster.set(origin,dir);hit=raycaster.intersectObject(panel,false)[0];
   }
-  if (!right || !panel.visible || !panelWanted) { cursorUV = null; return; }
-  const origin = new THREE.Vector3(), dir = new THREE.Vector3(0, 0, -1);
-  right.getWorldPosition(origin);
-  dir.applyQuaternion(right.getWorldQuaternion(new THREE.Quaternion()));
-  raycaster.set(origin, dir);
-  const hit = raycaster.intersectObject(panel, false)[0];
-  if (rayLine) rayLine.visible = !!hit;
-  const gp = right.userData.source?.gamepad;
-  const trigger = !!gp?.buttons?.[0]?.pressed;
-
+  const helpHit=hit && (wristHelp>=0 || inHit({x:hit.uv.x,y:1-hit.uv.y},HIT.how));
+  if (marks.active || refs.active) {
+    if(!helpHit || marks.drawing || marks.noteOpen){
+      if(cursorUV)uiDirty=true;cursorUV=null;dragging=false;triggerWasDown=trigger;
+      if(marks.active)marks.updateXR(right,trigger);else refs.updateXR(right,trigger);
+      return;
+    }
+    if(marks.active)marks.updateXR(null,trigger);else refs.updateXR(null,trigger);
+  }
+  if (!right || !panel.visible || !panelWanted) {cursorUV=null;return;}
+  if (rayLine) rayLine.visible=!!hit;
   if (!hit) {
     if (cursorUV) uiDirty = true;
     cursorUV = null;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createDrawing, angleOf } from '../../src/garden/drawing.mjs';
+import { createDrawing, angleOf, drawnGeometry } from '../../src/garden/drawing.mjs';
 import { createFeature, SPECIES } from '../../src/garden/catalogue.mjs';
 import { GardenStore } from '../../src/garden/store.mjs';
 import { circle, point, rectangle, handlesOf, measureGeometry } from '../../src/garden/geometry.mjs';
@@ -148,4 +148,9 @@ test('level drag, selection and undo are shared between bird and standing contro
   bird.draw.command('undo');eps(standing.store.get(f.id).level,.12);
   standing.draw.command('redo');eps(bird.store.get(f.id).level,.42);
   standing.draw.command('field',{key:'level',value:-.10});bird.draw.command('undo');eps(standing.store.get(f.id).level,.42);
+});
+
+test('an explicit straight run follows only its two measured ends',()=>{
+  const g=drawnGeometry('wall','straight',[[0,0],[1,.3],[2,-.25],[3,0]]);
+  assert.deepEqual(g.knots.map(k=>k.p),[[0,0],[3,0]]);
 });

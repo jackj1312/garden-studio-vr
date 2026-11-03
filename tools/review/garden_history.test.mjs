@@ -56,7 +56,7 @@ function endpoint() {
 const makeStore = (api, onChange) => new GardenStore({ site: 'front-garden', version: 'existing_2022', fetcher: api.fetcher, onChange });
 
 test('all tools have usable material, pattern and planting defaults', () => {
-  const expected = ['patio','path','lawn','gravel','decking','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging','planting-bed','plant','tree'];
+  const expected = ['outbuilding-base','patio','path','lawn','gravel','decking','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging','planting-bed','plant','tree'];
   equal(Object.keys(KINDS).sort(), expected.sort(), 'Catalogue coverage');
   const ids = new Set();
   for (const [k, defaults] of Object.entries(KINDS)) {

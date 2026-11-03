@@ -419,7 +419,7 @@ async function loadVersion(id, quiet = false) {
     versions.set(id, entry);
     model.applyStage(sidecar.stages.length, true);        // compile with everything visible: no hitch on the first stage change
     /* the shaders compile in parallel where the browser can (KHR_parallel_shader_compile), not in one blocking call */
-    if (show) { setLoad(0.97, "Preparing the materials…"); model.root.visible = true; await renderer.compileAsync(scene, camera); model.root.visible = false; loadingNow = false; setLoad(1, "Ready"); $("loading").hidden = true; }
+    if (show) { setLoad(0.97, "Preparing the materials…"); await renderer.compileAsync(scene, camera); loadingNow = false; setLoad(1, "Ready"); $("loading").hidden = true; }
     entry.file = entryFile;
     perf.note({ event: "version loaded", version: id, file: entryFile, ms: Math.round(performance.now() - t0), bvh_ms: Math.round(entry.bvh.ms), parts: model.parts.length, triangles: entry.bvh.triangles });
     return entry;
@@ -485,7 +485,6 @@ async function useVersion(id) {
   if (V && V !== entry && gardenLean) gardenQuality(false);
   if (V && V !== entry) { V.model.root.visible = false; if (KEEP_ONE || renderer.xr.isPresenting) dropVersion(V); }
   V = entry;
-  if (garden) await garden.useVersion(entry);
   V.model.root.visible = true;
   if (renderer.xr.isPresenting && VRQ[vrQuality].lean) leanMaterials(true);
   if (inVR() && garden?.enabled) gardenQuality(true);
@@ -522,6 +521,7 @@ async function useVersion(id) {
   requests.list().then(refreshBoard).catch(() => {});
   if (MODE.inspect) loadInspections();
   refreshBoard();
+  if (garden) await garden.useVersion(entry);
 }
 
 /* ------------------------------------------------------------------ *

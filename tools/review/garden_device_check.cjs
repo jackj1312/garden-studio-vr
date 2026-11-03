@@ -10,7 +10,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const errors=[];
  try{
   const page=await browser.newPage();page.on('pageerror',e=>{errors.push(e.message);console.log('PAGE ERROR',e.message);});
-  page.on('console',c=>{if(['error','warn'].includes(c.type())){const v=c.text();if(!v.includes('404')&&!v.includes('WebGL:')&&!v.includes('THREE.Clock'))console.log(c.type(),v.slice(0,310));if(/Shader Error|VALIDATE_STATUS|Unhandled/.test(v))errors.push(v.slice(0,250));}});
+  page.on('console',c=>{if(['error','warn'].includes(c.type())){const v=c.text();if(!v.includes('404')&&!v.includes('WebGL:')&&!v.includes('THREE.Clock'))console.log(c.type(),v.slice(0,310));if(/Shader Error|VALIDATE_STATUS|Unhandled|GL_INVALID_OPERATION: glMultiDraw/.test(v) && errors.length<5)errors.push(v.slice(0,250));}});
   const tablet=stage==='ipad',phone=stage==='phone',xr=stage==='quest';
   await page.setViewport(tablet?{width:1024,height:768,hasTouch:true,isMobile:true,deviceScaleFactor:1}:phone?{width:390,height:844,hasTouch:true,isMobile:true,deviceScaleFactor:1}:{width:1280,height:800,deviceScaleFactor:1});
   if(tablet||phone)await page.setUserAgent(tablet?'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1':'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/134 Mobile Safari/537.36');
@@ -54,6 +54,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     const support=await g(id=>{const a=__house.garden,f=a.store.get(id);return {top:a.garden.heightAt(2,11),expected:f.baseY+f.level,dirty:a.store.dirty};},reserved);
     assert(Math.abs(support.top-support.expected)<.001&&!support.dirty);
     await page.screenshot({path:path.join(out,'outbuilding-base.png')});
+    // The browser may decline clipboard permission. Exercise the same visible fallback
+    // without touching the user's clipboard during the QA run.
+    await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('Clipboard unavailable');}}}));
+    await page.click('[data-cmd=base-reference]');const handoff=await page.$eval('[aria-label="Base reference"]',el=>el.value);assert(handoff.includes(reserved)&&handoff.includes('0.220 m')&&handoff.includes('14.000 m'));await page.keyboard.press('Escape');
+    await page.evaluate(()=>document.querySelector('.garden-mark-choice')?.close());
     const ref=await g(async()=>{const r=await fetch('/layout?site='+__house.garden.state().site+'&version='+__house.garden.state().version);return await r.json();});
     assert(ref.garden.objects.some(v=>v.id===reserved && v.height===.22 && v.geometry.knots.length===6));
     console.log('slab panel checks',await g(async()=>{const m=await import('/tools/review/garden_slab_panel.test.mjs');return m.runSlabPanelChecks();}));

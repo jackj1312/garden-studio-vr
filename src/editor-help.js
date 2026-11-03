@@ -7,9 +7,10 @@ const pages = {
     ["Review changes", "Use Undo or Redo, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z. Show 3D preview to inspect the room. Changes lists the edits before Send to build."],
   ]],
   site: ["Garden and site review", [
-    ["Walk", "On this screen use W A S D or the arrow keys to move. Click the view for mouse look. Escape releases the pointer."],
+    ["Walk", "On this screen use W A S D or the arrow keys to move. Click the view for mouse look. Escape releases the pointer for the toolbar. The ? key opens these controls while walking."],
     ["Mark on screen", "M enters Mark mode. Drag on a surface to draw. K changes between a correction and a proposal, Z removes the last visible mark. Select a mark label to edit its note."],
     ["Mark in Quest", "In the surveyed garden, B toggles Mark. Point the right controller at a surface and hold the trigger to draw. A changes kind, the right grip undoes, and holding A with a note open records speech."],
+    ["Reference photos", "R opens or closes the site reference view on screen. In Quest, point at a reference picture and pull the trigger to enlarge it."],
     ["Design the garden", "Open Garden design for measured shapes, materials, levels and planting. It has its own How to use panel on screen and on the left wrist."],
   ]],
   house: ["House walkthrough and editing", [
@@ -52,7 +53,14 @@ export function showEditorHelp(key, button = document.activeElement) {
   if (!box.open) box.showModal(); close.focus();
 }
 document.addEventListener("click", e => { const b = e.target.closest?.("[data-editor-help]"); if (b) showEditorHelp(b.dataset.editorHelp, b); });
-window.addEventListener("keydown", e => { const box = document.querySelector("#studio-help-dialog[open]"); if (!box) return;
+window.addEventListener("keydown", e => { const box = document.querySelector("#studio-help-dialog[open]");
+  if (!box) {
+    if(e.key==='?' && !e.target.closest?.('input,textarea,select,[contenteditable]')){
+      const trigger=[...document.querySelectorAll('[data-editor-help]')].find(b=>b.offsetWidth&&b.offsetHeight);
+      if(trigger){e.preventDefault();e.stopImmediatePropagation();showEditorHelp(trigger.dataset.editorHelp,trigger);}
+    }
+    return;
+  }
   if (e.key === "Escape") { e.preventDefault(); box.close(); }
   if (e.key !== "Tab" && e.key !== "Enter" && e.key !== " ") e.stopImmediatePropagation();
 }, true);

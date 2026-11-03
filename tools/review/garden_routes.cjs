@@ -10,11 +10,20 @@ const puppeteer=require(process.env.PUPPETEER_CORE||'puppeteer-core');
     if(route==='plan/'){
       await p.waitForSelector('#plan .room, #plan [data-room]',{timeout:60000});
       await p.click('[data-editor-help=planner]');assert.match(await p.$eval('#studio-help-dialog',n=>n.textContent),/Undo/);await p.click('#studio-help-dialog button');
-      await p.$eval('#plan [data-room]',e=>{const r=e.getBoundingClientRect();const send=(type)=>e.dispatchEvent(new PointerEvent(type,{pointerId:7,clientX:r.x+r.width/2,clientY:r.y+r.height/2,bubbles:true})); send('pointerdown');send('pointerup');}).catch(()=>{});
+      const point=await p.evaluate(()=>{
+        for(const room of document.querySelectorAll('#plan polygon.room')){
+          const r=room.getBoundingClientRect();
+          for(let i=1;i<6;i++)for(let j=1;j<6;j++){
+            const x=r.left+r.width*i/6,y=r.top+r.height*j/6;
+            if(document.elementFromPoint(x,y)?.closest('[data-room]')===room)return {x,y};
+          }
+        }
+      });assert(point,'A room on the floor plan must be reachable by mouse');
+      await p.mouse.click(point.x,point.y);await p.waitForFunction(()=>location.hash.includes('/room/'));
       console.log('Planner controls and room geometry present');
     }else if(route.startsWith('index')){
       await p.waitForSelector('#startDesktop:not([disabled])',{timeout:150000});
-      await p.click('#startDesktop');await p.click('[data-editor-help=site]');assert.match(await p.$eval('#studio-help-dialog',n=>n.textContent),/Mark/);await p.keyboard.press('Escape');
+      await p.click('#startDesktop');await p.keyboard.type('?');await p.waitForSelector('#studio-help-dialog[open]');await p.keyboard.press('Escape');await p.click('[data-editor-help=site]');assert.match(await p.$eval('#studio-help-dialog',n=>n.textContent),/Mark/);await p.keyboard.press('Escape');
       assert.match(await p.$eval('.garden-entry',a=>a.href),/house-wip/);console.log('Original surveyed garden and shared help ready');
     }else if(route.includes('test=walk')){
       await p.waitForFunction(()=>window.__walkTest,{timeout:300000});const r=await p.evaluate(()=>__walkTest);

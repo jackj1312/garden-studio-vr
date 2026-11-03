@@ -383,4 +383,4 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   for publish/bake/Unreal) is in PLAN.md's change log.
 
 - 2026-11-03 · Codex · Jack selected the independent conservatory, fitted to the studio measurements. The shared furnishing layout also owns individual wall-face colours, per-room floors and editable patio proposals with straight or automatically smoothed curved edges.
-
+- 2026-11-03 · Codex · The live furnishing layout gives each plant and tree its own saved identity, host and transform. Finish checks compare a room’s explicitly dimensioned lining with that datum, which can differ from its navigation polygon.

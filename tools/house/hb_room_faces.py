@@ -249,7 +249,9 @@ def build(vb,rooms,items):
                         a=atom(name+suffix,'mesh','existing',meta,mat='spec_'+finish,mesh=mesh)
                         if carrier.get('as_built'):
                             a['as_built']={'replaces':list(carrier['as_built']['replaces'])}
-                        a['carrier']=carrier['id'];out.append(a)
+                        a['carrier']=carrier['id']
+                        a['scribe_neighbours']=abs(datum-c)>.008
+                        out.append(a)
                     # Partition by the real drawn openings at the construction step.
                     face=copy.copy(w);face.ua=lo;face.ub=hi;face.ends={'a':(lo,0),'b':(hi,0)}
                     face.z0=zz;face.z1=head
@@ -341,14 +343,24 @@ def build(vb,rooms,items):
                         face_c=datum+side*SKIM
                         if (face_c-start)*side<=.003:continue
                         section=sorted((start,face_c));bits=[]
-                        if lo-.04<=a<=hi+.04:bits.append(box_uc(w,a,a+.003,bottom,top,*section))
-                        if lo-.04<=b<=hi+.04:bits.append(box_uc(w,b-.003,b,bottom,top,*section))
+                        if lo-.04<=a<=hi+.04:bits.append(('left',box_uc(w,a,a+.003,bottom,top,*section)))
+                        if lo-.04<=b<=hi+.04:bits.append(('right',box_uc(w,b-.003,b,bottom,top,*section)))
                         ua=max(lo,a);ub=min(hi,b)
                         if ub-ua>.007:
-                            bits.append(box_uc(w,ua,ub,top-.003,top,*section))
-                            if op['kind']=='window':bits.append(box_uc(w,ua,ub,bottom,bottom+.003,*section))
-                        if bits:
-                            emit('-return-'+op['id'],merge_meshes(bits),top_finish);returned.add(op['id'])
+                            bits.append(('head',box_uc(w,ua,ub,top-.003,top,*section)))
+                            if op['kind']=='window':bits.append(('sill',box_uc(w,ua,ub,bottom,bottom+.003,*section)))
+                        for role,mesh in bits:emit('-return-'+role+'-'+op['id'],mesh,top_finish)
+                        if bits:returned.add(op['id'])
+    # Split construction ownership before emitting a mesh. Only parts with
+    # identical drawn/as-built visibility can give up any of their area.
+    from hb_panel_ownership import deduplicate
+    replaced={key for a in vb.atoms if a.get('as_built') for key in a['as_built']['replaces']}
+    groups={}
+    for part in out:
+        mask='measured' if part.get('as_built') else 'drawn-only' if part['carrier'] in replaced else 'common'
+        groups.setdefault(mask,[]).append(part)
+    unique={part['id']:part for group in groups.values() for part in deduplicate(group)}
+    out=[unique[p['id']] for p in out if p['id'] in unique]
     # As-built window boards and finishes replace their drawn counterpart as
     # a family, including split intervals and differently named measured returns.
     for a in [*vb.atoms,*out]:

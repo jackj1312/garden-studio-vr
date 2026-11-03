@@ -17,6 +17,7 @@ import math, copy, json, os
 from hb_geom import prism, merge_meshes, box, hexa
 from hb_build import atom, M, sig_of, slug
 from hb_walls import layer_stack
+from hb_room_faces import SKIM
 
 
 def _src(survey_path):
@@ -258,7 +259,7 @@ def as_built(vb, spec, notes):
         W2.openings = [o for o in W2.openings if o["id"] not in ids]
         oid = (w.get("id") or "front-door") + " (as built)"
         n = int(w.get("panes", 1))
-        packer = 0.025 if w.get("packer_z") else 0.0
+        packer = Z(w["packer_z"][1]) - z1 if w.get("packer_z") else 0.0
         op = dict(id=oid, kind=kind, u0=ua, u1=ub, z0=z0, z1=z1 + packer, panes=f"{n}-light", conf="measured from photos", src=src)
         W2.openings.append(op)
         opf = dict(op, z1=z1)
@@ -301,7 +302,11 @@ def as_built(vb, spec, notes):
                 hu0, hu1 = sorted((F.u((X(ls["x"][0]), fc)), F.u((X(ls["x"][1]), fc))))
                 pz0, pz1 = Z(w["packer_z"][0]), Z(w["packer_z"][1])
                 parts.append((F.slab(ua + 0.01, ub - 0.01, pz0, pz1, 0.02, fo0 - 0.002), "packer", "packer over the frame (recessed, between the jamb returns)"))
-                parts.append((F.slab(ua,ub,z1,z1+packer,fo0-.002,fo1),"upvc_white","internal cover to measured head packer"))
+                # The exterior packer and jamb returns end on this same section.
+                # Carry the backing above the fitted frame through to the room finish.
+                lining_depth = max(layer["o1"] for layer in W2.layers() if not layer.get("void")) + SKIM
+                parts.append((F.slab(ua, ub, z1, pz1, fo0 - 0.002, lining_depth),
+                              "upvc_white", "internal cover to measured head packer"))
                 parts.append((F.slab(hu0, hu1, pz1, hz1, -0.005, 0.0), "buff_concrete", "concrete head"))
                 parts.append((F.slab(hu0, hu1, Z(ls["z"][0]), Z(ls["z"][1]), -0.005 - ls.get("thick_m", 0.003), -0.005), "lead", "lead strip over the head"))
                 top, su0, su1 = hz1, hu0, hu1

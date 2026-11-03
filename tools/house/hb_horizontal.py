@@ -106,6 +106,7 @@ def horizontal(vb,rooms):
         for side in (-1,1):
             c=side*width/2;covered=[]
             for r in zones:
+                if plate['plate_wall'].split('~')[0] in r.get('_lining',{}):continue
                 if not isinstance(r['ceiling_y'],(int,float)) or not r['floor_y']+.4<bottom<r['ceiling_y']+.001:continue
                 head=min(r['ceiling_y'],top)
                 if head-bottom<.001:continue

@@ -527,6 +527,8 @@ for label, pt, indoor in positions:
             if indoor:
                 lk = leaks.setdefault(label.split(" (")[0], dict(position=label, rays=0, dir=[round(d.x, 2), round(d.z, 2), round(-d.y, 2)]))
                 lk["rays"] += 1
+                sample=lk.setdefault('samples',[])
+                if len(sample)<6:sample.append(dict(position=label,dir=[round(x,6) for x in d]))
             continue
         if h[1].dot(d) > 0.05 and not tri_ds[h[2]]:
             o = parts[owner[h[2]]]

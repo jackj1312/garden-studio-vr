@@ -39,6 +39,13 @@ def check(site,round_name,only):
             geometry('integrity',version,'on')
             geometry('integrity',version,'off')
             geometry('shell',version)
+        contact_counts={}
+        for version in versions:
+            rows=json.loads((site/(version+'_furnish.json')).read_text())['validator']
+            issues=[r['id'] for r in rows if r['shell_overlap_faces'] or (r.get('support_gap_mm') or 0)>10]
+            contact_counts[version]={'checked':len(rows),'issues':issues}
+            if not rows or issues:failed.append(version+' furnishing contacts')
+        (logs/'furniture-support.json').write_text(json.dumps(contact_counts,indent=2))
         run('finish',[sys.executable,'tools/house/check_finish.py',site,'--spec',site/'spec/spec_v1.json'])
         run('spec',[sys.executable,'tools/house/check_spec.py','--site',site,'--spec',site/'spec/spec_v1.json'])
     if only in ('all','compressed'):

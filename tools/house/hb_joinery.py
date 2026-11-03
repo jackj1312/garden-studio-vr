@@ -41,6 +41,17 @@ def offset_path(P, w, closed=False):
         s0, s1 = segs[i - 1], segs[i % len(segs)]
         q = _isect(s0[0], s0[1], s1[0], s1[1])
         out.append(q if q is not None else s1[0])
+    # On a return shorter than the mitre setback the front edge cannot
+    # run backwards. End that profile ring at the adjoining mitre.
+    for i in range(n if closed else n-1):
+        j=(i+1)%n
+        dx,dy=P[j][0]-P[i][0],P[j][1]-P[i][1]
+        if (out[j][0]-out[i][0])*dx+(out[j][1]-out[i][1])*dy >= -1e-10:continue
+        if not closed and i==0:out[i]=out[j]
+        elif not closed and j==n-1:out[j]=out[i]
+        else:
+            joint=((out[i][0]+out[j][0])/2,(out[i][1]+out[j][1])/2)
+            out[i]=out[j]=joint
     return out
 
 

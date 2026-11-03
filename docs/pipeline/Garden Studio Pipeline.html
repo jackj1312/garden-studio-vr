@@ -115,13 +115,15 @@ each one makes the next house cheaper.</p>
 </section>
 
 <section class="stage">
-  <header><span class="num">3</span><h3>The shell</h3><span class="badge part">● working, still improving</span></header>
+  <header><span class="num">3</span><h3>The shell</h3><span class="badge part">● candidate in verification</span></header>
   <p>The house is built by script in Blender from the data: walls, floors, ceilings, stairs, roof, doors and windows, then
   every surface finished: plastered reveals, skirting, architraves, window boards. The house must look finished, never
   "mid-build" (no raw brick inside, no gaps, nothing poking through the roof).</p>
-  <div class="ok"><strong>Being upgraded:</strong> finishes will be assigned to each wall face as it's built (Codex's method),
-  instead of finding raw surfaces afterwards. That's what caused the raw reveals and the plaster on the outside walls.</div>
+  <div class="ok"><strong>Built into the shell.</strong> Each wall face, window return and room floor receives its finish when its geometry is constructed. The integrity check then looks through the rooms at eye height. Both signed models passed the shell check.</div>
   <div class="facts"><div><b>Tools</b>generate_house.py and the shell, integrity and finish checks</div><div><b>Check</b>Watertight; nothing raw; every check passes</div></div>
+  <p>The generator assigns each wall face to a room as it builds the openings. It fits the cut faces of partial walls, the stair enclosure and the vault separately. Roof planes and room polygons set the ceilings and floors. The Before conservatory uses the studio footprint and clear heights. Its twin-wall glazing follows the pitch from the house to the rear boundary, and the approved construction sequence removes it.</p>
+  <figure class="pics"><img src="img/24-conservatory.jpg" alt="Inside the newly fitted Before conservatory"><img src="img/25-lounge.jpg" alt="Lounge and measured opening in the latest private candidate"></figure>
+  <figcaption>Candidate views on port 8450. The shell and integrity checks run before this build can reach the client link.</figcaption>
   <figure><img src="img/08-shell.jpg" alt="Finished shell kitchen"></figure>
   <figcaption>The bare finished shell of the new kitchen-diner, before furniture.</figcaption>
 </section>
@@ -146,8 +148,7 @@ each one makes the next house cheaper.</p>
 <section class="stage">
   <header><span class="num">6</span><h3>The outside</h3><span class="badge part">● working, still improving</span></header>
   <p>Brickwork matched to the real house, roof, the front garden with its paving, planting and pergola, the street,
-  neighbours and trees, so every window looks out on a real world. Added from Codex: apples under the tree, better grass,
-  and festoon lights.</p>
+  neighbours and trees. The candidate samples the measured lawn surface for each fallen apple and maps the reviewed Grass001 texture over the original lawn at a 1.4 m repeat.</p>
   <figure class="pics"><img src="img/10-front-audit.jpg" alt="The front, matched to a photo"><img src="img/22-codex-front.jpg" alt="Codex front garden details"></figure>
   <figcaption>Left: our front, checked against a real photo. Right: Codex's details we're adding (lights, cushions); we keep our brickwork and paving.</figcaption>
 </section>

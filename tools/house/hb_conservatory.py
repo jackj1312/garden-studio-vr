@@ -155,6 +155,18 @@ def elevations(records,roof,walls,roofs):
                 out.append(atom(id_+'-dwarf','mesh','existing',dict(meta,group='wall_outer'),sig=sig_of(id_,a,b,sill),mesh=v,mat='existing_brick'))
             op=dict(id=id_,kind='door' if isdoor else 'window',u0=0,u1=b-a,z0=sill,z1=wall.z1,swing='pair, outward (+y)' if isdoor else '')
             out.append(atom(id_+'-frame','fixture','door' if isdoor else 'window',meta,sig=sig_of(id_,op),wall=wall,op=op,c_plane=0,nlights=2 if isdoor else max(1,round((b-a)/.70)),internal=False,rooms=[],frame_mat='upvc_white',sill_mat='upvc_white',conservatory=True))
+            if not along_x:
+                # The dwarf wall ends at the rear masonry corner. The
+                # actual rear sash is narrower and set back within that wall.
+                # Its inner face, not the masonry face, receives the side post.
+                rear=next((r for r in records if bounds(r['poly'])[1]-bounds(r['poly'])[0]>bounds(r['poly'])[3]-bounds(r['poly'])[2] and r not in doors),None)
+                if rear:
+                    _,_,front,back=bounds(rear['poly']);sash_face=(front+back)/2-.035
+                    if 0<sash_face-b<.10:
+                        from hb_geom import prism_varz
+                        P=[(centre-.035,b),(centre+.035,b),(centre+.035,sash_face),(centre-.035,sash_face)]
+                        coupling=prism_varz(P,lambda p:sill,lambda p:ceiling(p[1]))
+                        out.append(atom(id_+'-corner-post','mesh','existing',meta,sig=sig_of(id_,b,sash_face),mesh=coupling,mat='upvc_white'))
             if not along_x and abs(ceiling(a)-ceiling(b))>.004:
                 from hb_geom import prism_varz
                 P=[(x0,a),(x1,a),(x1,b),(x0,b)]

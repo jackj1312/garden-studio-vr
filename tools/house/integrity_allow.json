@@ -2,14 +2,6 @@
  "note": "Integrity faults left open on purpose, each with its reason and who decides. The gate passes only with these listed; every one is in the report. Remove an entry as soon as its fix lands.",
  "allow": [
   {
-   "category": "sky_leak",
-   "version": "as_built_now",
-   "match": [
-    "conservatory"
-   ],
-   "reason": "the conservatory's party side (x 0.16) has no wall or frame in the 4915.1 trace (only the rear and right frames): sky shows over the dwarf wall. The back is not photographed: question for Jack (what closes that side), not invented."
-  },
-  {
    "category": "open_shell",
    "match": [
     "G-stair_"

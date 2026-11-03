@@ -531,6 +531,16 @@ def scribe_architraves(objs, N, log, reach=0.035):
             linings.append((ob,[min(v[k] for v in verts) for k in range(3)],[max(v[k] for v in verts) for k in range(3)]))
     for ob,p in objs:
         if ob.name.endswith('_architraves') and not p['props'].get('as_built'):scribe_to_room_finish(ob,linings)
+    structure=[]
+    for ob,p in objs:
+        props=p['props']
+        if ob.type!='MESH' or props.get('stage_out') or props.get('context') or props.get('group') not in ('wall_outer','wall_inner','wall_plate'):continue
+        v=[ob.matrix_world@q.co for q in ob.data.vertices]
+        if v:structure.append((props.get('element'),ob,[min(q[k] for q in v) for k in range(3)],[max(q[k] for q in v) for k in range(3)]))
+    for ob,p in objs:
+        cut=p.get('atom') or {}
+        if cut.get('scribe_neighbours'):
+            scribe_to_room_finish(ob,[(part,lo,hi) for host,part,lo,hi in structure if host!=cut['carrier']])
     valleys=[]
     for ob,p in objs:
         if ob.type=='MESH' and p['props'].get('group')=='valley' and not p['props'].get('stage_out'):

@@ -867,11 +867,14 @@ def snap_loose(items_out, house_objs, N, log, spec_items):
             wv = [Vector((cx_ + (v.x - cx_) * margin, cy_ + (v.y - cy_) * margin, v.z)) for v in wv]
         t_ = BVHTree.FromPolygons(wv, [tuple(pl.vertices) for pl in o_.data.polygons])
         return sum(1 for (ia, ib) in t_.overlap(tree_)[:3000] if min(wv[vi].z for vi in o_.data.polygons[ia].vertices) > zb + lift)
+    body_shell=None
     # 1. push furniture and plants out of the walls along their front
     for ob, p in items_out:
         it = pos_of.get(ob.get("spec_id"))
         if it is None or ob.type != "MESH" or (it["category"] not in ("furniture", "plant") and ob.get("kit_kind") != "floor_lamp") or ob.get("spec_kind") in HUNG: continue
-        if deep_hits(ob, WALLS) <= 2: continue
+        if it['category']=='furniture' and body_shell is None:body_shell=tree_of(shell)
+        collision=body_shell if it['category']=='furniture' else WALLS
+        if deep_hits(ob,collision)==0:continue
         R3 = ob.matrix_world.to_3x3(); M0 = ob.matrix_world.copy(); done = None
         dirs = []
         for lv in (Vector((0, 1, 0)), Vector((1, 0, 0)), Vector((-1, 0, 0))):      # out along the front first, then sideways
@@ -882,8 +885,28 @@ def snap_loose(items_out, house_objs, N, log, spec_items):
         for d_ in dirs:
             for k in range(1, steps):       # up to 120 mm (a bed drawn 25 mm into the wall, duvet overhang)
                 ob.matrix_world = Matrix.Translation(d_ * 0.005 * k) @ M0
-                if deep_hits(ob, WALLS) <= 2: done = k * 5; break
+                if deep_hits(ob,collision)==0:done=k*5;break
             if done: break
+        if done is None and it['category']=='furniture':
+            # A board behind the object and a skirting to one side may each
+            # block a different axis. Keep the signed yaw and floor datum.
+            if body_shell is None:body_shell=tree_of(shell)
+            offsets=sorted((a*a+b*b,abs(b),a,b) for a in range(1,steps) for b in range(1-steps,steps)
+                           if b and a*a+b*b<(steps*steps))
+            for squared,_,forward,sideways in offsets:
+                delta=(dirs[0]*forward+dirs[1]*sideways)*.005
+                ob.matrix_world=Matrix.Translation(delta)@M0
+                if deep_hits(ob,body_shell)==0:
+                    done=round(math.sqrt(squared)*5,1)
+                    floor=tree_of([(o,p) for o,p in shell if p['props'].get('surface_role')=='floor' and p['props'].get('room_id')==it['room']])
+                    if floor:
+                        vs=[ob.matrix_world@v.co for v in ob.data.vertices]
+                        base=min(v.z for v in vs)
+                        eye=Vector((ob.matrix_world.translation.x,ob.matrix_world.translation.y,base+.03))
+                        hit=floor.ray_cast(eye,DN,.06)[0]
+                        if hit is not None and abs(hit.z-base)<.01:
+                            ob.matrix_world=Matrix.Translation((0,0,hit.z-base))@ob.matrix_world
+                    break
         if done is None: ob.matrix_world = M0; continue
         ob["nudge_mm"] = done; moved.append((it["id"], f"out of the wall {done} mm"))
     # 1b. cushions rest against the sofa's back cushions, never inside them: moved forward along their front, up to 300 mm

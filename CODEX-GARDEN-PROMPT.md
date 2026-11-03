@@ -19,6 +19,12 @@ everything by mouse, with clean shapes:
   timber sleepers, gravel, lawn) and planting (choose a palette for a bed).
 - **See it as I go:** a plan view to draw in and a 3D view of the same design, side by side or switchable, in our garden with
   the house; the design opens in the house walkthrough and the headset too.
+- **In my Quest too:** design standing in the garden. The toolkit lives on a panel on my LEFT hand (pick a tool, shape,
+  material, depth, steps, undo); my RIGHT controller draws on the ground with the marking tool we already have (`src/marks.js`:
+  point at the ground, hold the trigger and sweep). A swept stroke becomes a clean shape: a rough curve snaps to a smooth
+  wall/edge/path, a closed loop becomes a patio or bed, a trigger-and-drag outward makes a perfect circle or square. Then grab
+  points or handles with the ray to adjust, and raise or sink a selected shape with the thumbstick. Everything I make in the
+  headset is the same design file as on the computer, and the reverse.
 - It saves the design to a file in the project, so I can come back and keep editing.
 
 ## Later, not now

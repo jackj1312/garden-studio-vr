@@ -46,7 +46,7 @@ footer{margin-top:60px;font-size:13px;color:var(--muted);border-top:1px solid va
 @media print{figure img.kit-plate{height:142mm;width:100%;object-fit:contain;background:#eeeae3}body{background:#fff}main{padding:0}.stage{border-color:#ccc}h2{break-after:avoid}}
 @media (max-width:600px){h1{font-size:34px}.stage{padding:18px}}
 #garden-design .pics img {max-height:210px; object-fit:contain;background:#edf0e9;}
-@media print {#garden-design .pics img {max-height:145px;} #garden-design {break-before:page;break-inside:avoid;} #garden-design figure {break-inside:avoid;}}
+@media print {#garden-design .pics img {max-height:145px;} #garden-design, #furnishing-editor {break-before:page;break-inside:avoid;} #garden-design figure {break-inside:avoid;}}
 </style>
 </head>
 <body>
@@ -62,7 +62,7 @@ today on 23 Battle Road, the test house.</p>
 <span class="done">● working</span> · <span class="part">● working, still improving</span> · <span class="plan">● planned</span></p>
 
 <div class="ok"><strong>Open it any time</strong> (on the Mac, phone or Quest, on the home Wi-Fi):<br>
-Room planner: <a href="https://192.168.1.118:8443/plan/">https://192.168.1.118:8443/plan/</a> · 
+Room planner: <a href="https://192.168.1.118:8450/plan/">https://192.168.1.118:8450/plan/</a> · 
 Walkthrough (review): <a href="https://192.168.1.118:8443/w/">https://192.168.1.118:8443/w/</a> · 
 Customer preview: <a href="https://192.168.1.118:8443/p/">https://192.168.1.118:8443/p/</a><br>
 Garden design on the <a href="https://127.0.0.1:8450/garden/">studio Mac</a> or <a href="https://192.168.1.118:8450/garden/">studio Wi-Fi for iPad and Quest</a>. Start the garden port with <code>tools/start_garden.command</code>.<br>
@@ -112,9 +112,18 @@ each one makes the next house cheaper.</p>
   signed spec. The client does this themselves in the <strong>room planner</strong>: a free plan view where they see each
   room, drag furniture, swap items from a catalogue by style, change colours and preview in 3D, before any expensive 3D work.
   When they're happy they pay the deposit and the build starts.</p>
-  <div class="facts"><div><b>In</b>The measured house, the client's choices</div><div><b>Out</b>A signed spec of every finish and item</div><div><b>Next</b>The planner reads and writes the same layout as the walkthrough</div></div>
+  <div class="facts"><div><b>In</b>The measured house, the client's choices</div><div><b>Out</b>A signed spec of every finish and item</div><div><b>Save</b>The planner reads and writes the same layout as the walkthrough</div></div>
   <figure class="pics"><img src="img/05-planner-room.jpg" alt="Planner room view"><img src="img/06-planner-catalogue.jpg" alt="Planner catalogue"><img src="img/07-planner-3d.jpg" alt="Planner 3D preview"></figure>
   <figcaption>The client planner: a room in plan, the catalogue by style, and the kitchen previewed in 3D.</figcaption>
+</section>
+
+<section class="stage" id="furnishing-editor">
+  <header><span class="num">2F</span><h3>Furnish and finish each room</h3><span class="badge done">● private candidate checked</span></header>
+  <p>Open <strong>Furnish a room</strong> in the walkthrough or a room in the client planner. Both use the same measured layout. Select a catalogue thumbnail, point at its host and place the piece. A red outline explains a blocked drop. Doors, routes and supported accessories are checked as furniture moves. The colour picker addresses one wall face and the floor selector addresses one room.</p>
+  <div class="facts"><div><b>Catalogue</b>280 photographed entries, 85 kinds and six styles</div><div><b>House</b>121 movable Before items and 152 After items</div><div><b>Next build</b>Fixed house, reusable models and a baked model of the saved revision</div></div>
+  <figure class="pics"><img src="img/30-furnish-plan.jpg" alt="Room plan with a side table, palette and floor control"><img src="img/31-furnish-quest.jpg" alt="The room plan and furniture controls in the simulated headset"></figure>
+  <figcaption>Mouse and touch share the same plan, collision rules and revision as the left-wrist catalogue. The Quest right ray places and drags, and the right thumbstick turns the selected piece.</figcaption>
+  <p>The checked private candidate is available <a href="https://127.0.0.1:8450/house.html?site=house&amp;mode=review&amp;edit=1">on the studio Mac</a>. The existing client house publication stays on its own release until all building checks pass.</p>
 </section>
 
 <section class="stage" id="garden-design">

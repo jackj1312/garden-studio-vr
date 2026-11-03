@@ -7,11 +7,7 @@ const root=path.resolve(__dirname,'../..'),local='https://127.0.0.1:8450';
 const [round,site='house',...opts]=process.argv.slice(2);
 if(!round || !/^[\w-]+$/.test(round)||!/^[\w-]+$/.test(site))throw Error('Expected a local round and site ID');
 const out=path.join(root,'renders/house-build/furnishing',round);
-const cameras=[
- ['kitchen-diner',[7.65,1.50,-4.83],[2.2,1,-7.6]],
- ['lounge',[3.30,1.50,-.75],[1.2,1,-4.2]],
- ['front-garden',[3.7,1.369,9.8],[4,1,.2]],
-];
+const cameras=require('./furnish_cameras.cjs');
 async function main(){
  fs.mkdirSync(out,{recursive:true});
  const browser=await puppeteer.launch({executablePath:process.env.CHROME||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,
@@ -37,11 +33,13 @@ async function main(){
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/sites',site,'versions.json')));
   const hashes=new Set(),stats={};
   async function select(version){
-    await page.evaluate(async id=>{let h=window.__house;if(h.V.def.id!==id)await h.useVersion(id);h.setStage(h.stageN);h.furnished(true);h.step(1);},version);
+    await page.evaluate(async id=>{let h=window.__house;if(h.V.def.id!==id)await h.useVersion(id);h.setStage(h.stageN);h.furnished(true);h.step(1);if(h.furnishing){h.furnishing.setStage(h.stageN);await h.furnishing.readyModels;}},version);
   }
   async function shoot(name,point){
     const shot=await page.evaluate(v=>{
-      const h=window.__house,r=h.captureAt(v),stats=h.stats();
+      const h=window.__house;
+      if(h.V.def.furnish_runtime && !h.furnishing?.runtime?.group.children.some(b=>b.visible&&b.count>0))throw Error('No visible runtime furniture in furnished capture');
+      const r=h.captureAt(v),stats=h.stats();
       return {url:r.url,hash:r.hash,stats,version:h.V.def.id,stage:h.stage};
     },{w:800,h:450,post:true,...point});
     if(hashes.has(shot.hash))throw Error('Duplicate camera frame: '+name);

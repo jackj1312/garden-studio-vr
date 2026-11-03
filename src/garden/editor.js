@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
 import {GardenStore} from './store.mjs';
-import {createGardenPanel} from './panel.js';
+import {createGardenPanel} from './panel.js?v=walk1';
 import {createGardenScene} from './scene.js';
 import {createGardenTerrain} from './terrain.js';
 import {createGardenPlan} from './plan.js';
@@ -10,10 +10,10 @@ import {createDrawing,angleOf} from './drawing.mjs';
 import {createFeature} from './catalogue.mjs';
 import {fitStroke,handlesOf,outlineMeasurements} from './geometry.mjs';
 
-export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,indoor,occlusion,normalPass}) {
+export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,walkPreview,indoor,occlusion,normalPass}) {
   const canvas=document.createElement('canvas');canvas.id='garden-plan';canvas.hidden=true;canvas.setAttribute('aria-label','Measured garden drawing plan');document.body.append(canvas);
   const terrain=createGardenTerrain(T,normalPass), garden=createGardenScene(T,scene), plan=createGardenPlan(T,{renderer,scene,canvas,terrain});
-  const stores=new Map();let active=false,bird=false,version='',store=null,loaded=false,oldPen=false,vrWas=false;
+  const stores=new Map();let active=false,bird=false,collapsed=false,resumeBird=false,version='',store=null,loaded=false,oldPen=false,vrWas=false;
   const overlay=new T.Group();overlay.name='Garden edit handles';overlay.userData.gardenOverlay=true;scene.add(overlay);
   const handleGeo=new T.SphereGeometry(1,8,6),handleMat=new T.MeshBasicMaterial({color:0xffdc91,depthTest:false,toneMapped:false});
   const strokeMat=new T.LineBasicMaterial({color:0xffdd87,depthTest:false,toneMapped:false});
@@ -21,14 +21,15 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   const draw=createDrawing({store:()=>store,pick:(x,z,t)=>garden.pick(x,z,t),ground:terrain.ground,changed:sync});
   function state(){
     const selected=store?.get(draw.state.selectedId)||null;
-    return {...draw.state,draft:draw.draft,drawingId:draw.drawingId,drawingReadout:draw.readout(),active,bird,site,version,selected,angle:selected?angleOf(selected.geometry):0,objects:cacheObjects,dirty:store?.dirty,saving:store?.saving,undo:store?.canUndo,redo:store?.canRedo,status:draw.state.status||status,conflict:draw.state.conflict};
+    return {...draw.state,draft:draw.draft,drawingId:draw.drawingId,drawingReadout:draw.readout(),active,bird,collapsed,site,version,selected,angle:selected?angleOf(selected.geometry):0,objects:cacheObjects,dirty:store?.dirty,saving:store?.saving,undo:store?.canUndo,redo:store?.canRedo,status:draw.state.status||status,conflict:draw.state.conflict};
   }
   const panel=createGardenPanel({action}),wrist=createGardenWrist({THREE:T,scene,camera,action,state,planImage:()=>plan.image,bounds:()=>plan.full});
   function sync(points){
     if(!store)return;
     strokes=points||null;cacheObjects=store.objects;
-    const draft=draw.draft,objects=draft?[...cacheObjects.filter(f=>f.id!==draft.id),draft]:cacheObjects;
-    const id=active?draw.state.selectedId:null;
+    const draft=collapsed?null:draw.draft,objects=draft?[...cacheObjects.filter(f=>f.id!==draft.id),draft]:cacheObjects;
+    const id=active&&!collapsed?draw.state.selectedId:null;
+    overlay.visible=active&&!collapsed;
     garden.set(objects,id);terrain.cuts(garden.cuts());
     plan.update(objects,active && draft?.kind==='outbuilding-base'?draft.id:id,strokes,active);
     for(const o of [...overlay.children]){overlay.remove(o);if(o.isLine)o.geometry.dispose();}
@@ -63,13 +64,30 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     bird=on;canvas.hidden=!active||!bird||inVR();if(document.pointerLockElement)document.exitPointerLock();
     sync();if(bird)requestAnimationFrame(()=>{if(active){fitPlanToDock();plan.capture();plan.render();}});
   }
+  function collapse(on){
+    if(!active||on===collapsed)return;
+    collapsed=on;document.body.classList.toggle('garden-walking',on);
+    if(on){
+      resumeBird=bird;
+      for(const [id,p] of pointers){if(p.el?.hasPointerCapture?.(id))p.el.releasePointerCapture(id);}
+      pointers.clear();primary=null;pan=null;
+      if(draw.drawing)draw.cancel();
+      view(false);
+      document.activeElement?.blur?.();
+      if(!inVR())walkPreview?.(true);
+    }else{
+      walkPreview?.(false);view(resumeBird);
+    }
+    sync();
+  }
   function enter(){
     if(!store||openLayoutEditor('garden',site,version))return;
     active=true;document.body.classList.add('garden-editing');marks?.setActive(false);prepare(true);
     view(true);status=loaded?'Draw a shape or select one to edit.':status;sync();
   }
   function leave(){
-    active=false;draw.cancel();document.body.classList.remove('garden-editing','garden-immersive');canvas.hidden=true;bird=false;indoor(false);prepare(false);sync();
+    if(collapsed)walkPreview?.(false);collapsed=false;
+    active=false;draw.cancel();document.body.classList.remove('garden-editing','garden-immersive','garden-walking');canvas.hidden=true;bird=false;indoor(false);prepare(false);sync();
   }
   async function importMark(){
     let ref=marks?.strokes.filter(s=>s.kind==='proposal'&&marks.isShown(s)).map(s=>({id:s.id,p:s.pts.map(q=>[q.x,q.y,q.z]),closed:s.closed,label:s.note||s.id}))||[];
@@ -102,6 +120,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   async function action(name,value){
     try{
       if(name==='vr'){document.getElementById('vr').click();return;}
+      if(name==='collapse'){collapse(!collapsed);return;}
       if(name==='view'){view(!bird);return;} if(name==='close'){leave();return;}
       if(name==='save'){await store.save();status='Saved · revision '+store.revision;draw.state.conflict=false;}
       else if(name==='reload'){
@@ -133,13 +152,13 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   function pointer(el){
     const consume=e=>{e.stopImmediatePropagation();e.preventDefault();};
     el.addEventListener('pointerdown',e=>{
-      if(!active||inVR()||el===renderer.domElement&&bird)return;
+      if(!active||collapsed||inVR()||el===renderer.domElement&&bird)return;
       consume(e);
       if(e.pointerType==='touch' && primary!=null && pointers.get(primary)?.type==='pen')return;
       if(e.pointerType==='pen' && pointers.size){pointers.clear();pan=null;draw.cancel();}
       el.setPointerCapture?.(e.pointerId);
       if(e.pointerType==='pen')oldPen=true;
-      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType,el});
       if(el===canvas&&(pointers.size>1||e.button!==0||(oldPen&&e.pointerType==='touch'))){
         draw.cancel();primary=null;pan=pair();return;
       }
@@ -148,9 +167,9 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
       draw.begin(p,{screenY:e.clientY,free:e.altKey||e.shiftKey,tolerance:el===canvas?Math.max(.08,plan.metres(e.pointerType==='mouse'?8:13)):.22});
     },true);
     el.addEventListener('pointermove',e=>{
-      if(!active||inVR())return;
+      if(!active||collapsed||inVR())return;
       if(!pointers.has(e.pointerId)){if(draw.corners.length)draw.hover(at(e,el));return;}consume(e);
-      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType,el});
       if(pan){const next=pair();if(el===canvas){const a=plan.at(pan.x,pan.y),b=plan.at(next.x,next.y);plan.pan(a[0]-b[0],a[1]-b[1]);if(pan.d&&next.d)plan.zoom(pan.d/next.d,plan.at(next.x,next.y));}else look(next.x-pan.x,next.y-pan.y);
         pan=next;return;}
       if(primary!==e.pointerId)return;
@@ -164,14 +183,19 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
       if(el.hasPointerCapture?.(e.pointerId))el.releasePointerCapture(e.pointerId);
     }
     el.addEventListener('pointerup',e=>up(e,false),true);el.addEventListener('pointercancel',e=>up(e,true),true);
-    el.addEventListener('click',e=>{if(active)consume(e);},true);
-    el.addEventListener('contextmenu',e=>{if(active)consume(e);});
+    el.addEventListener('click',e=>{if(active&&!collapsed)consume(e);},true);
+    el.addEventListener('contextmenu',e=>{if(active&&!collapsed)consume(e);});
   }
   pointer(canvas);pointer(renderer.domElement);
   canvas.addEventListener('wheel',e=>{if(!active)return;e.preventDefault();plan.zoom(Math.exp(Math.max(-1,Math.min(1,e.deltaY*.0018))),plan.at(e.clientX,e.clientY));},{passive:false});
   addEventListener('keydown',e=>{
     if(!active||inVR()||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]'))return;
     const k=e.key.toLowerCase(),mod=e.metaKey||e.ctrlKey;
+    if(collapsed){
+      if(k==='escape' && document.pointerLockElement){e.preventDefault();document.exitPointerLock();}
+      if(k==='tab'&&!mod&&!e.shiftKey){e.preventDefault();e.stopImmediatePropagation();collapse(false);}
+      return;
+    }
     const cmd=mod&&k==='z'?(e.shiftKey?'redo':'undo'):mod&&k==='s'?'save':mod&&k==='d'?'copy':k==='delete'||k==='backspace'?'delete':k==='escape'?'cancel':k==='enter'?'finish':null;
     if(cmd){e.preventDefault();e.stopImmediatePropagation();action(cmd);}
   },true);
@@ -181,7 +205,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   document.querySelectorAll('[data-garden-open]').forEach(b=>b.addEventListener('click',enter));
   const consumer={project:surface,hover(h){draw.hover(h?.point);},begin(h){draw.begin(h.point,{tolerance:bird ? .30 : .21});},move(h){draw.move(h.point,{deltaY:h.verticalDelta});},end(){draw.end();},cancel(){draw.cancel();}};
   function frame(left,now){
-    const vr=inVR();document.body.classList.toggle('garden-immersive',active&&vr);if(vr!==vrWas){vrWas=vr;canvas.hidden=!active||!bird||vr;indoor(active&&vr);}
+    const vr=inVR();document.body.classList.toggle('garden-immersive',active&&vr);if(vr!==vrWas){vrWas=vr;if(vr&&collapsed)collapse(false);canvas.hidden=!active||!bird||vr;indoor(active&&vr);}
     if(!active){wrist.update(left,false,vr);return;}
     if(!plan.ready&&bird)plan.capture();
     if(vr)indoor(true);

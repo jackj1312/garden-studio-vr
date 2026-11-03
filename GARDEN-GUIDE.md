@@ -10,7 +10,8 @@ If port 8450 is down, double-click `tools/start_garden.command` in Garden Studio
 2. For a circle or square, drag from the centre. For a rectangle, drag between opposite corners. Sweep a curve, returning to the starting point for a closed patio or bed. With **Corner points**, click each corner and press **Finish shape**. **Straight runs** draws between the two chosen ends.
 3. Choose **Select**. Drag the body to move it, a corner or radius handle to resize, and the control points or tangent handles to reshape a curve. Type the radius, dimensions, centre coordinates or angle when a measurement matters. The selected object's fields also change its material, pattern and planting palette.
 4. Set **Level** in metres. Negative values excavate. Positive values raise the surface. **Add steps** on screen or **Fit steps** on the wrist adds a flight to a levelled area. Adjust its position around the perimeter, width and count. Raised beds and walls can have coping. Each plant or tree is its own selectable object and can be moved, copied and removed independently.
-5. **Standing** returns to the garden and house. Right-drag to look while designing. The ordinary house walk controls still work. **Save garden** writes this site and house version. Undo and redo are available for individual drawing and editing actions.
+5. **Minimise** takes you to standing height and gives the mouse to the walkthrough. Move the mouse to turn and use **WASD** or the arrow keys to walk. **Esc** releases the pointer. Click the garden to lock it again. **Tab** or **Show tools** returns to your previous drawing view.
+6. **Standing** returns to the garden and house. Right-drag to look while designing. The ordinary house walk controls still work. **Save garden** writes this site and house version. Undo and redo are available for individual drawing and editing actions.
 
 ### An outbuilding base
 
@@ -42,3 +43,5 @@ The mouse, mobile touch, simulated Pencil and simulated Quest controller all cre
 
 ![The garden drawing tools on the simulated left wrist](docs/pipeline/img/28-garden-wrist.jpg)
 
+
+![Garden tools minimised with the walkthrough active](renders/garden-tool/garden-walk-mac.jpg)

@@ -1,4 +1,5 @@
-You are working in Jack's live studio project (this folder). Bring the quality of your own independent Battle Road build
+You are working in Jack's live studio project: `~/Garden Studio VR` (this folder). Before anything else, tell me in one line
+to switch you to your highest reasoning level, and wait until I say it's done. Bring the quality of your own independent Battle Road build
 (`~/Desktop/23 Battle Road/independent/`) into THIS build, and build the furnishing system described below, end to end.
 Work autonomously, stage by stage, until every stage is done and tested. Ask me only for spending, logins/purchases, or a
 design choice this brief and the project files don't answer, and batch those questions.
@@ -90,6 +91,7 @@ fix round, after any context reset, and before every report. Change it only with
 
 ## Rules
 - Jack's Mac is an 8 GB M1 Air: one heavy job at a time (Blender, conversions, captures); no Cycles renders or light bakes.
+  Claude runs no Blender or heavy job while you work; you have the Mac's one heavy slot.
 - Don't break what works: navigation, Before/After, Furnished/Unfurnished, doors, marking tool, headset controls, room
   culling. Keep the walk test (`house.html?site=house-wip&test=walk`) passing.
 - Publish to `assets/sites/house-wip` only when every check passes (integrity, shell, finish, spec, export and the walk test);

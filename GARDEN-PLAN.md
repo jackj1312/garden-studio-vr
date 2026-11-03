@@ -25,3 +25,5 @@ Re-read this plan, FIRST-PASS and the relevant project rules before each stage, 
 
 2026-11-03 · Jack requested locked-mouse walking with the garden panel minimised. Reuse house walking and head turning, suspend drawing, retain the current design and return to the same editing view. Test real pointer lock, Esc, relative mouse movement and WASD on the live route.
 2026-11-03 · Jack reported low desktop frame rate. Measure the actual live Retina garden and keep its geometry, material and shadow detail while reducing screen passes and unnecessary roof queries during design. Verify the regular house render resumes on exit.
+
+2026-11-03 · A minimised editor must support mouse look when the embedded browser denies native pointer lock. Garden and Furniture must be reachable in both directions while preserving drafts. The older Wi-Fi garden has explicit return links for the furnished preview and room planner.

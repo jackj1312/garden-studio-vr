@@ -36,3 +36,5 @@ The current published build already fails gates. Keep its baseline separate from
 2026-11-03 · Jack reported the new furnished house was slow on his PC. Test the ordinary desktop route at Retina resolution, use direct rendering while turning or walking and restore desktop contact shadows for the stationary room. Publish a distinct read-only local preview while the client release completes its gates.
 
 2026-11-03 · Jack wants unrestricted placement, wall snapping, independent height, fine arrow controls, clickable highlighted wall faces and photographic floor coverings. Spatial checks are advisory in the editors and on save.
+
+2026-11-03 · Jack asked for textured floor detail, button-free look in the embedded browser, reciprocal garden/furniture navigation, Plan and Detailed 3D overhead editing, one house-wide toolbar light switch, Golden hour and Night. Check visible bulbs across rooms and from the garden, continuous window light at thresholds and on/off desktop frame intervals on the served build. Unreal floor material inputs are checked in the exported GLB; an Unreal render is a separate proof.

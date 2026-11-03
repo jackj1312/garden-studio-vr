@@ -45,3 +45,5 @@ The mouse, mobile touch, simulated Pencil and simulated Quest controller all cre
 
 
 ![Garden tools minimised with the walkthrough active](renders/garden-tool/garden-walk-mac.jpg)
+
+From the integrated Garden panel, choose **Furniture** to return to the room editor in the same house version. Its **Garden** button brings you back. In the separate Wi-Fi garden, **Furnished house** opens the latest read-only walkthrough and **Wi-Fi room planner** opens the client planner.

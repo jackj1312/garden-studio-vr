@@ -14,6 +14,7 @@ import { installSite } from "./site.js?v=f383e46-1642";
 import { createFade, attachControllerModels, attachHandModels, createShadowFollow, createBlobShadows, hapticPulse } from "./presence.js?v=f383e46-1642";
 import { createAmbience } from "./ambience.js?v=f383e46-1642";
 import { updateWind } from "./wind.js?v=f383e46-1642";
+import {helpPage} from "./editor-help.js";
 import { createMarks } from "./marks.js?v=f383e46-1642";
 import { createRefs } from "./refs.js?v=f383e46-1642";
 
@@ -466,6 +467,7 @@ panel.rotation.set(-Math.PI / 3.1, 0, 0);
 panel.visible = false;
 
 const HIT = {
+  how: { x: 367, y: 9, w: 125, h: 36 },
   scrub: { x: 24, y: 112, w: 464, h: 54 },
   play:  { x: 24, y: 242, w: 150, h: 48 },
   varA:  { x: 190, y: 242, w: 142, h: 48 },
@@ -490,6 +492,7 @@ function roundRect(c, x, y, w, h, r) {
 const inHit = (uv, r) =>
   uv.x * PW >= r.x && uv.x * PW <= r.x + r.w && uv.y * PH >= r.y && uv.y * PH <= r.y + r.h;
 
+let wristHelp=-1;
 function drawPanel() {
   pctx.clearRect(0, 0, PW, PH);
   pctx.fillStyle = "rgba(16,18,16,0.93)";
@@ -497,6 +500,14 @@ function drawPanel() {
   pctx.lineWidth = 2;
   roundRect(pctx, 2, 2, PW - 4, PH - 4, 18); pctx.fill(); pctx.stroke();
 
+  if(wristHelp>=0){
+    const rows=helpPage("site")[1],[title,description]=rows[wristHelp];
+    pctx.fillStyle="#e3ebda";pctx.font="600 26px system-ui";pctx.fillText(title,22,86);
+    pctx.font="20px system-ui";let line="",y=130;
+    for(const word of description.split(" ")){if(pctx.measureText(line+" "+word).width>460){pctx.fillText(line,22,y);y+=28;line="";}line+=(line?" ":"")+word;}
+    pctx.fillText(line,22,y);pctx.fillStyle="#c3d4ba";pctx.fillText("Next control   →",22,319);pctx.fillText("Close help",367,35);
+    panelTex.needsUpdate=true;uiDirty=false;return;
+  }
   const idx = Math.min(5, Math.max(0, Math.round(stageValue) - 1));
   pctx.fillStyle = "#f2f1ea";
   pctx.font = "600 33px system-ui, sans-serif";
@@ -538,6 +549,7 @@ function drawPanel() {
   btn(HIT.play, playing ? "Pause" : "Play build", playing);
   btn(HIT.varA, VARIANTS.A.label, variant === "A");
   btn(HIT.varB, VARIANTS.B.label, variant === "B");
+  btn(HIT.how,"How to use",false);
   timeKeys.forEach((k, i) => btn(timeHit[i], TIMES[k].short || TIMES[k].label, timeKey === k));
 
   if (cursorUV) {
@@ -632,6 +644,11 @@ function updatePointer() {
   const uv = cursorUV;
   const pressed = trigger && !triggerWasDown;
 
+  if(pressed && (inHit(uv,HIT.how)||wristHelp>=0)){
+    wristHelp=inHit(uv,HIT.how)?(wristHelp<0?0:-1):(wristHelp+1)%helpPage("site")[1].length;
+    uiDirty=true;triggerWasDown=trigger;return;
+  }
+  if(wristHelp>=0){triggerWasDown=trigger;return;}
   if (pressed && inHit(uv, HIT.scrub)) dragging = true;
   if (dragging && trigger) {
     setStage(1 + clamp01((uv.x * PW - HIT.scrub.x) / HIT.scrub.w) * 5);

@@ -578,7 +578,7 @@ function lineObject(state,e) {
 }
 
 export function createGardenScene(THREE, scene){
-  const T=THREE,root=new T.Group();root.name='Garden proposals';scene.add(root);
+  const T=THREE,root=new T.Group();root.name='Garden proposals';root.userData.gardenOverlay=true;scene.add(root);
   const entries=new Map(),materials=new Map(),normals=new Map();
   const vegetation=new T.MeshStandardMaterial({vertexColors:true,roughness:.84,side:T.DoubleSide});
   const selectionMaterial=new T.LineBasicMaterial({color:0xedbd63});

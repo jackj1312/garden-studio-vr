@@ -48,7 +48,9 @@ export function createWalker(getBVH, getMask, getFloorMask = getMask, proposal =
       ray.origin.set(pos.x, (h > 1.2 ? low : pos.y) + h, pos.z);
       ray.direction.copy(d);
       const house = bvh.raycast(ray, far, mask);
-      const added = proposal?.barrier(ray, far);
+      const obstacle = proposal?.barrier(ray, far);
+      const p = obstacle?.point;
+      const added = p && !proposal.indoors(p.x,p.y,p.z) ? obstacle : null;
       const hit = added && (!house || added.distance < house.distance) ? added : house;
       if (hit && Math.abs(hit.normal.y) < 0.7 && (!best || hit.distance < best.distance))
         best = { distance: hit.distance, normal: hit.normal.clone() };

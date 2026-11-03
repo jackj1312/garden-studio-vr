@@ -3,7 +3,7 @@ import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs';
 import { measureGeometry } from './geometry.mjs';
 import { angleOf } from './drawing.mjs';
 
-const W = 704, H = 816, WRIST_W = .39, WRIST_H = WRIST_W * H / W;
+const W = 704, H = 816, WRIST_W = .265, WRIST_H = WRIST_W * H / W;
 const METHODS = {
   auto: 'Fit my stroke', straight: 'Straight run', curve: 'Smooth curve', arc: 'Circular arc',
   circle: 'Circle', rectangle: 'Rectangle', square: 'Square', corners: 'Corner points',
@@ -248,21 +248,25 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
   function planPosition() {
     camera.getWorldPosition(head); camera.getWorldDirection(forward); forward.y = 0;
     if (forward.lengthSq() < .001) forward.set(0, 0, -1);
-    forward.normalize(); position.copy(head).addScaledVector(forward, .96); position.y -= .15;
+    forward.normalize(); position.copy(head).addScaledVector(forward, .91);
+    position.x -= forward.z * .245; position.z += forward.x * .245; position.y -= .045;
     table.position.copy(scene.worldToLocal(position));
     table.lookAt(head); table.rotateX(-.17); table.updateMatrixWorld(true);
   }
+  let paintedRevision=null;
   function refreshPlan() {
     const b = bounds();
     if (!b || ![b.x0,b.x1,b.z0,b.z1].every(Number.isFinite) || b.x1 <= b.x0 || b.z1 <= b.z0) return;
     extent = { ...b };
     const ratio = (b.x1 - b.x0) / (b.z1 - b.z0);
-    const w = Math.min(.96, .68 * ratio), h = w / ratio;
+    const w = Math.min(1.10, .92 * ratio), h = w / ratio;
     table.scale.set(w, h, 1); table.updateMatrixWorld(true);
     // Hide our own surfaces for a host that renders the orthographic snapshot here.
     const wristShown = wrist.visible; table.visible = wrist.visible = false;
     let source;
     try { source = planImage(); } finally { wrist.visible = wristShown; table.visible = true; }
+    if(source?.gardenRevision!=null && paintedRevision===source.gardenRevision)return;
+    paintedRevision=source?.gardenRevision ?? null;
     if (source && (source.width || source.videoWidth || source.naturalWidth)) {
       const width = ratio >= 1 ? 768 : Math.max(1, Math.round(768 * ratio));
       const height = ratio >= 1 ? Math.max(1, Math.round(768 / ratio)) : 768;

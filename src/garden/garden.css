@@ -169,3 +169,5 @@
  .garden-editing .gd-panel { top:auto; }
  body:has(.gd-panel.gd-collapsed) #garden-plan {height:calc(100dvh - 100px);}
 }
+
+.garden-immersive .gd-panel,.garden-immersive #toast,.garden-immersive #crosshair,.garden-immersive #lookHint {display:none!important;}

@@ -260,6 +260,7 @@
   body.touch-sticks #toast { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 160px); }
 </style>
 <link rel="stylesheet" href="src/editor-help.css">
+<link rel="stylesheet" data-garden-panel-style href="src/garden/garden.css">
 <script type="module" src="src/editor-help.js"></script>
 </head>
 <body>
@@ -418,6 +419,7 @@
     <span id="loadText">Loading…</span>
   </div>
   <div class="actions">
+    <button type="button" data-editor-help="house">How to use</button>
     <button class="primary" id="startDesktop" disabled>Explore on this screen</button>
     <button id="startVR" disabled>Enter VR</button>
   </div>
@@ -434,6 +436,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=furnish2"></script>
+<script type="module" src="src/house/viewer.js?v=garden1"></script>
 </body>
 </html>

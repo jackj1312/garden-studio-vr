@@ -20,7 +20,7 @@ export function createGardenPlan(T,{renderer,scene,canvas,terrain}) {
     const old=renderer.getRenderTarget(),xr=renderer.xr.enabled,oldViewport=renderer.getViewport(new T.Vector4()),oldScissor=renderer.getScissor(new T.Vector4()),scissor=renderer.getScissorTest();
     const hidden=scene.children.filter(o=>o.visible&&(o.userData.gardenOverlay||o.name==='Marks'));hidden.forEach(o=>o.visible=false);
     try {
-      renderer.xr.enabled=false;renderer.setRenderTarget(target);renderer.setScissorTest(false);renderer.clear();renderer.render(scene,camera);
+      renderer.xr.enabled=false;renderer.setRenderTarget(target);renderer.setScissorTest(false);renderer.clear();terrain.surveyOnly(()=>renderer.render(scene,camera));
       const bytes=new Uint8Array(base.width*base.height*4);renderer.readRenderTargetPixels(target,0,0,base.width,base.height,bytes);
       const ctx=base.getContext('2d'),img=ctx.createImageData(base.width,base.height),stride=base.width*4;
       for(let y=0;y<base.height;y++)img.data.set(bytes.subarray((base.height-y-1)*stride,(base.height-y)*stride),y*stride);
@@ -53,6 +53,7 @@ export function createGardenPlan(T,{renderer,scene,canvas,terrain}) {
   }
   function render(){
     if(!full)return;
+    picture.gardenRevision=(picture.gardenRevision||0)+1;
     const c=picture.getContext('2d');c.clearRect(0,0,picture.width,picture.height);c.drawImage(base,0,0);overlay(c,picture.width,picture.height,full,editing);
     if(!canvas.isConnected||canvas.hidden)return;
     const r=canvas.getBoundingClientRect(),ratio=Math.min(2,devicePixelRatio);if(r.width<2||r.height<2)return;

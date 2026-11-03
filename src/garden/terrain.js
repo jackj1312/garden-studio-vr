@@ -24,7 +24,7 @@ export function createGardenTerrain(T,normalPass) {
   }
   function hit(r,far=120){
     if(!entry)return null;
-    const h=entry.bvh.raycast(r,far,mask,null); if(!h||h.normal.y<.45)return null;
+    const h=entry.bvh.raycast(r,far,mask,null); if(!h||h.normal.y<.45 || entry.model.roomAt(h.point.x,h.point.y+1,h.point.z))return null;
     return {point:h.point.clone(),normal:h.normal.clone(),distance:h.distance,surface:'garden'};
   }
   function ground(x,z){ray.origin.set(x,15,z);ray.direction.set(0,-1,0);return hit(ray)?.point.y??null;}
@@ -74,6 +74,11 @@ if (gsWeight > 0.5 && all(greaterThanEqual(gsUV, vec2(0.))) && all(lessThanEqual
     }
     signature=key;
   }
-  return {version,cuts,hit,ground,get extent(){return extent;},dispose:restore};
+  function surveyOnly(render){
+    const rects=adopted.map(([m])=>[m.userData.gardenMaskRect,m.userData.gardenMaskRect.clone()]);
+    try{for(const [r] of rects)r.set(1e6,1e6,1,1);return render();}
+    finally{for(const [r,old] of rects)r.copy(old);}
+  }
+  return {version,cuts,hit,ground,surveyOnly,get extent(){return extent;},dispose:restore};
 }
 

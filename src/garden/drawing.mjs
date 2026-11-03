@@ -26,6 +26,7 @@ export function drawnGeometry(kind,method,coords,finish=false) {
     if (points.length>1 && distance(points.at(-1),points[0])<.01) points.pop();
     return validateGeometry({type:'curve',closed,knots:points.map(p=>({p,in:[...p],out:[...p],mode:'corner'}))});
   }
+  if(method==='straight'&&!closed)return fitStroke([start,end],{closed:false,mode:'straight'});
   return fitStroke(coords,{closed,mode:method});
 }
 

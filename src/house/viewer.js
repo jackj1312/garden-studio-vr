@@ -1524,7 +1524,7 @@ const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUti
 const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
 const locked = () => document.pointerLockElement === renderer.domElement;
 let lockRefused = false, lockWanted = false;
-const lookEligible = e => walk && !inVR() && !IS_TOUCH && (!e || e.pointerType === "mouse") && !lockRefused;
+const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse") && !lockRefused;
 function captureMouse() {
   lockWanted = true;
   try {
@@ -3335,13 +3335,18 @@ function gardenQuality(on) {
   }
 }
 async function initGarden() {
-  const {createGardenEditor} = await import("../garden/editor.js");
+  const {createGardenEditor} = await import("../garden/editor.js?v=walk1");
   pickRay.isOutdoor = index => { const p=V.model.parts[index]; return p?.group==="ground" || p?.storey==="site"; };
   garden = createGardenEditor({scene,camera,renderer,site:SITE,marks,inVR,occlusion:pickRay,normalPass:()=>gtao?.normalMaterial,indoor:gardenQuality,
     prepare(on) {
       freeMouse(); if (on) { gotoMenu.close(); if (V && stageValue !== stageN) setStage(stageN,true);
         if (!inVR() && !walk) spawnAt("Front path"); orbit.enabled=false;
       } else { orbit.enabled=!walk&&!inVR();gardenStroke.cancel(garden.consumer); }
+    },
+    walkPreview(on) {
+      if(!on){freeMouse();return;}
+      if(!walk)setWalk(true);
+      if(lookEligible()&&!locked())captureMouse();
     },
     look(dx,dy) {yawPitch.yaw-=dx*.004; yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-dy*.004,-1.35,1.35);}
   });

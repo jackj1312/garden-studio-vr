@@ -160,7 +160,7 @@
 
 #garden-plan { box-sizing:border-box; position:fixed; left:clamp(314px, calc(25vw + 25px), 355px); top:0; width:calc(100% - clamp(314px, calc(25vw + 25px), 355px)); height:100dvh; z-index:29; touch-action:none; cursor:crosshair; background:#29332d; }
 #garden-plan[hidden] { display:none !important; }
-.garden-editing #baBar,.garden-editing #top,.garden-editing #stageBar,.garden-editing #crosshair,.garden-editing #lookHint,.garden-editing #stageListWrap { display:none!important; }
+.garden-editing #baBar,.garden-editing #top,.garden-editing #stageBar,.garden-editing:not(.garden-walking) #crosshair,.garden-editing:not(.garden-walking) #lookHint,.garden-editing #stageListWrap { display:none!important; }
 .garden-editing .gd-panel { top:12px; max-height:calc(100dvh - 24px); }
 .garden-mark-choice { max-width:90vw; background:#25312b;color:#f2f4e9;border:1px solid #768772;border-radius:12px; }
 .garden-mark-choice button { display:block;margin:5px;padding:8px; }
@@ -192,3 +192,8 @@
 @media (any-pointer: coarse) {
   .gd-panel .gd-slab-edges summary { min-height: 44px; padding-block: 13px; }
 }
+
+.gd-walk-hint {display:none;color:var(--gd-muted);font-size:12px;line-height:1.4;padding:0 12px 9px;}
+.gd-collapsed .gd-walk-hint {display:block}
+.gd-touch-walk {display:none}
+@media (pointer:coarse){.gd-touch-walk{display:inline}.gd-mouse-walk{display:none}}

@@ -86,6 +86,7 @@ export function createGardenPanel({ action }) {
         <button type="button" data-cmd="close" aria-label="Close garden design" title="Close garden design">×</button>
       </div>
     </header>
+    <div class="gd-walk-hint"><span class="gd-mouse-walk">WASD to walk · Mouse to look · Esc releases · Tab shows tools</span><span class="gd-touch-walk">Use the thumb controls to walk and look. Tap Show tools to draw again.</span></div>
     <div class="gd-body">
       <div class="gd-view-row">
         <button type="button" data-cmd="vr" hidden>Enter VR</button>
@@ -150,7 +151,7 @@ export function createGardenPanel({ action }) {
   drawActions.append(button('Finish shape', 'finish'), button('Cancel drawing', 'cancel'));
   const collapse = find('[data-cmd=collapse]');
   const siteQuery = new URLSearchParams(location.search);
-  let state, inspectorKey = '', listKey = '', collapsed = false;
+  let state, inspectorKey = '', listKey = '';
 
   function updateSlab() {
     const preview = state.draft?.kind === 'outbuilding-base' ? state.draft : null;
@@ -280,11 +281,7 @@ export function createGardenPanel({ action }) {
     event.stopPropagation();
     const cmd = control.dataset.cmd, val = control.dataset.val;
     if (cmd === 'collapse') {
-      collapsed = !collapsed;
-      root.classList.toggle('gd-collapsed', collapsed);
-      collapse.textContent = collapsed ? 'Show tools' : 'Minimise';
-      collapse.setAttribute('aria-expanded', String(!collapsed));
-      collapse.setAttribute('aria-label', collapsed ? 'Expand garden tools' : 'Collapse garden tools');
+      action('collapse');
     } else if (cmd === 'view') {
       if ((val === 'bird') !== !!state.bird) action('view');
     } else if (cmd === 'tool') action('tool', val);
@@ -298,6 +295,10 @@ export function createGardenPanel({ action }) {
   function update(next) {
     state = next; root.hidden = !state.active;
     if (!state.active) return;
+    root.classList.toggle('gd-collapsed',!!state.collapsed);
+    collapse.textContent=state.collapsed?'Show tools':'Minimise';
+    collapse.setAttribute('aria-expanded',String(!state.collapsed));
+    collapse.setAttribute('aria-label',state.collapsed?'Show garden tools and resume drawing':'Minimise garden tools and walk');
     const selected = state.selected;
     const site = state.site || siteQuery.get('site');
     const version = state.version || siteQuery.get('version');

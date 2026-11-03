@@ -32,9 +32,9 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
    const room=getRoom(),roomType=filters.roomType==='current'?stockRoom(room):filters.roomType;
    const allowedByRoom=c=>!roomType||!c.roomTypes?.length||c.roomTypes.includes('any')||c.roomTypes.includes(roomType)||
      (roomType==='kitchen' && c.roomTypes.includes('dining'))||(roomType==='hall'&&c.roomTypes.includes('entry'));
-   const filtered=kit.filter(c=>!c.fixed && allowedByRoom(c)&&(!filters.kind||c.kind===filters.kind)&&(!filters.style||c.style===filters.style||c.style==='shared')&&(!filters.query||[c.name,c.kind,c.style].join(' ').toLowerCase().includes(filters.query.toLowerCase())));
+   const filtered=kit.filter(c=>allowedByRoom(c)&&(!filters.kind||c.kind===filters.kind)&&(!filters.style||c.style===filters.style||c.style==='shared')&&(!filters.query||[c.name,c.kind,c.style].join(' ').toLowerCase().includes(filters.query.toLowerCase())));
    return {active,bird,site,version:entry?.def.id||'',room,rooms:ctx?.rooms||[],selected:layout?.get(selectedId)||null,pending,filtered,filters,
-     kinds:[...new Set(kit.filter(c=>!c.fixed).map(c=>c.kind))].sort(),styles:[...new Set(kit.map(c=>c.style))].filter(s=>s!=='shared').sort(),roomTypes:typedRooms(),
+     kinds:[...new Set(kit.map(c=>c.kind))].sort(),styles:[...new Set(kit.map(c=>c.style))].filter(s=>s!=='shared').sort(),roomTypes:typedRooms(),
      items:layout?.items||[],floors,face,colour:layout?.wallColours?.[face]||'',floor:layout?.roomFloors?.[room?.id]||'',
      status:verdict?.ok===false?verdict.reasons.join(' · '):status,verdict,dirty:layout?.dirty,undo:layout?.canUndo,redo:layout?.canRedo,
      saving:layout?.saving,conflict:layout?.conflict||retry,revision:layout?.revision||0};
@@ -178,10 +178,11 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
    const f=drag?.original||draft||(pending?kit.find(c=>c.id===pending):null),type=f?.host?.type||f?.host;
    if(type==='wall'&&wall)return wall;
    if(type==='surface'&&item&&item.id!==selectedId)return item;
-   const plane=new T.Plane(new T.Vector3(0,1,0),-room.floorY),p=ray.intersectPlane(plane,new T.Vector3());
+   const ceiling=type==='ceiling',y=ceiling?room.ceilingY:room.floorY;
+   const plane=new T.Plane(new T.Vector3(0,1,0),-y),p=ray.intersectPlane(plane,new T.Vector3());
    if(!p)return wall||null;const d=ray.origin.distanceTo(p);
    if(!drag&&!pending && wall&&wall.distance<d-.05)return wall;
-   return {point:p,normal:new T.Vector3(0,1,0),distance:d,surface:'floor'};
+   return {point:p,normal:new T.Vector3(0,ceiling?-1:1,0),distance:d,surface:ceiling?'ceiling':'floor'};
  }
  function pointerHit(e,el){
    if(el===canvas){const p=plan.point(e.clientX,e.clientY);return p?{point:new T.Vector3(p[0],getRoom()?.floorY||0,p[1]),normal:new T.Vector3(0,1,0)}:null;}

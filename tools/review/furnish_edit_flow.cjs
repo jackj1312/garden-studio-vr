@@ -120,6 +120,16 @@ async function profile(browser,name) {
     if(!touch)result.catalogue=await plannerClient(page,ORIGIN,SITE);
     await boot();initial=await record();assert.equal(initial.site,SITE);assert.equal(initial.version,VERSION);
     const startState=await current();assert.ok(!startState.dirty);const places=await spots();
+    await page.select(sel('roomType'),'');
+    assert.equal(await page.$$eval('[data-furnish-panel] [data-stock-id]',b=>b.length),280);
+    await page.select(sel('kind'),'pendant');await page.select(sel('style'),'modern');
+    await click('[data-stock-id="modern.pendant"]');
+    const ceilingDrop=await screen(places.a);await start(ceilingDrop);await end();
+    await page.waitForFunction(()=>__house.furnishing.state().selected?.catalogueId==='modern.pendant',{timeout:8000});
+    const ceiling=await page.evaluate(()=>{const s=__house.furnishing.state();return [s.selected.host.id,s.selected.position[1]+s.selected.size[2],s.room.ceilingY];});
+    assert.equal(ceiling[0],'ceiling/'+ROOM);assert(Math.abs(ceiling[1]-ceiling[2])<.002);
+    result.ceilingProposal=ceiling;
+    await click(cmd('undo'));await page.select(sel('roomType'),'current');
     await page.select(sel('kind'),'side_table');await page.select(sel('style'),'modern');
     await click('[data-furnish-panel] [data-stock-id="'+STOCK+'"]');
     const add=await screen(places.a);await start(add);await end();

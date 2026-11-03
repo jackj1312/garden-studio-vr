@@ -2,6 +2,7 @@
 import ipaddress
 import json
 import os
+import posixpath
 import re
 import stat
 from functools import lru_cache
@@ -19,6 +20,7 @@ SOURCE = re.compile(r"src/(?:[\w-]+/)*[\w.-]+\.(?:js|mjs|css)")
 THREE = re.compile(r"assets/vendor/three/(?:[\w.-]+/)*[\w.-]+\.(?:js|wasm)")
 SKIES = {"assets/hdri/sky_midday_2k.jpg", "assets/hdri/sky_midday_4k.jpg",
          "assets/hdri/kloofendal_43d_clear_puresky_2k.exr"}
+FLOOR_TEXTURES = {"tools/library/kit/maps/"+n for n in ("oak_wood_planks_diff_2k.jpg", "Marble019_1K-JPG_Color.jpg", "knitted_fleece_diff_1k.jpg")}
 SAFE_SPEC = {"assets/sites/house/spec/spec_v1.json", "assets/sites/house/spec/catalogue_v1.json",
              "assets/planner/house/doors.json", SITE_DIR + "/spec/spec_v1.json"}
 METADATA = {SITE_DIR + "/" + n for n in ("versions.json", "regs.json", "regs_map.json", "materials.json")}
@@ -73,6 +75,34 @@ def garden_handler(base, project, address):
                         files.add(SITE_DIR + "/" + filename)
                         if field == "elements":
                             elements.add(filename)
+                # Only named outputs of this published version. Asset documents
+                # refer to content-addressed sibling buffers and textures.
+                release=r"(?:releases/[0-9a-f]{20}/)?"
+                for field,suffix in (("glb",".glb"),("glb_quest","_quest.glb"),("glb_quest_meshopt","_quest_mo.glb"),("elements","_elements.json"),("stages",".json")):
+                    name=item.get(field,"")
+                    forms=[re.escape(version+suffix)]
+                    if field in ("glb","glb_quest","glb_quest_meshopt"):
+                        forms.append("furnish/"+version+"/fixed"+re.escape(suffix))
+                    if re.fullmatch(release+"(?:"+"|".join(forms)+")",name):
+                        files.add(SITE_DIR+"/"+name);files.add(SITE_DIR+"/"+version+suffix) if field in ("elements","stages") else None
+                        if field=="elements":elements.add(version+suffix)
+                runtime=item.get("furnish_runtime",{})
+                for field in ("seed","variants"):
+                    name=runtime.get(field,"")
+                    if not re.fullmatch(release+"furnish/"+version+"/"+field+r"\.json",name):continue
+                    files.update([SITE_DIR+"/"+name,SITE_DIR+"/furnish/"+version+"/"+field+".json"])
+                    if field!="variants":continue
+                    with public_file(root,SITE_DIR+"/"+name) as vfile: records=json.load(vfile).get("variants",{})
+                    for record in records.values():
+                        for key in ("url","questUrl"):
+                            uri=record.get(key,"")
+                            if not re.fullmatch(r"furnish/models/[a-f0-9]{64}\.gltf",uri):continue
+                            files.add(SITE_DIR+"/"+uri)
+                            with public_file(root,SITE_DIR+"/"+uri) as mfile:gltf=json.load(mfile)
+                            for resource in gltf.get("buffers",[])+gltf.get("images",[]):
+                                dep=resource.get("uri","")
+                                if re.fullmatch(r"\.\./(?:buffers/[a-f0-9]{64}\.bin|textures/[a-f0-9]{64}\.(?:jpg|png|webp|ktx2))",dep):
+                                    files.add(SITE_DIR+"/"+posixpath.normpath(posixpath.join(posixpath.dirname(uri),dep)))
             return versions, files, elements
         if path == "tools/library/kit/materials.json":
             # The exporter may repack a reviewed roughness JPEG as a PNG. Its
@@ -138,6 +168,9 @@ def garden_handler(base, project, address):
                 if (target.scheme or target.netloc or not path.startswith("/") or path.startswith("//")
                         or "\\" in path or "\x00" in path or any(p.startswith(".") for p in path.split("/"))):
                     return None
+                if path=="/spec/changes":
+                    q=parse_qs(target.query,keep_blank_values=True,max_num_fields=3)
+                    return path if (self.command in ("GET","POST") and q=={"site":["house"],"view":["planner"]}) else None
                 if path == "/layout":
                     q = parse_qs(target.query, keep_blank_values=True, max_num_fields=4)
                     if (self.command not in ("GET", "POST") or set(q) != {"site", "version"}
@@ -153,7 +186,7 @@ def garden_handler(base, project, address):
 
         def allowed(self):
             route = self.route()
-            if route == "/layout":
+            if route in ("/layout","/spec/changes"):
                 return True
             if route is None:
                 return False
@@ -162,6 +195,22 @@ def garden_handler(base, project, address):
                     return True
             except OSError:
                 return False
+
+        def _json(self, code, obj):
+            if self.route()=="/spec/changes" and isinstance(obj,dict) and "changes" in obj:
+                # The LAN client can reconstruct geometry and materials without receiving
+                # free-text notes or build-report filenames from other review workflows.
+                safe=[]
+                for row in obj["changes"]:
+                    if not isinstance(row,dict) or "note" in str(row.get("op","")).lower():continue
+                    record={k:row[k] for k in ("id","version","room","op","target","before","after","status","created") if k in row}
+                    for k in ("before","after","target"):
+                        if isinstance(record.get(k),dict):
+                            record[k]={key:v for key,v in record[k].items() if key not in ("note","audio","author","photo","photos")}
+                    record["summary"]=str(record.get("op","Edit"))+" · "+str(record.get("room") or "Room")
+                    safe.append(record)
+                obj={"site":obj.get("site","house"),"changes":safe,"batches":[]}
+            return super()._json(code,obj)
 
         def list_directory(self, path):
             self.send_error(404)
@@ -200,7 +249,7 @@ def garden_handler(base, project, address):
             self.send_error(404)
 
         def do_POST(self):
-            if self.route() == "/layout":
+            if self.route() in ("/layout","/spec/changes"):
                 return super().do_POST()
             self.send_error(404)
 

@@ -1,4 +1,4 @@
-"""Shared, versioned house layouts. The garden editor owns only the garden section."""
+"""Revision-checked garden and furnishing sections on one versioned house layout."""
 import errno
 import fcntl
 import json
@@ -22,6 +22,15 @@ KINDS = set("patio path lawn gravel decking wall retaining-wall raised-bed sunke
 MAX_BODY = 2 * 1024 * 1024
 MAX_LAYOUT = 12 * 1024 * 1024
 CATALOGUE = Path(__file__).resolve().parents[1] / "src/garden/catalogue.mjs"
+FURNISH_MODULE = Path(__file__).resolve().parents[1] / "src/furnish/placement.mjs"
+FURNISH_VALIDATOR = '''
+import {readFileSync} from 'node:fs';
+const {buildRoomContext,validateFurnishDelta}=await import(process.argv[1]);
+const {inputs,previous,next}=JSON.parse(readFileSync(0,'utf8'));
+const ctx=buildRoomContext(inputs);
+try { validateFurnishDelta(ctx,previous,next); }
+catch(e) { process.stderr.write(e.message); process.exit(2); }
+'''
 VALIDATOR_LOCK = threading.Lock()
 VALIDATOR = """
 import {readFileSync} from 'node:fs';
@@ -247,23 +256,153 @@ def stored(data, site, version):
         base.update(record)
         if (type(base["schema"]) is not int or base["schema"] != 1 or base["site"] != site
                 or base["version"] != version or type(base["revision"]) is not int or base["revision"] < 0
-                or not isinstance(base["garden"], dict) or not isinstance(base["garden"].get("objects"), list)):
+                or not isinstance(base["garden"], dict) or not isinstance(base["garden"].get("objects"), list)
+                or not isinstance(base["items"], list) or not isinstance(base["wallColours"], dict)
+                or not isinstance(base["roomFloors"], dict)):
             raise ValueError("layout")
     except (TypeError, ValueError, UnicodeError, RecursionError):
         raise LayoutError(500, "Invalid existing layout") from None
     return base
 
 
-def change_record(previous, after):
-    old = {x["id"]: x for x in previous["garden"]["objects"]}
-    new = {x["id"]: x for x in after["garden"]["objects"]}
-    change = {"section": "garden", "site": after["site"], "version": after["version"],
+def read_json_asset(fd, path, required=False):
+    """Read only named ordinary assets below pinned directories, as on layout reads."""
+    try:
+        if len(path) > 1:
+            with directory(path[0], fd) as inner:
+                return read_json_asset(inner, path[1:], required)
+        data = read_bytes(fd, path[0])
+        if data is not None:
+            try:
+                return decode(data)
+            except (ValueError, UnicodeError, RecursionError):
+                raise LayoutError(500, "Invalid furnishing source") from None
+    except FileNotFoundError:
+        pass
+    if required:
+        raise LayoutError(503, "Furnishing source is unavailable: " + path[-1])
+    return None
+
+
+def furnishing_seed(fd, version):
+    seed = read_json_asset(fd, ("furnish", version, "seed.json"))
+    if seed is not None and (not isinstance(seed, dict) or seed.get("schema") != 1
+                             or not isinstance(seed.get("items"), list)):
+        raise LayoutError(500, "Invalid furnishing seed")
+    return seed
+
+
+def normalise_stock(root, record):
+    # Unrecognised future entries are retained verbatim. The expandable legacy
+    # label is mapped only using its explicit reviewed catalogue entry.
+    if not any(isinstance(it, dict) and it.get("variant") == "standard" for it in record["items"]):
+        return record
+    with directory(root) as project:
+        catalogue = read_json_asset(project, ("tools", "library", "kit", "catalogue.json"))
+    entries = {v["id"]: v for v in (catalogue or {}).get("items", [])}
+    items = []
+    for it in record["items"]:
+        key = it.get("catalogueId") if isinstance(it, dict) else None
+        product = entries.get(key) if isinstance(key, str) else None
+        if product and it.get("variant") == product.get("variant"):
+            it = dict(it, variant=product["id"])
+        items.append(it)
+    return dict(record, items=items)
+
+
+EDITABLE_ITEM_FIELDS = set("id kind style variant catalogueId room position rotation size host hostOffset "
+                           "hostRotation hostContact finishes lampOn name label".split())
+
+
+def retain_item_extensions(previous, incoming):
+    """A client can clear a known finish/host field; it cannot erase fields it never understood."""
+    old = {it["id"]: it for it in previous if isinstance(it, dict) and isinstance(it.get("id"), str)}
+    result = []
+    for item in incoming:
+        key = item.get("id") if isinstance(item, dict) else None
+        if isinstance(key, str) and key in old:
+            item = {**{k: v for k, v in old[key].items() if k not in EDITABLE_ITEM_FIELDS}, **item}
+        result.append(item)
+    return result
+
+
+def effective_furnish(record, seed):
+    if not seed or record.get("furnishSeeded") is True or record["items"]:
+        return record
+    # A garden-only save used to write items:[] as a placeholder. A furniture
+    # save sets a permanent marker, even when the user removes the final item.
+    return dict(record, items=seed["items"], wallColours={**seed.get("wallColours", {}), **record["wallColours"]},
+                roomFloors={**seed.get("roomFloors", {}), **record["roomFloors"]})
+
+
+def validate_furnish(root, fd, site, version, seed, previous, patch):
+    if (not isinstance(patch["items"], list) or len(patch["items"]) > 1024
+            or not isinstance(patch["wallColours"], dict) or not isinstance(patch["roomFloors"], dict)):
+        invalid("expected bounded items, wallColours and roomFloors")
+    project_spec = ("spec", "spec_v1.json")
+    project_floors = ("spec", "catalogue_v1.json")
+    with directory(root) as project:
+        def source(path):
+            local = read_json_asset(fd, path)
+            if local is not None:
+                return local
+            if site == "house-wip":
+                return read_json_asset(project, ("assets", "sites", "house", *path), required=True)
+            raise LayoutError(422, "This site has no signed furnishing spec")
+        spec = read_json_asset(fd, project_spec) or source(project_spec)
+        floors = read_json_asset(fd, project_floors) or source(project_floors)
+        try:
+            schedule = next(v for k, v in spec["versions"].items() if k == version or v["elements"] == version)
+            basename = schedule["elements"]
+            if not NAME.fullmatch(basename):
+                raise ValueError()
+        except StopIteration:
+            invalid("This version has no signed room schedule")
+        except (KeyError, TypeError, ValueError):
+            raise LayoutError(500, "Invalid room schedule") from None
+        elements = read_json_asset(fd, (basename + "_elements.json",), required=True)
+        doors = read_json_asset(project, ("assets", "planner", site, "doors.json"))
+        if doors is None and site == "house-wip":
+            doors = read_json_asset(project, ("assets", "planner", "house", "doors.json"))
+        catalogue = read_json_asset(project, ("tools", "library", "kit", "catalogue.json"), required=True)
+        variants = read_json_asset(fd, ("furnish", version, "variants.json"))
+    inputs = {"site": site, "version": version, "spec": spec, "floorCatalogue": floors, "elements": elements,
+              "doors": doors or {}, "catalogue": catalogue, "seed": seed or {}, "variants": variants or {}}
+    interior = {k: previous[k] for k in ("items", "wallColours", "roomFloors")}
+    executable = shutil.which("node") or next((p for p in ("/opt/homebrew/bin/node", "/usr/local/bin/node")
+                                                if os.access(p, os.X_OK)), None)
+    if not executable:
+        raise LayoutError(503, "Furnishing validation is unavailable")
+    with VALIDATOR_LOCK:
+        try:
+            result = subprocess.run([executable, "--max-old-space-size=128", "--input-type=module",
+                                     "-e", FURNISH_VALIDATOR, FURNISH_MODULE.as_uri()],
+                                    input=encode({"inputs": inputs, "previous": interior, "next": patch}),
+                                    capture_output=True, timeout=25)
+        except (OSError, subprocess.TimeoutExpired):
+            raise LayoutError(503, "Furnishing validation is unavailable") from None
+    if result.returncode == 2:
+        invalid(result.stderr.decode("utf-8", errors="replace")[:320] or "Invalid furnishing update")
+    if result.returncode:
+        raise LayoutError(503, "Furnishing validation is unavailable")
+
+
+def change_record(previous, after, section="garden"):
+    old_items = previous["garden"]["objects"] if section == "garden" else previous["items"]
+    new_items = after["garden"]["objects"] if section == "garden" else after["items"]
+    old = {x["id"]: x for x in old_items}
+    new = {x["id"]: x for x in new_items}
+    change = {"section": section, "site": after["site"], "version": after["version"],
               "baseRevision": previous["revision"], "revision": after["revision"],
               "at": datetime.now(timezone.utc).isoformat(),
               "upsert": [obj for key, obj in new.items() if old.get(key) != obj],
               "removed": [key for key in old if key not in new]}
     if list(old) != list(new):
         change["order"] = list(new)
+    if section == "furnish":
+        for key in ("wallColours", "roomFloors"):
+            a, b = previous[key], after[key]
+            change[key] = {k: b.get(k) for k in dict.fromkeys([*a, *b]) if a.get(k) != b.get(k)}
     return change
 
 
@@ -330,18 +469,24 @@ class LayoutStore:
             try:
                 with directory("layout", fd) as layout:
                     self.recover(layout, site, version)
-                    return stored(read_bytes(layout, version + ".json"), site, version)
+                    record = stored(read_bytes(layout, version + ".json"), site, version)
             except FileNotFoundError:
-                return initial(site, version)
+                record = initial(site, version)
+            return normalise_stock(self.root, effective_furnish(record, furnishing_seed(fd, version)))
 
     def save(self, site, version, patch):
-        if not isinstance(patch, dict) or set(patch) != {"baseRevision", "section", "garden"} or patch["section"] != "garden":
-            invalid("expected a garden section update")
+        if not isinstance(patch, dict) or patch.get("section") not in ("garden", "furnish"):
+            invalid("expected a garden or furnish section update")
+        section = patch["section"]
+        fields = {"garden"} if section == "garden" else {"items", "wallColours", "roomFloors"}
+        if set(patch) not in (fields | {"baseRevision", "section"}, fields | {"baseRevision", "section", "version"}):
+            invalid("invalid section fields")
+        if "version" in patch and patch["version"] != version:
+            invalid("version does not match layout URL")
         revision = patch["baseRevision"]
         if type(revision) is not int or revision < 0:
             invalid("invalid base revision")
         with self.site(site, version) as fd:
-            validate_garden(patch["garden"])
             with directory("layout", fd, create=True) as layout:
                 self.recover(layout, site, version)
                 raw = read_bytes(layout, version + ".json")
@@ -349,9 +494,23 @@ class LayoutStore:
                 if revision != previous["revision"]:
                     raise LayoutError(409, "Layout revision is stale", revision=previous["revision"],
                                       currentRevision=previous["revision"])
-                if previous["garden"] == patch["garden"]:
-                    return previous
-                after = dict(previous, revision=revision + 1, garden=patch["garden"])
+                seed = furnishing_seed(fd, version)
+                before = normalise_stock(self.root, effective_furnish(previous, seed))
+                if section == "garden":
+                    validate_garden(patch["garden"])
+                    if previous["garden"] == patch["garden"]:
+                        return before
+                    after = dict(previous, revision=revision + 1, garden=patch["garden"])
+                else:
+                    changes = {k: patch[k] for k in fields}
+                    if not isinstance(changes["items"], list):
+                        invalid("Expected an item list")
+                    changes["items"] = retain_item_extensions(before["items"], changes["items"])
+                    changes = normalise_stock(self.root, changes)
+                    validate_furnish(self.root, fd, site, version, seed, before, changes)
+                    if previous.get("furnishSeeded") is True and all(previous[k] == changes[k] for k in fields):
+                        return before
+                    after = dict(previous, revision=revision + 1, furnishSeeded=True, **changes)
                 if len(encode(after)) > MAX_LAYOUT:
                     raise LayoutError(413, "Layout is too large")
                 # Preflight all destinations before recording the intent to commit.
@@ -360,10 +519,10 @@ class LayoutStore:
                     if regular(logs, f"{after['revision']:09d}.json"):
                         raise LayoutError(500, "Layout change log conflict")
                 job = {"previous": (raw or encode(previous)).decode("utf-8"),
-                       "next": after, "change": change_record(previous, after)}
+                       "next": after, "change": change_record(before, after, section)}
                 write_bytes(layout, version + ".pending.json", encode(job))
                 self.recover(layout, site, version)
-                return after
+                return normalise_stock(self.root, effective_furnish(after, seed))
 
 
 def handle_layout(handler, root):

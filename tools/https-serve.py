@@ -226,6 +226,16 @@ def transcribe(site, site_dir, marks_path, sid, audio_path):
     print(f"transcribe {sid}: {text[:80]}", flush=True)
 
 
+# A linked development worktree may serve QA assets while the real client's
+# saved layout stays in the live checkout. Production needs no override.
+def layout_root(request):
+    published = os.environ.get("STUDIO_PUBLISHED_LAYOUT_ROOT")
+    site = urllib.parse.parse_qs(urllib.parse.urlsplit(request.path).query).get("site")
+    if published and site == [os.environ.get("STUDIO_PUBLISHED_LAYOUT_SITE", "house-wip")]:
+        return os.path.realpath(published)
+    return root
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def _site(self, want_path):
         """(site, site_dir, query) when the request is for want_path; None otherwise.
@@ -254,7 +264,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if urllib.parse.urlsplit(self.path).path == "/layout":
-            return handle_layout(self, root)
+            return handle_layout(self, layout_root(self))
         if urllib.parse.urlsplit(self.path).path.startswith("/scan/"):
             return scan_get(self)
         if urllib.parse.urlsplit(self.path).path.startswith("/house/"):
@@ -273,7 +283,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if urllib.parse.urlsplit(self.path).path == "/layout":
-            return handle_layout(self, root)
+            return handle_layout(self, layout_root(self))
         path = urllib.parse.urlsplit(self.path).path
         if path.startswith("/scan/"):
             return scan_post(self)

@@ -127,6 +127,8 @@
     padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-soft);
   }
 </style>
+<link rel="stylesheet" href="src/editor-help.css">
+<script type="module" src="src/editor-help.js"></script>
 </head>
 <body>
 
@@ -144,6 +146,8 @@
     <div class="sep"></div>
     <div class="group" id="times"></div>
     <div class="spacer"></div>
+    <a class="garden-entry" href="house.html?site=house-wip&amp;mode=review&amp;garden=1">Garden design</a>
+    <button type="button" data-editor-help="site">How to use</button>
     <button id="play">Play build</button>
     <button id="variantA" aria-pressed="true">Corner</button>
     <button id="variantB" aria-pressed="false">Along fence</button>
@@ -184,6 +188,8 @@
     <span>Loading materials and sky…</span>
   </div>
   <div class="actions">
+    <a class="garden-entry" href="house.html?site=house-wip&amp;mode=review&amp;garden=1">Open garden design</a>
+    <button type="button" data-editor-help="site">How to use</button>
     <button class="primary" id="startDesktop" disabled>Explore on this screen</button>
     <button id="startVR" disabled>Enter VR</button>
     <button id="startAR" disabled>See it in your garden</button>
@@ -195,8 +201,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+    "three": "./assets/vendor/three/build/three.module.js",
+    "three/addons/": "./assets/vendor/three/examples/jsm/"
   }
 }
 </script>

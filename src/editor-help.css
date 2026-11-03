@@ -1,0 +1,8 @@
+#studio-help-dialog { box-sizing:border-box; position:fixed; width:min(29rem,calc(100% - 2rem)); max-height:80dvh; overflow:auto; margin:auto; padding:0; border:1px solid #7c8c79; border-radius:14px; color:#f4f2e8; background:#202a26; box-shadow:0 18px 65px #0008; font:15px/1.45 system-ui,sans-serif; }
+#studio-help-dialog::backdrop { background:#101710aa; }
+#studio-help-dialog article { padding:18px 22px 22px; }
+#studio-help-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#studio-help-dialog h2 { color:inherit; font:600 19px/1.2 system-ui; margin:0; }
+#studio-help-dialog h3 { color:#cadfc2; font:600 15px system-ui; margin:16px 0 3px; }
+#studio-help-dialog p { color:inherit; font:inherit; margin:0; }
+#studio-help-dialog button { color:inherit; border:1px solid #748579; border-radius:6px; background:#344338; padding:6px 10px; cursor:pointer; }

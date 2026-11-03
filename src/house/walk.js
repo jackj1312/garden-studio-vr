@@ -32,7 +32,7 @@ const DIRS = [...Array(8)].map((_, i) => new THREE.Vector3(Math.cos(i * Math.PI 
 const SOLE = DIRS.map(d => [d.x * BODY.foot, d.z * BODY.foot]);
 const EDGE = DIRS.map(d => [d.x * BODY.edge, d.z * BODY.edge]);
 
-export function createWalker(getBVH, getMask, getFloorMask = getMask) {
+export function createWalker(getBVH, getMask, getFloorMask = getMask, proposal = null) {
   const ray = new THREE.Ray();
   const dir = new THREE.Vector3(), n = new THREE.Vector3(), rem = new THREE.Vector3();
 
@@ -47,7 +47,11 @@ export function createWalker(getBVH, getMask, getFloorMask = getMask) {
     for (const h of BODY.heights) {
       ray.origin.set(pos.x, (h > 1.2 ? low : pos.y) + h, pos.z);
       ray.direction.copy(d);
-      const hit = bvh.raycast(ray, far, mask);
+      const house = bvh.raycast(ray, far, mask);
+      const obstacle = proposal?.barrier(ray, far);
+      const p = obstacle?.point;
+      const added = p && !proposal.indoors(p.x,p.y,p.z) ? obstacle : null;
+      const hit = added && (!house || added.distance < house.distance) ? added : house;
       if (hit && Math.abs(hit.normal.y) < 0.7 && (!best || hit.distance < best.distance))
         best = { distance: hit.distance, normal: hit.normal.clone() };
     }
@@ -58,6 +62,9 @@ export function createWalker(getBVH, getMask, getFloorMask = getMask) {
      something). Back faces (the inside of a tread or slab the ray starts in) are skipped by the tree; a steep
      face (a stringer's sloped top, a roof) is looked past. null = nothing within reach. */
   function floorRay(x, y, z, reach) {
+    const level = proposal?.height(x, z);
+    if (level != null && !proposal.indoors(x,y,z) && y < Math.max(level, proposal.base(x, z) ?? level) + 1.2)
+      return level <= y + BODY.step + .005 && level >= y - reach ? level : null;
     const bvh = getBVH(), mask = getFloorMask();
     ray.origin.set(x, y + BODY.step, z);
     ray.direction.set(0, -1, 0);

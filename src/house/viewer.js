@@ -17,7 +17,8 @@ import { createWalker, BODY } from "./walk.js?v=furnish2";
 import { createEditor } from "./edits.js?v=h15";
 import { checkRules } from "./rules.js?v=h11";
 import { modeFromURL, PLAIN_GROUP, PLAIN_CATEGORY, TAB_LABEL } from "./modes.js?v=h22";
-import { createMarks, KINDS as MARK_KINDS } from "../marks.js?v=h31";
+import {helpPage,showEditorHelp} from "../editor-help.js";
+import { createMarks, createEditorStroke, KINDS as MARK_KINDS } from "../marks.js?v=h31";
 import { createVRBoard, renderBoardDOM, createCard, createBoardTab } from "./board.js?v=h15";
 import { createDoors, isLeaf } from "./doors.js?v=h15";
 import { createPerf } from "./perf.js?v=h15";
@@ -308,6 +309,8 @@ if (!LITE) {
  *  State
  * ------------------------------------------------------------------ */
 const versions = new Map();                  // id -> {def, sidecar, model, bvh, editor, rules}
+let garden = null, gardenLean = false;
+const gardenStroke = createEditorStroke();
 let V = null, manifest = null, lastProposal = null, regs = null, materialsJson = null;
 let stageValue = 1, stageN = 1, playing = false, tween = null, stageDirty = true;
 let tool = "info";                            // info | measure | addwall
@@ -336,7 +339,12 @@ let target = null;                            // {part, point, source, at}: what
 let boardTab = MODE.tabs[0];
 const section = createSection(() => [...versions.values()].flatMap(v => v.model ? [...v.model.sets.values()] : []));
 const measure = createMeasure(scene);
-const walker = createWalker(() => V.bvh, () => V.model.masks.solid, () => V.model.masks.floor);
+const walker = createWalker(() => V.bvh, () => V.model.masks.solid, () => V.model.masks.floor, {
+  height: (x,z) => garden?.objects.length ? garden.garden.heightAt(x,z) : null,
+  base: (x,z) => garden?.terrain.ground(x,z),
+  indoors: (x,y,z) => !!V?.model.roomAt(x,y+.10,z),
+  barrier: (ray,far) => garden?.objects.length ? garden.garden.blockRay(ray,far) : null,
+});
 const requests = createRequests({ site: SITE, getVersion: () => V?.def.id, mode: MODE.key });
 const recorder = createRecorder();
 const inspections = new Map();                // inspection point id -> {checks: {key: {status, note, at}}}
@@ -411,7 +419,7 @@ async function loadVersion(id, quiet = false) {
     versions.set(id, entry);
     model.applyStage(sidecar.stages.length, true);        // compile with everything visible: no hitch on the first stage change
     /* the shaders compile in parallel where the browser can (KHR_parallel_shader_compile), not in one blocking call */
-    if (show) { setLoad(0.97, "Preparing the materials…"); model.root.visible = true; await renderer.compileAsync(scene, camera); model.root.visible = false; loadingNow = false; setLoad(1, "Ready"); $("loading").hidden = true; }
+    if (show) { setLoad(0.97, "Preparing the materials…"); await renderer.compileAsync(scene, camera); loadingNow = false; setLoad(1, "Ready"); $("loading").hidden = true; }
     entry.file = entryFile;
     perf.note({ event: "version loaded", version: id, file: entryFile, ms: Math.round(performance.now() - t0), bvh_ms: Math.round(entry.bvh.ms), parts: model.parts.length, triangles: entry.bvh.triangles });
     return entry;
@@ -474,10 +482,12 @@ function dropVersion(entry) {
 async function useVersion(id) {
   perf.tag("version load");
   const entry = await loadVersion(id);
+  if (V && V !== entry && gardenLean) gardenQuality(false);
   if (V && V !== entry) { V.model.root.visible = false; if (KEEP_ONE || renderer.xr.isPresenting) dropVersion(V); }
   V = entry;
   V.model.root.visible = true;
   if (renderer.xr.isPresenting && VRQ[vrQuality].lean) leanMaterials(true);
+  if (inVR() && garden?.enabled) gardenQuality(true);
   for (const [s, on] of Object.entries(storeyState)) V.model.storeyShown[s] = on;
   markDoorsHidden();
   stageN = V.sidecar.stages.length;
@@ -511,6 +521,7 @@ async function useVersion(id) {
   requests.list().then(refreshBoard).catch(() => {});
   if (MODE.inspect) loadInspections();
   refreshBoard();
+  if (garden) await garden.useVersion(entry);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1218,9 +1229,17 @@ async function toggleVoiceNote() {
   } catch (err) { toast(`Microphone: ${err.message}`); }
 }
 
+let houseHelpIndex=0;
+function showHouseHelp(){
+  if(!inVR()){showEditorHelp("house");return;}
+  const [,rows]=helpPage("house"),[title,detail]=rows[houseHelpIndex++%rows.length];
+  showCard("How to use · "+title,[detail,"Press How to use again for the next control."],null,20);
+}
 function toolsBlocks() {
   const out = [];
   const tools = [
+    { id:"how", label:"How to use", press:showHouseHelp },
+    { id:"garden", label:"Garden design", press:()=>garden?.enter() },
     { id: "info", label: "Info", on: () => tool === "info", press: () => setTool("info") },
     ...(MODE.measure ? [{ id: "meas", label: "Measure", on: () => tool === "measure", press: () => setTool("measure") },
                         { id: "mclr", label: "Clear tape", press: () => measure.clear() }] : []),
@@ -1771,7 +1790,7 @@ function markDoorsHidden() {                      // (both rules: the door leave
   if (!V) return;
   let n = 0;
   for (const p of V.model.parts) {
-    const loose = unfurnished && isLoose(p);
+    const loose = (unfurnished || (gardenLean && !p.context && p.storey !== "site")) && isLoose(p);
     if (loose) n++;
     p.viewHidden = (doorsHidden && isLeaf(p)) || loose;
   }
@@ -2247,7 +2266,7 @@ const wristTab = createBoardTab();
 let heightOffer = false;
 /* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
 /* round 8: Furnished / Unfurnished next to No doors */
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null]];
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", null]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -2260,7 +2279,7 @@ const baPanel = (() => {
   mesh.renderOrder = 905; mesh.visible = false;
   mesh.position.set(0, 0.05, 0.075); mesh.rotation.set(-Math.PI / 2.6, 0, 0);          // on the back of the left wrist
   const LABEL = { before: "Before", after: "After", height: "Height", doors: "No doors", goto: "Go to", fast: "Fast",
-                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture" };
+                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use" };
   const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
     : id === "height" ? !!floorOffset : id === "fast" ? fastWalk : id === "goto" ? gotoMenu.isOpen : id === "mark" ? !!marks?.active : false;
   const sub = id => id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
@@ -2306,6 +2325,8 @@ const baPanel = (() => {
       else if (id === "mark") marks?.toggle();
       else if (id === "turn") setTurnMode(turnMode === "smooth" ? "snap" : "smooth");
       else if (id === "comfort") setComfort(COMFORT[(COMFORT.indexOf(comfort) + 1) % COMFORT.length]);
+      else if (id === "how") showHouseHelp();
+      else if (id === "garden") garden?.enter();
       else beforeAfter(id === "after");
       draw();
       return id;
@@ -2898,11 +2919,11 @@ function vrFrame(dt, now) {
   const stick = a => a.length >= 4 ? [a[2], a[3]] : [a[0] || 0, a[1] || 0];
   const dead = v => Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85;
 
-  const raised = !SIMPLE && !boardMin && (boardPinned || boardFacing());
+  const raised = !garden?.enabled && !SIMPLE && !boardMin && (boardPinned || boardFacing());
   vrBoard.mesh.material.opacity += ((raised ? 1 : 0) - vrBoard.mesh.material.opacity) * 0.25;
   vrBoard.mesh.visible = !!L && vrBoard.mesh.material.opacity > 0.03;
   wristTab.visible = !SIMPLE && !!L && boardMin;
-  baPanel.visible = SIMPLE && !!L;
+  baPanel.visible = !garden?.enabled && SIMPLE && !!L;
   if (vrBoard.mesh.visible) perf.tag("board open");
   /* the person's height (4 ft by default, Jack 1 Nov) applied once the head pose has arrived: no button needed */
   if (autoHeightAt && now > autoHeightAt && rawEye() > 0.3) { autoHeightAt = 0; heightOffer = false; heightCheck({ auto: true }); }
@@ -2939,7 +2960,9 @@ function vrFrame(dt, now) {
   if (pressed("rs", !!rb[3]?.pressed)) { perf.toggle(); hapticPulse([R], 0.3, 20); refreshBoard(); }
   const grip = !!R && !!rb[1]?.pressed;
 
-  const [rx, ry] = stick(ra).map(dead);
+  const [stickX, stickY] = stick(ra).map(dead);
+  const changingLevel = garden?.stickLevel(stickY);
+  const rx = garden?.bird ? 0 : stickX, ry = changingLevel || garden?.bird ? 0 : stickY;
   // right stick left / right: turn (not while the grip steers a flight). Smooth: the push sets the speed (75 deg/s
   // full), reached and let go of over TURN.ease s; snap: 30 deg steps (builder / inspector / architect, or Turn: snap)
   if (turnMode === "smooth") {
@@ -2996,7 +3019,7 @@ function vrFrame(dt, now) {
     if (Math.abs(lx) > 0.7) {
       if (!tabLatch) { const t = MODE.tabs; boardTab = t[(t.indexOf(boardTab) + (lx > 0 ? 1 : t.length - 1)) % t.length]; vrBoard.resetPage(); refreshBoard(); tabLatch = true; hapticPulse([L], 0.25, 15); }
     } else if (Math.abs(lx) < 0.3) tabLatch = false;
-  } else if ((free || (hovering && !landing)) && (lx || ly)) {
+  } else if ((free || (hovering && !landing)) && !garden?.bird && (lx || ly)) {
     const fwd = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const mv = new THREE.Vector3().addScaledVector(fwd, -ly).addScaledVector(right, lx);
@@ -3023,6 +3046,18 @@ function vrFrame(dt, now) {
   laser.visible = true;
   const trig = !!rb[0]?.pressed;
   const tDown = pressed("trig", trig);
+  if (garden?.enabled) {
+    card.hide(); cardUntil=0; heightOffer=false;
+    vrBoard.mesh.visible = wristTab.visible = baPanel.visible = false;
+    const d = !gardenStroke.drawing ? garden.wrist.hitWrist(controllerRay(R), tDown) : null;
+    if (d != null) { laser.scale.z = d; gardenStroke.skip(trig); }
+    else {
+      const hit = gardenStroke.frame(R, trig, garden.consumer);
+      laser.scale.z = hit?.distance ?? 2;
+      if (hit) { laserDot.position.copy(hit.displayPoint || hit.point); laserDot.visible = true; }
+    }
+    setHover(null); trigRing.visible = false; return;
+  }
   if (card.mesh.visible && !loadingNow && (tDown || (cardUntil && now > cardUntil))) { card.hide(); cardUntil = 0; heightOffer = false; if (tDown && !marks?.active) { marks?.updateXR(null, trig); return; } }   // marking: the first pull already draws
   laserDot.material.color.setHex(0xffffff);
   trigRing.visible = false;
@@ -3165,6 +3200,7 @@ async function enterVR() {
     session.addEventListener("end", () => {
       document.body.classList.remove("in-vr");
       perf.hud.visible = false; flying = false; hovering = false; landing = null; autoHeightAt = 0; gotoMenu.close(); marksListDirty = true;
+      gardenQuality(false);
       leanMaterials(false);
       if (!renderer.shadowMap.enabled) { renderer.shadowMap.enabled = true; sun.castShadow = true; renderer.shadowMap.needsUpdate = true; }
       const head = camera.getWorldPosition(new THREE.Vector3());
@@ -3272,6 +3308,46 @@ addEventListener("resize", () => {
 /* ------------------------------------------------------------------ *
  *  Boot
  * ------------------------------------------------------------------ */
+function gardenQuality(on) {
+  if (gardenLean === on) return;
+  gardenLean = on;
+  markDoorsHidden(); V.model.applyStage(stageValue, true); V.cull?.invalidate?.();
+  // Preserve the outdoor PBR sets, translucent doors, windows, and fixed structure.
+  const groups = new Map();
+  for (const p of V.model.parts) {
+    const eligible = !p.context && p.storey !== "site" && ["fitting","floor_finish","wall_lining","ceiling","skirting"].includes(p.group);
+    groups.set(p.set, (groups.get(p.set) ?? true) && eligible);
+  }
+  for (const [set,inside] of groups) {
+    const m = set?.normal; if (!m) continue;
+    if (!inside && m.userData.lean) {
+      if (on) { Object.assign(m,m.userData.lean);m.userData.gardenOutdoor=true; }
+      else if (m.userData.gardenOutdoor) { m.normalMap=m.roughnessMap=m.metalnessMap=null;delete m.userData.gardenOutdoor; }
+      m.needsUpdate=true;
+    }
+    if (!inside || m.transparent) continue;
+    if (on && !m.userData.gardenDetail) {
+      m.userData.gardenDetail = {normalMap:m.normalMap,roughnessMap:m.roughnessMap,bumpMap:m.bumpMap};
+      m.normalMap=m.roughnessMap=m.bumpMap=null; m.needsUpdate=true;
+    } else if (!on && m.userData.gardenDetail) {
+      Object.assign(m,m.userData.gardenDetail);delete m.userData.gardenDetail;m.needsUpdate=true;
+    }
+  }
+}
+async function initGarden() {
+  const {createGardenEditor} = await import("../garden/editor.js");
+  pickRay.isOutdoor = index => { const p=V.model.parts[index]; return p?.group==="ground" || p?.storey==="site"; };
+  garden = createGardenEditor({scene,camera,renderer,site:SITE,marks,inVR,occlusion:pickRay,normalPass:()=>gtao?.normalMaterial,indoor:gardenQuality,
+    prepare(on) {
+      freeMouse(); if (on) { gotoMenu.close(); if (V && stageValue !== stageN) setStage(stageN,true);
+        if (!inVR() && !walk) spawnAt("Front path"); orbit.enabled=false;
+      } else { orbit.enabled=!walk&&!inVR();gardenStroke.cancel(garden.consumer); }
+    },
+    look(dx,dy) {yawPitch.yaw-=dx*.004; yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-dy*.004,-1.35,1.35);}
+  });
+  await garden.useVersion(V);
+  if(params.get("garden")==="1") {garden.enter(); $("start").hidden=true;}
+}
 async function boot() {
   $("modeLabel").textContent = MODE.label;
   try {
@@ -3315,6 +3391,7 @@ async function boot() {
   furnishButtons();
   if (marks) { await marks.load(); marks.refreshVisibility(); }
   setXray(false);
+  await initGarden();
   const lg = $("legend");
   for (const c of Object.values(XRAY)) {
     const s = document.createElement("span");
@@ -3433,7 +3510,7 @@ let last = performance.now(), workPrev = 0, lookUiTick = 0, deskMoving = false, 
 renderer.info.autoReset = false;               // the composer renders several passes a frame: count them all, reset once
 const SEND_PERF = IS_QUEST || params.has("perf");
 function loop(fakeNow) {
-  const now = fakeNow ?? performance.now();
+  const now = Math.max(last, fakeNow ?? performance.now());
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (renderer.shadowMap.needsUpdate && renderer.shadowMap.enabled) shadowPasses++;
@@ -3451,14 +3528,16 @@ function loop(fakeNow) {
   if (stageDirty) applyStageNow();
   else V.cull?.prepare();                      // the wall holes are found once, on the first frame at the last stage (not on the first frame in the headset)
   if (V.doors?.moving) { V.doors.update(dt); perf.tag("doors"); if (hoverPart?.pose) { const h = hoverPart; hoverPart = null; setHover(h); } }
+  garden?.frame(hands.left,now);
   if (inVR()) { if (SIM.on) simPose(); vrFrame(dt, now); }
+  else if (garden?.bird) { /* The measured plan has its own camera. Preserve the standing pose. */ }
   else if (walk) desktopWalk(dt);
   else orbit.update();
   if (target && (playing || tween || target.part.pose)) updateHighlight();
   measure.update(camera);
   if (marks) { marks.update(dt); if (marksListDirty) renderMarksList(); }
   /* mouse-look: the crosshair's colour, the capture hint; a mark's note box needs the mouse back to type and press Save */
-  if (!inVR()) {
+  if (!inVR() && !garden?.bird) {
     if (STICKS && walk) touchLookStep(dt);
     updateCrosshair(dt);
     if (marks?.noteOpen && locked()) freeMouse();
@@ -3484,6 +3563,7 @@ function loop(fakeNow) {
   const moving = comfort === "blur" && (inVR() ? Math.abs(turnVel) > BLUR.xrTurnFrac * TURN.rate || (flying && flySpeed > BLUR.flyMin) : deskMove.fast);
   blurFade = Math.max(0, Math.min(1, blurFade + (moving ? 1 : -1) * dt / BLUR.fade));
   deskMoving = !inVR() && deskMove.moving;
+  if (garden?.bird && !inVR()) { workPrev = performance.now() - now; return; }
   if (renderer.xr.isPresenting || SIM.on || !composer) {
     const t0 = performance.now();
     const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
@@ -3517,7 +3597,7 @@ window.__house = {
   setTurnMode, setComfort, get turnMode() { return turnMode; }, get comfort() { return comfort; }, get turnVel() { return turnVel; },
   get blurFade() { return blurFade; }, xrBlur, blurGovernor, sticks, touchMove, touchLook, layoutSticks, get locked() { return locked(); }, lockedClick, blurPass: () => blurPass, get renderMs() { return renderMs; }, vignette,
   specCameras: () => specCameras, lookAtMark, get autoHeightAt() { return autoHeightAt; }, howTo, showCard, card,
-  sim, hands, perf, heightInfo, get cull() { return V?.cull; }, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
+  get garden() { return garden; }, sim, hands, perf, heightInfo, get cull() { return V?.cull; }, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
   get flying() { return flying; }, get hovering() { return hovering; }, get landing() { return landing; }, get boardMin() { return boardMin; }, get hoverPart() { return hoverPart; },
   get seated() { return seated; }, get doorsHidden() { return doorsHidden; }, setUnfurnished, get unfurnished() { return unfurnished; }, isLoose, looseCount, baPanel, get stageN() { return stageN; }, manifest: () => manifest, dropVersion,
   stats() { renderer.render(scene, camera); const i = renderer.info.render; return { calls: i.calls, triangles: i.triangles, houseBatches: V.model.drawCalls(), houseBatchesLive: V.model.liveCalls(), settingBatches: V.model.settingCalls(), parts: V.model.parts.length }; },

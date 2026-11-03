@@ -143,6 +143,34 @@ function makeLabel(line1, line2, css) {
 /* the fields every stroke has; anything else a viewer stamps on (meta / annotate) rides along in s.extra */
 const CORE = new Set(["id", "kind", "closed", "points", "points3d", "normals", "surface", "length_m", "area_m2", "created", "note", "audio", "note_status"]);
 
+function aimController(controller, ray, rotation) {
+  controller.getWorldPosition(ray.origin);
+  ray.direction.set(0, 0, -1).applyQuaternion(controller.getWorldQuaternion(rotation));
+}
+
+/* The studio's right trigger owns exactly one gesture until release. Garden tools use the
+   same controller ray as review marks, with a different destination for the stroke. */
+export function createEditorStroke() {
+  const ray = new THREE.Ray(), rotation = new THREE.Quaternion();
+  let held = false, drawing = false, startY = 0;
+  return {
+    get drawing() { return drawing; },
+    skip(trigger) { held = !!trigger; },
+    cancel(consumer) { if (drawing) consumer.cancel(); drawing = held = false; },
+    frame(controller, trigger, consumer) {
+      if (!controller) { if (drawing) consumer.cancel(); drawing = held = false; return null; }
+      aimController(controller, ray, rotation);
+      const h = consumer.project(ray);
+      if (trigger && !held && h) { startY = ray.direction.y; consumer.begin(h); drawing = true; }
+      else if (trigger && drawing && h) { h.verticalDelta = (ray.direction.y - startY) * 2; consumer.move(h); }
+      else if (!trigger && drawing) { if (h) { h.verticalDelta = (ray.direction.y - startY) * 2; consumer.move(h); } drawing = false; consumer.end(); }
+      if(!trigger&&!drawing&&h)consumer.hover?.(h);
+      held = trigger;
+      return h;
+    },
+  };
+}
+
 export function createMarks({ scene, camera, renderer, siteKey, onActive, raycast = null, meta = null, annotate = null,
                               visible = null, inXR = null, onChange = null, hint: hintText = null, seeThrough = true, tagField = "elements",
                               lockAim = false }) {
@@ -581,9 +609,8 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive, raycas
   /* call every frame while presenting and in Mark mode */
   function updateXR(controller, trigger) {
     if (!active || !controller) { ray.visible = false; triggerWas = trigger; return; }
-    controller.getWorldPosition(_o);
-    _d.set(0, 0, -1).applyQuaternion(controller.getWorldQuaternion(_q));
-    raycaster.set(_o, _d);
+    aimController(controller, raycaster.ray, _q);
+    _o.copy(raycaster.ray.origin); _d.copy(raycaster.ray.direction);
     const pressed = trigger && !triggerWas;
     triggerWas = trigger;
 

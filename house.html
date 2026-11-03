@@ -259,6 +259,9 @@
   @media (orientation: landscape) { body.touch-sticks #baBar { max-width: 820px; top: calc(max(8px, env(safe-area-inset-top, 0px)) + 40px); } }
   body.touch-sticks #toast { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 160px); }
 </style>
+<link rel="stylesheet" href="src/editor-help.css">
+<link rel="stylesheet" data-garden-panel-style href="src/garden/garden.css">
+<script type="module" src="src/editor-help.js"></script>
 </head>
 <body>
 
@@ -308,6 +311,8 @@
   </div>
   <button id="rulesSummary" class="rules-only" data-status="pass">Regs</button>
   <div class="spacer"></div>
+  <button type="button" data-editor-help="house">How to use</button>
+  <button type="button" data-garden-open>Garden design</button>
   <button id="vr" class="primary">Enter VR</button>
 </div>
 
@@ -322,6 +327,8 @@
   <button id="baFast" aria-pressed="false" title="G · twice the walking speed (fly unchanged)">Fast</button>
   <button id="baFurnish" aria-pressed="false" title="Furnished / Unfurnished: hide the furniture, soft furnishings, decor and plants to see the house itself">Furnished</button>
   <button id="baComfort" title="While turning fast: subtle blur, a dark vignette, or nothing">Comfort: subtle blur</button>
+  <button type="button" data-garden-open>Garden design</button>
+  <button type="button" data-editor-help="house">How to use</button>
   <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
   <div id="baHelp" class="meta"></div>
 </div>
@@ -412,6 +419,7 @@
     <span id="loadText">Loading…</span>
   </div>
   <div class="actions">
+    <button type="button" data-editor-help="house">How to use</button>
     <button class="primary" id="startDesktop" disabled>Explore on this screen</button>
     <button id="startVR" disabled>Enter VR</button>
   </div>
@@ -428,6 +436,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=furnish2"></script>
+<script type="module" src="src/house/viewer.js?v=garden1"></script>
 </body>
 </html>

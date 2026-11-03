@@ -44,7 +44,15 @@ window.photograph=async function(url){
  key.target.position.copy(centre);
  Object.assign(key.shadow.camera,{left:-radius,right:radius,top:radius,bottom:-radius,near:radius*.01,far:radius*6});
  key.shadow.camera.updateProjectionMatrix();
- renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');
+ let lens=camera;
+ if(item.getObjectByProperty('isMesh',true) && /mirror/.test(url)){
+   // A planar mirror with an orthographic lens samples one direction of a
+   // distant environment. A real product lens sees variation across the pane.
+   lens=new T.PerspectiveCamera(34,1,radius*.01,radius*9);
+   lens.position.copy(centre).add(new T.Vector3(.77,.54,1.36).normalize().multiplyScalar(side/Math.tan(17*Math.PI/180)+radius*.32));
+   lens.lookAt(centre);
+ }
+ renderer.render(scene,lens);const png=renderer.domElement.toDataURL('image/png');
  scene.remove(item);const geometries=new Set(),materials=new Set(),textures=new Set();
  item.traverse(o=>{if(!o.isMesh)return;geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
  for(const m of materials){for(const v of Object.values(m))if(v?.isTexture)textures.add(v);m.dispose();}

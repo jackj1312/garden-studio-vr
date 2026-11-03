@@ -198,3 +198,4 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Front garden: border blocks grey, same block as the path, flush with it (row 287)
 - house-wip only ever changes through the gated publish script (row 300)
 - Every placed item: front faces the room, base touches its host surface within 5 mm, no penetration, built to its catalogue size (row 301)
+- The three hero frames are rendered without saved mark ribbons. (row 303)

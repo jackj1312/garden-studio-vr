@@ -1,0 +1,1 @@
+{"id": "modern.rug", "kind": "rug", "style": "modern", "family": "Linear", "name": "Linear rug", "variant": "standard", "compatibleStyles": ["modern"], "construction_m": [2.4, 1.7, 0.012], "host": "floor", "roomTypes": ["any"], "fixed": false, "size_m": [2.4, 1.7, 0.0135], "model": "models/modern.rug.gltf", "thumbnail": "thumbs/modern.rug.png", "revision": "e1048dd87d1a6151"}

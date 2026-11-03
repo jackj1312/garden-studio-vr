@@ -1,0 +1,1 @@
+{"id": "modern.art", "kind": "art", "style": "modern", "family": "Linear", "name": "Linear art", "variant": "standard", "compatibleStyles": ["modern"], "construction_m": [0.55, 0.035, 0.75], "host": "wall", "roomTypes": ["any"], "fixed": false, "size_m": [0.55, 0.035, 0.75], "model": "models/modern.art.gltf", "thumbnail": "thumbs/modern.art.png", "revision": "84b416f924d0e911"}

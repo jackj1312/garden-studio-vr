@@ -1,0 +1,8364 @@
+{
+ "schema": 1,
+ "axes": "X width, Y depth, Z up, front -Y, metres; glTF +Z front, Y up",
+ "styles": [
+  "modern",
+  "contemporary",
+  "scandinavian",
+  "country",
+  "industrial",
+  "traditional"
+ ],
+ "items": [
+  {
+   "id": "modern.sofa",
+   "kind": "sofa",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22,
+    0.94,
+    0.80308
+   ],
+   "model": "models/modern.sofa.gltf",
+   "thumbnail": "thumbs/modern.sofa.png",
+   "revision": "4315bb63cfcb2584"
+  },
+  {
+   "id": "contemporary.sofa",
+   "kind": "sofa",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22,
+    0.94,
+    0.80308
+   ],
+   "model": "models/contemporary.sofa.gltf",
+   "thumbnail": "thumbs/contemporary.sofa.png",
+   "revision": "c3fd895f62e7ca53"
+  },
+  {
+   "id": "scandinavian.sofa",
+   "kind": "sofa",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22,
+    0.94,
+    0.80308
+   ],
+   "model": "models/scandinavian.sofa.gltf",
+   "thumbnail": "thumbs/scandinavian.sofa.png",
+   "revision": "f24054d19c106db4"
+  },
+  {
+   "id": "country.sofa",
+   "kind": "sofa",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22223,
+    0.94638,
+    0.80308
+   ],
+   "model": "models/country.sofa.gltf",
+   "thumbnail": "thumbs/country.sofa.png",
+   "revision": "3c6de0aa534c87b8"
+  },
+  {
+   "id": "industrial.sofa",
+   "kind": "sofa",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22,
+    0.94,
+    0.80308
+   ],
+   "model": "models/industrial.sofa.gltf",
+   "thumbnail": "thumbs/industrial.sofa.png",
+   "revision": "135b1bc546be63a9"
+  },
+  {
+   "id": "traditional.sofa",
+   "kind": "sofa",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage sofa",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    2.22,
+    0.97,
+    0.84
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.22223,
+    0.94638,
+    0.80308
+   ],
+   "model": "models/traditional.sofa.gltf",
+   "thumbnail": "thumbs/traditional.sofa.png",
+   "revision": "dac377fd82ff501b"
+  },
+  {
+   "id": "modern.armchair",
+   "kind": "armchair",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/modern.armchair.gltf",
+   "thumbnail": "thumbs/modern.armchair.png",
+   "revision": "55fa6d52c735651e"
+  },
+  {
+   "id": "contemporary.armchair",
+   "kind": "armchair",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/contemporary.armchair.gltf",
+   "thumbnail": "thumbs/contemporary.armchair.png",
+   "revision": "d2583bf502b7913f"
+  },
+  {
+   "id": "scandinavian.armchair",
+   "kind": "armchair",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/scandinavian.armchair.gltf",
+   "thumbnail": "thumbs/scandinavian.armchair.png",
+   "revision": "12c20cb196ad97e3"
+  },
+  {
+   "id": "country.armchair",
+   "kind": "armchair",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/country.armchair.gltf",
+   "thumbnail": "thumbs/country.armchair.png",
+   "revision": "5327b988f0205c7f"
+  },
+  {
+   "id": "industrial.armchair",
+   "kind": "armchair",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/industrial.armchair.gltf",
+   "thumbnail": "thumbs/industrial.armchair.png",
+   "revision": "3271bbb6b2a1106a"
+  },
+  {
+   "id": "traditional.armchair",
+   "kind": "armchair",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage armchair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.79,
+    0.84,
+    0.82
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.7494,
+    0.7896,
+    0.80074
+   ],
+   "model": "models/traditional.armchair.gltf",
+   "thumbnail": "thumbs/traditional.armchair.png",
+   "revision": "f39dea44812873dd"
+  },
+  {
+   "id": "modern.dining_chair",
+   "kind": "dining_chair",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.48967,
+    0.51555,
+    0.79356
+   ],
+   "model": "models/modern.dining_chair.gltf",
+   "thumbnail": "thumbs/modern.dining_chair.png",
+   "revision": "266f325d36187c59"
+  },
+  {
+   "id": "contemporary.dining_chair",
+   "kind": "dining_chair",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.48967,
+    0.51555,
+    0.79356
+   ],
+   "model": "models/contemporary.dining_chair.gltf",
+   "thumbnail": "thumbs/contemporary.dining_chair.png",
+   "revision": "3ab38eb5b4fe8508"
+  },
+  {
+   "id": "scandinavian.dining_chair",
+   "kind": "dining_chair",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.48967,
+    0.51555,
+    0.79356
+   ],
+   "model": "models/scandinavian.dining_chair.gltf",
+   "thumbnail": "thumbs/scandinavian.dining_chair.png",
+   "revision": "4d96d91f91023eda"
+  },
+  {
+   "id": "country.dining_chair",
+   "kind": "dining_chair",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47985,
+    0.50643,
+    0.80448
+   ],
+   "model": "models/country.dining_chair.gltf",
+   "thumbnail": "thumbs/country.dining_chair.png",
+   "revision": "25f25e2156aa7698"
+  },
+  {
+   "id": "industrial.dining_chair",
+   "kind": "dining_chair",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47985,
+    0.50643,
+    0.78062
+   ],
+   "model": "models/industrial.dining_chair.gltf",
+   "thumbnail": "thumbs/industrial.dining_chair.png",
+   "revision": "4895babe4c03e784"
+  },
+  {
+   "id": "traditional.dining_chair",
+   "kind": "dining_chair",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage dining chair",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.49,
+    0.56,
+    0.81
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47985,
+    0.50643,
+    0.80448
+   ],
+   "model": "models/traditional.dining_chair.gltf",
+   "thumbnail": "thumbs/traditional.dining_chair.png",
+   "revision": "5f6475694f47ff41"
+  },
+  {
+   "id": "modern.bed",
+   "kind": "bed",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/modern.bed.gltf",
+   "thumbnail": "thumbs/modern.bed.png",
+   "revision": "c6bf06e03b163cc1"
+  },
+  {
+   "id": "contemporary.bed",
+   "kind": "bed",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/contemporary.bed.gltf",
+   "thumbnail": "thumbs/contemporary.bed.png",
+   "revision": "27e70461ab15edf3"
+  },
+  {
+   "id": "scandinavian.bed",
+   "kind": "bed",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/scandinavian.bed.gltf",
+   "thumbnail": "thumbs/scandinavian.bed.png",
+   "revision": "7ed73beeece803e2"
+  },
+  {
+   "id": "country.bed",
+   "kind": "bed",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/country.bed.gltf",
+   "thumbnail": "thumbs/country.bed.png",
+   "revision": "58e8d120daa32a42"
+  },
+  {
+   "id": "industrial.bed",
+   "kind": "bed",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/industrial.bed.gltf",
+   "thumbnail": "thumbs/industrial.bed.png",
+   "revision": "26d55fd26fd338d3"
+  },
+  {
+   "id": "traditional.bed",
+   "kind": "bed",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.68,
+    2.18,
+    1.09
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.77349,
+    2.21658,
+    1.09
+   ],
+   "model": "models/traditional.bed.gltf",
+   "thumbnail": "thumbs/traditional.bed.png",
+   "revision": "18b96b752c0ff641"
+  },
+  {
+   "id": "modern.single_bed",
+   "kind": "single_bed",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/modern.single_bed.gltf",
+   "thumbnail": "thumbs/modern.single_bed.png",
+   "revision": "ec26de71e3fe836d"
+  },
+  {
+   "id": "contemporary.single_bed",
+   "kind": "single_bed",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/contemporary.single_bed.gltf",
+   "thumbnail": "thumbs/contemporary.single_bed.png",
+   "revision": "e681860914b4111b"
+  },
+  {
+   "id": "scandinavian.single_bed",
+   "kind": "single_bed",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/scandinavian.single_bed.gltf",
+   "thumbnail": "thumbs/scandinavian.single_bed.png",
+   "revision": "3dacdfdb101a7b00"
+  },
+  {
+   "id": "country.single_bed",
+   "kind": "single_bed",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/country.single_bed.gltf",
+   "thumbnail": "thumbs/country.single_bed.png",
+   "revision": "e45f75037baf8e75"
+  },
+  {
+   "id": "industrial.single_bed",
+   "kind": "single_bed",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/industrial.single_bed.gltf",
+   "thumbnail": "thumbs/industrial.single_bed.png",
+   "revision": "49bafa80ae3df9ca"
+  },
+  {
+   "id": "traditional.single_bed",
+   "kind": "single_bed",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage single bed",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.0,
+    2.12,
+    1.02
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.09349,
+    2.15528,
+    1.02
+   ],
+   "model": "models/traditional.single_bed.gltf",
+   "thumbnail": "thumbs/traditional.single_bed.png",
+   "revision": "c6744269bbe7f3e2"
+  },
+  {
+   "id": "modern.coffee_table",
+   "kind": "coffee_table",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "model": "models/modern.coffee_table.gltf",
+   "thumbnail": "thumbs/modern.coffee_table.png",
+   "revision": "c4e9b8544277eb52"
+  },
+  {
+   "id": "contemporary.coffee_table",
+   "kind": "coffee_table",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "model": "models/contemporary.coffee_table.gltf",
+   "thumbnail": "thumbs/contemporary.coffee_table.png",
+   "revision": "c8713a343701d1c6"
+  },
+  {
+   "id": "scandinavian.coffee_table",
+   "kind": "coffee_table",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36394
+   ],
+   "model": "models/scandinavian.coffee_table.gltf",
+   "thumbnail": "thumbs/scandinavian.coffee_table.png",
+   "revision": "978d626bc101d07a"
+  },
+  {
+   "id": "country.coffee_table",
+   "kind": "coffee_table",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "model": "models/country.coffee_table.gltf",
+   "thumbnail": "thumbs/country.coffee_table.png",
+   "revision": "1d0f6cea2f57f87b"
+  },
+  {
+   "id": "industrial.coffee_table",
+   "kind": "coffee_table",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "model": "models/industrial.coffee_table.gltf",
+   "thumbnail": "thumbs/industrial.coffee_table.png",
+   "revision": "cd1bcc8be9e20c19"
+  },
+  {
+   "id": "traditional.coffee_table",
+   "kind": "coffee_table",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage coffee table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.15,
+    0.65,
+    0.36
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.65,
+    0.36394
+   ],
+   "model": "models/traditional.coffee_table.gltf",
+   "thumbnail": "thumbs/traditional.coffee_table.png",
+   "revision": "3aadc0e4ebcd323b"
+  },
+  {
+   "id": "modern.dining_table",
+   "kind": "dining_table",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "model": "models/modern.dining_table.gltf",
+   "thumbnail": "thumbs/modern.dining_table.png",
+   "revision": "2c73e4743a54040c"
+  },
+  {
+   "id": "contemporary.dining_table",
+   "kind": "dining_table",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "model": "models/contemporary.dining_table.gltf",
+   "thumbnail": "thumbs/contemporary.dining_table.png",
+   "revision": "de5271425ceab4a7"
+  },
+  {
+   "id": "scandinavian.dining_table",
+   "kind": "dining_table",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75226
+   ],
+   "model": "models/scandinavian.dining_table.gltf",
+   "thumbnail": "thumbs/scandinavian.dining_table.png",
+   "revision": "b7d1ce45a3171c90"
+  },
+  {
+   "id": "country.dining_table",
+   "kind": "dining_table",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "model": "models/country.dining_table.gltf",
+   "thumbnail": "thumbs/country.dining_table.png",
+   "revision": "69fb0dbaf16e1c2e"
+  },
+  {
+   "id": "industrial.dining_table",
+   "kind": "dining_table",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "model": "models/industrial.dining_table.gltf",
+   "thumbnail": "thumbs/industrial.dining_table.png",
+   "revision": "046daa96840a1bb7"
+  },
+  {
+   "id": "traditional.dining_table",
+   "kind": "dining_table",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage dining table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.85,
+    0.91,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "dining"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.85,
+    0.91,
+    0.75226
+   ],
+   "model": "models/traditional.dining_table.gltf",
+   "thumbnail": "thumbs/traditional.dining_table.png",
+   "revision": "2b57c80629c4f965"
+  },
+  {
+   "id": "modern.side_table",
+   "kind": "side_table",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "model": "models/modern.side_table.gltf",
+   "thumbnail": "thumbs/modern.side_table.png",
+   "revision": "caaae99e38693bb5"
+  },
+  {
+   "id": "contemporary.side_table",
+   "kind": "side_table",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "model": "models/contemporary.side_table.gltf",
+   "thumbnail": "thumbs/contemporary.side_table.png",
+   "revision": "54cd089ae1cb675b"
+  },
+  {
+   "id": "scandinavian.side_table",
+   "kind": "side_table",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49145
+   ],
+   "model": "models/scandinavian.side_table.gltf",
+   "thumbnail": "thumbs/scandinavian.side_table.png",
+   "revision": "b4be59b5e8625743"
+  },
+  {
+   "id": "country.side_table",
+   "kind": "side_table",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "model": "models/country.side_table.gltf",
+   "thumbnail": "thumbs/country.side_table.png",
+   "revision": "56e5a2f3c64d0395"
+  },
+  {
+   "id": "industrial.side_table",
+   "kind": "side_table",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "model": "models/industrial.side_table.gltf",
+   "thumbnail": "thumbs/industrial.side_table.png",
+   "revision": "6270b9716c72e60d"
+  },
+  {
+   "id": "traditional.side_table",
+   "kind": "side_table",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage side table",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.46,
+    0.46,
+    0.49
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.46,
+    0.46,
+    0.49145
+   ],
+   "model": "models/traditional.side_table.gltf",
+   "thumbnail": "thumbs/traditional.side_table.png",
+   "revision": "43aadd887a966412"
+  },
+  {
+   "id": "modern.rug",
+   "kind": "rug",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/modern.rug.gltf",
+   "thumbnail": "thumbs/modern.rug.png",
+   "revision": "e1048dd87d1a6151"
+  },
+  {
+   "id": "contemporary.rug",
+   "kind": "rug",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/contemporary.rug.gltf",
+   "thumbnail": "thumbs/contemporary.rug.png",
+   "revision": "6f06a7bc71770d0c"
+  },
+  {
+   "id": "scandinavian.rug",
+   "kind": "rug",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/scandinavian.rug.gltf",
+   "thumbnail": "thumbs/scandinavian.rug.png",
+   "revision": "0e52d87a80351bed"
+  },
+  {
+   "id": "country.rug",
+   "kind": "rug",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/country.rug.gltf",
+   "thumbnail": "thumbs/country.rug.png",
+   "revision": "f4743900d49f1ce5"
+  },
+  {
+   "id": "industrial.rug",
+   "kind": "rug",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/industrial.rug.gltf",
+   "thumbnail": "thumbs/industrial.rug.png",
+   "revision": "43a92537f516b965"
+  },
+  {
+   "id": "traditional.rug",
+   "kind": "rug",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage rug",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    2.4,
+    1.7,
+    0.012
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    2.4,
+    1.7,
+    0.0135
+   ],
+   "model": "models/traditional.rug.gltf",
+   "thumbnail": "thumbs/traditional.rug.png",
+   "revision": "96063ec0e32c52d7"
+  },
+  {
+   "id": "modern.cushion",
+   "kind": "cushion",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/modern.cushion.gltf",
+   "thumbnail": "thumbs/modern.cushion.png",
+   "revision": "812f8812f7f0085b"
+  },
+  {
+   "id": "contemporary.cushion",
+   "kind": "cushion",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/contemporary.cushion.gltf",
+   "thumbnail": "thumbs/contemporary.cushion.png",
+   "revision": "6a3892f9ad8a06ac"
+  },
+  {
+   "id": "scandinavian.cushion",
+   "kind": "cushion",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/scandinavian.cushion.gltf",
+   "thumbnail": "thumbs/scandinavian.cushion.png",
+   "revision": "64ecf49b7d155845"
+  },
+  {
+   "id": "country.cushion",
+   "kind": "cushion",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/country.cushion.gltf",
+   "thumbnail": "thumbs/country.cushion.png",
+   "revision": "ae25c34ae1573dba"
+  },
+  {
+   "id": "industrial.cushion",
+   "kind": "cushion",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/industrial.cushion.gltf",
+   "thumbnail": "thumbs/industrial.cushion.png",
+   "revision": "c7683f82638b7f7d"
+  },
+  {
+   "id": "traditional.cushion",
+   "kind": "cushion",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage cushion",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.47,
+    0.47,
+    0.15
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47454,
+    0.47454,
+    0.15
+   ],
+   "model": "models/traditional.cushion.gltf",
+   "thumbnail": "thumbs/traditional.cushion.png",
+   "revision": "5d6c12c586ab39b1"
+  },
+  {
+   "id": "modern.throw",
+   "kind": "throw",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/modern.throw.gltf",
+   "thumbnail": "thumbs/modern.throw.png",
+   "revision": "82b8a8afe310ed89"
+  },
+  {
+   "id": "contemporary.throw",
+   "kind": "throw",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/contemporary.throw.gltf",
+   "thumbnail": "thumbs/contemporary.throw.png",
+   "revision": "ac637db5715c852f"
+  },
+  {
+   "id": "scandinavian.throw",
+   "kind": "throw",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/scandinavian.throw.gltf",
+   "thumbnail": "thumbs/scandinavian.throw.png",
+   "revision": "5f122436c362f683"
+  },
+  {
+   "id": "country.throw",
+   "kind": "throw",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/country.throw.gltf",
+   "thumbnail": "thumbs/country.throw.png",
+   "revision": "862bcf0cc76534cd"
+  },
+  {
+   "id": "industrial.throw",
+   "kind": "throw",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/industrial.throw.gltf",
+   "thumbnail": "thumbs/industrial.throw.png",
+   "revision": "722362904e9cfd65"
+  },
+  {
+   "id": "traditional.throw",
+   "kind": "throw",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage throw",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.15,
+    0.76,
+    0.04
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.76,
+    0.00292
+   ],
+   "model": "models/traditional.throw.gltf",
+   "thumbnail": "thumbs/traditional.throw.png",
+   "revision": "29f51689f016e6e0"
+  },
+  {
+   "id": "modern.curtain",
+   "kind": "curtain",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/modern.curtain.gltf",
+   "thumbnail": "thumbs/modern.curtain.png",
+   "revision": "3d54f1dcf969a610"
+  },
+  {
+   "id": "contemporary.curtain",
+   "kind": "curtain",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/contemporary.curtain.gltf",
+   "thumbnail": "thumbs/contemporary.curtain.png",
+   "revision": "a065f4e1912a2cc0"
+  },
+  {
+   "id": "scandinavian.curtain",
+   "kind": "curtain",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/scandinavian.curtain.gltf",
+   "thumbnail": "thumbs/scandinavian.curtain.png",
+   "revision": "e00ae3733e24303c"
+  },
+  {
+   "id": "country.curtain",
+   "kind": "curtain",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/country.curtain.gltf",
+   "thumbnail": "thumbs/country.curtain.png",
+   "revision": "9894bba174467b14"
+  },
+  {
+   "id": "industrial.curtain",
+   "kind": "curtain",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/industrial.curtain.gltf",
+   "thumbnail": "thumbs/industrial.curtain.png",
+   "revision": "78d19551c82f11d2"
+  },
+  {
+   "id": "traditional.curtain",
+   "kind": "curtain",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage curtain",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.65,
+    0.14,
+    2.2
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.728,
+    0.11691,
+    2.2235
+   ],
+   "model": "models/traditional.curtain.gltf",
+   "thumbnail": "thumbs/traditional.curtain.png",
+   "revision": "7dde98a5b3600825"
+  },
+  {
+   "id": "modern.roman_blind",
+   "kind": "roman_blind",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/modern.roman_blind.gltf",
+   "thumbnail": "thumbs/modern.roman_blind.png",
+   "revision": "ac234c2fe6d1e347"
+  },
+  {
+   "id": "contemporary.roman_blind",
+   "kind": "roman_blind",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/contemporary.roman_blind.gltf",
+   "thumbnail": "thumbs/contemporary.roman_blind.png",
+   "revision": "3ebef6ed4192a1ea"
+  },
+  {
+   "id": "scandinavian.roman_blind",
+   "kind": "roman_blind",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/scandinavian.roman_blind.gltf",
+   "thumbnail": "thumbs/scandinavian.roman_blind.png",
+   "revision": "f9833c3e732a2cbf"
+  },
+  {
+   "id": "country.roman_blind",
+   "kind": "roman_blind",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/country.roman_blind.gltf",
+   "thumbnail": "thumbs/country.roman_blind.png",
+   "revision": "26a01934cc24d455"
+  },
+  {
+   "id": "industrial.roman_blind",
+   "kind": "roman_blind",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/industrial.roman_blind.gltf",
+   "thumbnail": "thumbs/industrial.roman_blind.png",
+   "revision": "e370f7c0ebb51df0"
+  },
+  {
+   "id": "traditional.roman_blind",
+   "kind": "roman_blind",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage roman blind",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.5,
+    0.09,
+    0.24
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.5,
+    0.09,
+    0.24492
+   ],
+   "model": "models/traditional.roman_blind.gltf",
+   "thumbnail": "thumbs/traditional.roman_blind.png",
+   "revision": "72a5d9c52917976c"
+  },
+  {
+   "id": "modern.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/modern.kitchen_base.gltf",
+   "thumbnail": "thumbs/modern.kitchen_base.png",
+   "revision": "f54d1147dd5f3418"
+  },
+  {
+   "id": "contemporary.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/contemporary.kitchen_base.gltf",
+   "thumbnail": "thumbs/contemporary.kitchen_base.png",
+   "revision": "b30b441716c78697"
+  },
+  {
+   "id": "scandinavian.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/scandinavian.kitchen_base.gltf",
+   "thumbnail": "thumbs/scandinavian.kitchen_base.png",
+   "revision": "be1b427ef289224c"
+  },
+  {
+   "id": "country.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/country.kitchen_base.gltf",
+   "thumbnail": "thumbs/country.kitchen_base.png",
+   "revision": "54f1b6d343943471"
+  },
+  {
+   "id": "industrial.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/industrial.kitchen_base.gltf",
+   "thumbnail": "thumbs/industrial.kitchen_base.png",
+   "revision": "58aa5074f48a46e6"
+  },
+  {
+   "id": "traditional.kitchen_base",
+   "kind": "kitchen_base",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage kitchen base",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/traditional.kitchen_base.gltf",
+   "thumbnail": "thumbs/traditional.kitchen_base.png",
+   "revision": "14736a0aac689b52"
+  },
+  {
+   "id": "modern.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37596,
+    0.72
+   ],
+   "model": "models/modern.kitchen_wall.gltf",
+   "thumbnail": "thumbs/modern.kitchen_wall.png",
+   "revision": "69b1c21173707394"
+  },
+  {
+   "id": "contemporary.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37596,
+    0.72
+   ],
+   "model": "models/contemporary.kitchen_wall.gltf",
+   "thumbnail": "thumbs/contemporary.kitchen_wall.png",
+   "revision": "5694b4967ca759e1"
+  },
+  {
+   "id": "scandinavian.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37895,
+    0.72
+   ],
+   "model": "models/scandinavian.kitchen_wall.gltf",
+   "thumbnail": "thumbs/scandinavian.kitchen_wall.png",
+   "revision": "f3a75df4e4258e2e"
+  },
+  {
+   "id": "country.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37895,
+    0.72
+   ],
+   "model": "models/country.kitchen_wall.gltf",
+   "thumbnail": "thumbs/country.kitchen_wall.png",
+   "revision": "8c2c062b3f2c2d6f"
+  },
+  {
+   "id": "industrial.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37596,
+    0.72
+   ],
+   "model": "models/industrial.kitchen_wall.gltf",
+   "thumbnail": "thumbs/industrial.kitchen_wall.png",
+   "revision": "278a9100aa9fc6ae"
+  },
+  {
+   "id": "traditional.kitchen_wall",
+   "kind": "kitchen_wall",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage kitchen wall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.33,
+    0.72
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.37895,
+    0.72
+   ],
+   "model": "models/traditional.kitchen_wall.gltf",
+   "thumbnail": "thumbs/traditional.kitchen_wall.png",
+   "revision": "6c3959258d38021f"
+  },
+  {
+   "id": "modern.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66596,
+    2.15
+   ],
+   "model": "models/modern.kitchen_tall.gltf",
+   "thumbnail": "thumbs/modern.kitchen_tall.png",
+   "revision": "f68fdf727287a6c5"
+  },
+  {
+   "id": "contemporary.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66596,
+    2.15
+   ],
+   "model": "models/contemporary.kitchen_tall.gltf",
+   "thumbnail": "thumbs/contemporary.kitchen_tall.png",
+   "revision": "899e9612b48889b6"
+  },
+  {
+   "id": "scandinavian.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66895,
+    2.15
+   ],
+   "model": "models/scandinavian.kitchen_tall.gltf",
+   "thumbnail": "thumbs/scandinavian.kitchen_tall.png",
+   "revision": "0c1f3ddd00710698"
+  },
+  {
+   "id": "country.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66895,
+    2.15
+   ],
+   "model": "models/country.kitchen_tall.gltf",
+   "thumbnail": "thumbs/country.kitchen_tall.png",
+   "revision": "06f68d8a4905296a"
+  },
+  {
+   "id": "industrial.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66596,
+    2.15
+   ],
+   "model": "models/industrial.kitchen_tall.gltf",
+   "thumbnail": "thumbs/industrial.kitchen_tall.png",
+   "revision": "2c0a4d8bd9616162"
+  },
+  {
+   "id": "traditional.kitchen_tall",
+   "kind": "kitchen_tall",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage kitchen tall",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.66895,
+    2.15
+   ],
+   "model": "models/traditional.kitchen_tall.gltf",
+   "thumbnail": "thumbs/traditional.kitchen_tall.png",
+   "revision": "8ad77164341abf7d"
+  },
+  {
+   "id": "shared.oven",
+   "kind": "oven",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio oven",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.59,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.6,
+    0.65449,
+    0.6
+   ],
+   "model": "models/shared.oven.gltf",
+   "thumbnail": "thumbs/shared.oven.png",
+   "revision": "796f972d96361c9b"
+  },
+  {
+   "id": "shared.fridge",
+   "kind": "fridge",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio fridge",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.65,
+    1.88
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.6,
+    0.66819,
+    1.88
+   ],
+   "model": "models/shared.fridge.gltf",
+   "thumbnail": "thumbs/shared.fridge.png",
+   "revision": "df84cdc0cc72cbac"
+  },
+  {
+   "id": "shared.hob",
+   "kind": "hob",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio hob",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.59,
+    0.52,
+    0.014
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.59,
+    0.52,
+    0.0115
+   ],
+   "model": "models/shared.hob.gltf",
+   "thumbnail": "thumbs/shared.hob.png",
+   "revision": "132bc3271fc0e20a"
+  },
+  {
+   "id": "shared.sink",
+   "kind": "sink",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio sink",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.54,
+    0.46,
+    0.21
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.54,
+    0.46,
+    0.21
+   ],
+   "model": "models/shared.sink.gltf",
+   "thumbnail": "thumbs/shared.sink.png",
+   "revision": "c916fdd9e7152299"
+  },
+  {
+   "id": "shared.tap",
+   "kind": "tap",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio tap",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.17,
+    0.25,
+    0.35
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.073,
+    0.229,
+    0.338
+   ],
+   "model": "models/shared.tap.gltf",
+   "thumbnail": "thumbs/shared.tap.png",
+   "revision": "8e6ea8839fc463a1"
+  },
+  {
+   "id": "shared.basin",
+   "kind": "basin",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio basin",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.58,
+    0.44,
+    0.16
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.58,
+    0.44,
+    0.16
+   ],
+   "model": "models/shared.basin.gltf",
+   "thumbnail": "thumbs/shared.basin.png",
+   "revision": "3a8c2665a9d97691"
+  },
+  {
+   "id": "modern.vanity",
+   "kind": "vanity",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.52796,
+    1.0052
+   ],
+   "model": "models/modern.vanity.gltf",
+   "thumbnail": "thumbs/modern.vanity.png",
+   "revision": "b911528d609883aa"
+  },
+  {
+   "id": "contemporary.vanity",
+   "kind": "vanity",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.52796,
+    1.0052
+   ],
+   "model": "models/contemporary.vanity.gltf",
+   "thumbnail": "thumbs/contemporary.vanity.png",
+   "revision": "492e91242a243751"
+  },
+  {
+   "id": "scandinavian.vanity",
+   "kind": "vanity",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.53095,
+    1.0052
+   ],
+   "model": "models/scandinavian.vanity.gltf",
+   "thumbnail": "thumbs/scandinavian.vanity.png",
+   "revision": "1a13dd074de64cc7"
+  },
+  {
+   "id": "country.vanity",
+   "kind": "vanity",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.53095,
+    1.0052
+   ],
+   "model": "models/country.vanity.gltf",
+   "thumbnail": "thumbs/country.vanity.png",
+   "revision": "7913ba658fb6706d"
+  },
+  {
+   "id": "industrial.vanity",
+   "kind": "vanity",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.52796,
+    1.0052
+   ],
+   "model": "models/industrial.vanity.gltf",
+   "thumbnail": "thumbs/industrial.vanity.png",
+   "revision": "43a7c93d471c96da"
+  },
+  {
+   "id": "traditional.vanity",
+   "kind": "vanity",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.8,
+    0.49,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.53095,
+    1.0052
+   ],
+   "model": "models/traditional.vanity.gltf",
+   "thumbnail": "thumbs/traditional.vanity.png",
+   "revision": "15c62d36a14e42ad"
+  },
+  {
+   "id": "shared.toilet",
+   "kind": "toilet",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio toilet",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.37,
+    0.66,
+    0.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.37,
+    0.627,
+    0.804
+   ],
+   "model": "models/shared.toilet.gltf",
+   "thumbnail": "thumbs/shared.toilet.png",
+   "revision": "3f12a464a9e527cf"
+  },
+  {
+   "id": "shared.bath",
+   "kind": "bath",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio bath",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.75,
+    1.7,
+    0.57
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.75,
+    1.7,
+    0.7708
+   ],
+   "model": "models/shared.bath.gltf",
+   "thumbnail": "thumbs/shared.bath.png",
+   "revision": "5f5bb4f2fdb0dd06"
+  },
+  {
+   "id": "shared.shower",
+   "kind": "shower",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio shower",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.9,
+    0.9,
+    2.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.918,
+    0.94566,
+    2.059
+   ],
+   "model": "models/shared.shower.gltf",
+   "thumbnail": "thumbs/shared.shower.png",
+   "revision": "44a2ab7ec9bcba50"
+  },
+  {
+   "id": "shared.radiator",
+   "kind": "radiator",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio radiator",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.95,
+    0.1,
+    0.6
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.024,
+    0.088,
+    0.6665
+   ],
+   "model": "models/shared.radiator.gltf",
+   "thumbnail": "thumbs/shared.radiator.png",
+   "revision": "a241358664fa5fbd"
+  },
+  {
+   "id": "shared.towel_rail",
+   "kind": "towel_rail",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio towel rail",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.5,
+    0.09,
+    1.1
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.574,
+    0.0486,
+    1.165
+   ],
+   "model": "models/shared.towel_rail.gltf",
+   "thumbnail": "thumbs/shared.towel_rail.png",
+   "revision": "c2e705c1806692fd"
+  },
+  {
+   "id": "modern.pendant",
+   "kind": "pendant",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/modern.pendant.gltf",
+   "thumbnail": "thumbs/modern.pendant.png",
+   "revision": "e5fa5e6f10f28a31"
+  },
+  {
+   "id": "contemporary.pendant",
+   "kind": "pendant",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/contemporary.pendant.gltf",
+   "thumbnail": "thumbs/contemporary.pendant.png",
+   "revision": "4a631866179047f8"
+  },
+  {
+   "id": "scandinavian.pendant",
+   "kind": "pendant",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/scandinavian.pendant.gltf",
+   "thumbnail": "thumbs/scandinavian.pendant.png",
+   "revision": "6ae889ea265f593c"
+  },
+  {
+   "id": "country.pendant",
+   "kind": "pendant",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/country.pendant.gltf",
+   "thumbnail": "thumbs/country.pendant.png",
+   "revision": "bb3e3847fa15adea"
+  },
+  {
+   "id": "industrial.pendant",
+   "kind": "pendant",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/industrial.pendant.gltf",
+   "thumbnail": "thumbs/industrial.pendant.png",
+   "revision": "c423797e550a61ba"
+  },
+  {
+   "id": "traditional.pendant",
+   "kind": "pendant",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    0.75
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.364,
+    0.364,
+    0.75173
+   ],
+   "model": "models/traditional.pendant.gltf",
+   "thumbnail": "thumbs/traditional.pendant.png",
+   "revision": "710934d152125d9f"
+  },
+  {
+   "id": "modern.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/modern.floor_lamp.gltf",
+   "thumbnail": "thumbs/modern.floor_lamp.png",
+   "revision": "3450f2fad36a8609"
+  },
+  {
+   "id": "contemporary.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/contemporary.floor_lamp.gltf",
+   "thumbnail": "thumbs/contemporary.floor_lamp.png",
+   "revision": "9947badea3e8be6e"
+  },
+  {
+   "id": "scandinavian.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/scandinavian.floor_lamp.gltf",
+   "thumbnail": "thumbs/scandinavian.floor_lamp.png",
+   "revision": "44b4f28d7e1da5c3"
+  },
+  {
+   "id": "country.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/country.floor_lamp.gltf",
+   "thumbnail": "thumbs/country.floor_lamp.png",
+   "revision": "690509441cc75471"
+  },
+  {
+   "id": "industrial.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/industrial.floor_lamp.gltf",
+   "thumbnail": "thumbs/industrial.floor_lamp.png",
+   "revision": "828cc7bc2cafc450"
+  },
+  {
+   "id": "traditional.floor_lamp",
+   "kind": "floor_lamp",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage floor lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.36,
+    0.36,
+    1.53
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.364,
+    0.364,
+    1.53173
+   ],
+   "model": "models/traditional.floor_lamp.gltf",
+   "thumbnail": "thumbs/traditional.floor_lamp.png",
+   "revision": "8f2800550b07e994"
+  },
+  {
+   "id": "modern.table_lamp",
+   "kind": "table_lamp",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/modern.table_lamp.gltf",
+   "thumbnail": "thumbs/modern.table_lamp.png",
+   "revision": "9986679b9033d809"
+  },
+  {
+   "id": "contemporary.table_lamp",
+   "kind": "table_lamp",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/contemporary.table_lamp.gltf",
+   "thumbnail": "thumbs/contemporary.table_lamp.png",
+   "revision": "d8c5943a8c092112"
+  },
+  {
+   "id": "scandinavian.table_lamp",
+   "kind": "table_lamp",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/scandinavian.table_lamp.gltf",
+   "thumbnail": "thumbs/scandinavian.table_lamp.png",
+   "revision": "aa1eaa5e6e34d965"
+  },
+  {
+   "id": "country.table_lamp",
+   "kind": "table_lamp",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/country.table_lamp.gltf",
+   "thumbnail": "thumbs/country.table_lamp.png",
+   "revision": "f9e454419e96abe2"
+  },
+  {
+   "id": "industrial.table_lamp",
+   "kind": "table_lamp",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/industrial.table_lamp.gltf",
+   "thumbnail": "thumbs/industrial.table_lamp.png",
+   "revision": "9cbe76fad9302d72"
+  },
+  {
+   "id": "traditional.table_lamp",
+   "kind": "table_lamp",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage table lamp",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.46
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.294,
+    0.294,
+    0.46173
+   ],
+   "model": "models/traditional.table_lamp.gltf",
+   "thumbnail": "thumbs/traditional.table_lamp.png",
+   "revision": "0e9d36253a09b032"
+  },
+  {
+   "id": "modern.wall_light",
+   "kind": "wall_light",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/modern.wall_light.gltf",
+   "thumbnail": "thumbs/modern.wall_light.png",
+   "revision": "77370396b7c9c449"
+  },
+  {
+   "id": "contemporary.wall_light",
+   "kind": "wall_light",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/contemporary.wall_light.gltf",
+   "thumbnail": "thumbs/contemporary.wall_light.png",
+   "revision": "9c7cf936e3065aa6"
+  },
+  {
+   "id": "scandinavian.wall_light",
+   "kind": "wall_light",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/scandinavian.wall_light.gltf",
+   "thumbnail": "thumbs/scandinavian.wall_light.png",
+   "revision": "f8245e46f56feb36"
+  },
+  {
+   "id": "country.wall_light",
+   "kind": "wall_light",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/country.wall_light.gltf",
+   "thumbnail": "thumbs/country.wall_light.png",
+   "revision": "13185d9e343a23d9"
+  },
+  {
+   "id": "industrial.wall_light",
+   "kind": "wall_light",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/industrial.wall_light.gltf",
+   "thumbnail": "thumbs/industrial.wall_light.png",
+   "revision": "ff01082e5bef37d4"
+  },
+  {
+   "id": "traditional.wall_light",
+   "kind": "wall_light",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage wall light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.13,
+    0.17,
+    0.28
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.134,
+    0.156,
+    0.23273
+   ],
+   "model": "models/traditional.wall_light.gltf",
+   "thumbnail": "thumbs/traditional.wall_light.png",
+   "revision": "c066b7d8e7e6ec37"
+  },
+  {
+   "id": "shared.downlight",
+   "kind": "downlight",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio downlight",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.085,
+    0.085,
+    0.028
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.085,
+    0.085,
+    0.011
+   ],
+   "model": "models/shared.downlight.gltf",
+   "thumbnail": "thumbs/shared.downlight.png",
+   "revision": "917f7de995c48b08"
+  },
+  {
+   "id": "modern.book_stack",
+   "kind": "book_stack",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/modern.book_stack.gltf",
+   "thumbnail": "thumbs/modern.book_stack.png",
+   "revision": "79e2d9daab638a2b"
+  },
+  {
+   "id": "contemporary.book_stack",
+   "kind": "book_stack",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/contemporary.book_stack.gltf",
+   "thumbnail": "thumbs/contemporary.book_stack.png",
+   "revision": "5edee09a2305bb53"
+  },
+  {
+   "id": "scandinavian.book_stack",
+   "kind": "book_stack",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/scandinavian.book_stack.gltf",
+   "thumbnail": "thumbs/scandinavian.book_stack.png",
+   "revision": "869f47d00d53fcc5"
+  },
+  {
+   "id": "country.book_stack",
+   "kind": "book_stack",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/country.book_stack.gltf",
+   "thumbnail": "thumbs/country.book_stack.png",
+   "revision": "8e4c17f953c3fe5f"
+  },
+  {
+   "id": "industrial.book_stack",
+   "kind": "book_stack",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/industrial.book_stack.gltf",
+   "thumbnail": "thumbs/industrial.book_stack.png",
+   "revision": "e620b58a981db119"
+  },
+  {
+   "id": "traditional.book_stack",
+   "kind": "book_stack",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage book stack",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.26,
+    0.19,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.26,
+    0.19005,
+    0.12
+   ],
+   "model": "models/traditional.book_stack.gltf",
+   "thumbnail": "thumbs/traditional.book_stack.png",
+   "revision": "0fa6543f0017f43e"
+  },
+  {
+   "id": "modern.books",
+   "kind": "books",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/modern.books.gltf",
+   "thumbnail": "thumbs/modern.books.png",
+   "revision": "e366421fb4650d13"
+  },
+  {
+   "id": "contemporary.books",
+   "kind": "books",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/contemporary.books.gltf",
+   "thumbnail": "thumbs/contemporary.books.png",
+   "revision": "85f7933e65172f88"
+  },
+  {
+   "id": "scandinavian.books",
+   "kind": "books",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/scandinavian.books.gltf",
+   "thumbnail": "thumbs/scandinavian.books.png",
+   "revision": "affb8e27e95882ba"
+  },
+  {
+   "id": "country.books",
+   "kind": "books",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/country.books.gltf",
+   "thumbnail": "thumbs/country.books.png",
+   "revision": "3e79ac4bbfd45f51"
+  },
+  {
+   "id": "industrial.books",
+   "kind": "books",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/industrial.books.gltf",
+   "thumbnail": "thumbs/industrial.books.png",
+   "revision": "bc4226ffec0d460f"
+  },
+  {
+   "id": "traditional.books",
+   "kind": "books",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage books",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.34,
+    0.21,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3366,
+    0.206,
+    0.2744
+   ],
+   "model": "models/traditional.books.gltf",
+   "thumbnail": "thumbs/traditional.books.png",
+   "revision": "7ab7f4dd45664848"
+  },
+  {
+   "id": "modern.vase",
+   "kind": "vase",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/modern.vase.gltf",
+   "thumbnail": "thumbs/modern.vase.png",
+   "revision": "4f74e259a37938ff"
+  },
+  {
+   "id": "contemporary.vase",
+   "kind": "vase",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/contemporary.vase.gltf",
+   "thumbnail": "thumbs/contemporary.vase.png",
+   "revision": "ebe3927ba1944ac9"
+  },
+  {
+   "id": "scandinavian.vase",
+   "kind": "vase",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/scandinavian.vase.gltf",
+   "thumbnail": "thumbs/scandinavian.vase.png",
+   "revision": "f8aefee5e8073b58"
+  },
+  {
+   "id": "country.vase",
+   "kind": "vase",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/country.vase.gltf",
+   "thumbnail": "thumbs/country.vase.png",
+   "revision": "2e67742f0408c589"
+  },
+  {
+   "id": "industrial.vase",
+   "kind": "vase",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/industrial.vase.gltf",
+   "thumbnail": "thumbs/industrial.vase.png",
+   "revision": "3261a32da429d86d"
+  },
+  {
+   "id": "traditional.vase",
+   "kind": "vase",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage vase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.18,
+    0.18,
+    0.28
+   ],
+   "model": "models/traditional.vase.gltf",
+   "thumbnail": "thumbs/traditional.vase.png",
+   "revision": "032da4950e505ab7"
+  },
+  {
+   "id": "modern.bowl",
+   "kind": "bowl",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/modern.bowl.gltf",
+   "thumbnail": "thumbs/modern.bowl.png",
+   "revision": "ef841f57d432e93f"
+  },
+  {
+   "id": "contemporary.bowl",
+   "kind": "bowl",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/contemporary.bowl.gltf",
+   "thumbnail": "thumbs/contemporary.bowl.png",
+   "revision": "cc502218903bc30d"
+  },
+  {
+   "id": "scandinavian.bowl",
+   "kind": "bowl",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/scandinavian.bowl.gltf",
+   "thumbnail": "thumbs/scandinavian.bowl.png",
+   "revision": "8ddc69e8d6a7f7f4"
+  },
+  {
+   "id": "country.bowl",
+   "kind": "bowl",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/country.bowl.gltf",
+   "thumbnail": "thumbs/country.bowl.png",
+   "revision": "57c51eee57fb2082"
+  },
+  {
+   "id": "industrial.bowl",
+   "kind": "bowl",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/industrial.bowl.gltf",
+   "thumbnail": "thumbs/industrial.bowl.png",
+   "revision": "1558975798861d38"
+  },
+  {
+   "id": "traditional.bowl",
+   "kind": "bowl",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.29,
+    0.29,
+    0.09
+   ],
+   "model": "models/traditional.bowl.gltf",
+   "thumbnail": "thumbs/traditional.bowl.png",
+   "revision": "b1fb6bc29174125b"
+  },
+  {
+   "id": "modern.plant",
+   "kind": "plant",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/modern.plant.gltf",
+   "thumbnail": "thumbs/modern.plant.png",
+   "revision": "1030dd761ea921ca"
+  },
+  {
+   "id": "contemporary.plant",
+   "kind": "plant",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/contemporary.plant.gltf",
+   "thumbnail": "thumbs/contemporary.plant.png",
+   "revision": "53cb1416b0ff220f"
+  },
+  {
+   "id": "scandinavian.plant",
+   "kind": "plant",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/scandinavian.plant.gltf",
+   "thumbnail": "thumbs/scandinavian.plant.png",
+   "revision": "2f58200010eba48f"
+  },
+  {
+   "id": "country.plant",
+   "kind": "plant",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/country.plant.gltf",
+   "thumbnail": "thumbs/country.plant.png",
+   "revision": "d3483029d5288893"
+  },
+  {
+   "id": "industrial.plant",
+   "kind": "plant",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/industrial.plant.gltf",
+   "thumbnail": "thumbs/industrial.plant.png",
+   "revision": "4819001dd9f5751a"
+  },
+  {
+   "id": "traditional.plant",
+   "kind": "plant",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage plant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.44,
+    0.44,
+    0.72
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.34062,
+    0.33687,
+    0.72045
+   ],
+   "model": "models/traditional.plant.gltf",
+   "thumbnail": "thumbs/traditional.plant.png",
+   "revision": "91d87bd0af9a7714"
+  },
+  {
+   "id": "modern.art",
+   "kind": "art",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/modern.art.gltf",
+   "thumbnail": "thumbs/modern.art.png",
+   "revision": "84b416f924d0e911"
+  },
+  {
+   "id": "contemporary.art",
+   "kind": "art",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/contemporary.art.gltf",
+   "thumbnail": "thumbs/contemporary.art.png",
+   "revision": "214a1dfb364e9dfa"
+  },
+  {
+   "id": "scandinavian.art",
+   "kind": "art",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/scandinavian.art.gltf",
+   "thumbnail": "thumbs/scandinavian.art.png",
+   "revision": "874b9b643d0f78be"
+  },
+  {
+   "id": "country.art",
+   "kind": "art",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/country.art.gltf",
+   "thumbnail": "thumbs/country.art.png",
+   "revision": "fe6de7cdcee28eee"
+  },
+  {
+   "id": "industrial.art",
+   "kind": "art",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/industrial.art.gltf",
+   "thumbnail": "thumbs/industrial.art.png",
+   "revision": "ae987188d6645daa"
+  },
+  {
+   "id": "traditional.art",
+   "kind": "art",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage art",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.55,
+    0.035,
+    0.75
+   ],
+   "model": "models/traditional.art.gltf",
+   "thumbnail": "thumbs/traditional.art.png",
+   "revision": "64d1d32ba80ee549"
+  },
+  {
+   "id": "modern.mirror",
+   "kind": "mirror",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/modern.mirror.gltf",
+   "thumbnail": "thumbs/modern.mirror.png",
+   "revision": "ba94490240c677fc"
+  },
+  {
+   "id": "contemporary.mirror",
+   "kind": "mirror",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/contemporary.mirror.gltf",
+   "thumbnail": "thumbs/contemporary.mirror.png",
+   "revision": "37cfabdd148c4250"
+  },
+  {
+   "id": "scandinavian.mirror",
+   "kind": "mirror",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/scandinavian.mirror.gltf",
+   "thumbnail": "thumbs/scandinavian.mirror.png",
+   "revision": "22592bd696575dbe"
+  },
+  {
+   "id": "country.mirror",
+   "kind": "mirror",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/country.mirror.gltf",
+   "thumbnail": "thumbs/country.mirror.png",
+   "revision": "629165e0ee2bfb8a"
+  },
+  {
+   "id": "industrial.mirror",
+   "kind": "mirror",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/industrial.mirror.gltf",
+   "thumbnail": "thumbs/industrial.mirror.png",
+   "revision": "b932496efc79a66a"
+  },
+  {
+   "id": "traditional.mirror",
+   "kind": "mirror",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage mirror",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.58,
+    0.035,
+    0.78
+   ],
+   "model": "models/traditional.mirror.gltf",
+   "thumbnail": "thumbs/traditional.mirror.png",
+   "revision": "d00a87e774e38fb3"
+  },
+  {
+   "id": "modern.wardrobe",
+   "kind": "wardrobe",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/modern.wardrobe.gltf",
+   "thumbnail": "thumbs/modern.wardrobe.png",
+   "revision": "3a95fad3d82a3c3b"
+  },
+  {
+   "id": "contemporary.wardrobe",
+   "kind": "wardrobe",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/contemporary.wardrobe.gltf",
+   "thumbnail": "thumbs/contemporary.wardrobe.png",
+   "revision": "96f55860fbb029b2"
+  },
+  {
+   "id": "scandinavian.wardrobe",
+   "kind": "wardrobe",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/scandinavian.wardrobe.gltf",
+   "thumbnail": "thumbs/scandinavian.wardrobe.png",
+   "revision": "7cfb8a5aebaa6bbf"
+  },
+  {
+   "id": "country.wardrobe",
+   "kind": "wardrobe",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/country.wardrobe.gltf",
+   "thumbnail": "thumbs/country.wardrobe.png",
+   "revision": "72063763fbb91782"
+  },
+  {
+   "id": "industrial.wardrobe",
+   "kind": "wardrobe",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/industrial.wardrobe.gltf",
+   "thumbnail": "thumbs/industrial.wardrobe.png",
+   "revision": "219013b89d441685"
+  },
+  {
+   "id": "traditional.wardrobe",
+   "kind": "wardrobe",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage wardrobe",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.6,
+    0.6,
+    2.15
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.6,
+    0.65068,
+    2.15
+   ],
+   "model": "models/traditional.wardrobe.gltf",
+   "thumbnail": "thumbs/traditional.wardrobe.png",
+   "revision": "65ed2dbabaf93efa"
+  },
+  {
+   "id": "modern.dresser",
+   "kind": "dresser",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48696,
+    0.79
+   ],
+   "model": "models/modern.dresser.gltf",
+   "thumbnail": "thumbs/modern.dresser.png",
+   "revision": "88f8b1bff225bd4d"
+  },
+  {
+   "id": "contemporary.dresser",
+   "kind": "dresser",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48696,
+    0.79
+   ],
+   "model": "models/contemporary.dresser.gltf",
+   "thumbnail": "thumbs/contemporary.dresser.png",
+   "revision": "7f5734e83e4ef0e5"
+  },
+  {
+   "id": "scandinavian.dresser",
+   "kind": "dresser",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48995,
+    0.79
+   ],
+   "model": "models/scandinavian.dresser.gltf",
+   "thumbnail": "thumbs/scandinavian.dresser.png",
+   "revision": "9d12fbd4166c8c40"
+  },
+  {
+   "id": "country.dresser",
+   "kind": "dresser",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48995,
+    0.79
+   ],
+   "model": "models/country.dresser.gltf",
+   "thumbnail": "thumbs/country.dresser.png",
+   "revision": "1bb18fc19b646d80"
+  },
+  {
+   "id": "industrial.dresser",
+   "kind": "dresser",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48696,
+    0.79
+   ],
+   "model": "models/industrial.dresser.gltf",
+   "thumbnail": "thumbs/industrial.dresser.png",
+   "revision": "d16d06593f9da161"
+  },
+  {
+   "id": "traditional.dresser",
+   "kind": "dresser",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage dresser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.15,
+    0.44,
+    0.79
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.48995,
+    0.79
+   ],
+   "model": "models/traditional.dresser.gltf",
+   "thumbnail": "thumbs/traditional.dresser.png",
+   "revision": "6f2eb506e3307419"
+  },
+  {
+   "id": "modern.desk",
+   "kind": "desk",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.61796,
+    0.75
+   ],
+   "model": "models/modern.desk.gltf",
+   "thumbnail": "thumbs/modern.desk.png",
+   "revision": "e86f7279f6e9373c"
+  },
+  {
+   "id": "contemporary.desk",
+   "kind": "desk",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.61796,
+    0.75
+   ],
+   "model": "models/contemporary.desk.gltf",
+   "thumbnail": "thumbs/contemporary.desk.png",
+   "revision": "1b6e4415ffbad64f"
+  },
+  {
+   "id": "scandinavian.desk",
+   "kind": "desk",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.62095,
+    0.75226
+   ],
+   "model": "models/scandinavian.desk.gltf",
+   "thumbnail": "thumbs/scandinavian.desk.png",
+   "revision": "ec5ef8e2914acdc8"
+  },
+  {
+   "id": "country.desk",
+   "kind": "desk",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.62095,
+    0.75
+   ],
+   "model": "models/country.desk.gltf",
+   "thumbnail": "thumbs/country.desk.png",
+   "revision": "5ae7b24322d849d2"
+  },
+  {
+   "id": "industrial.desk",
+   "kind": "desk",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.61796,
+    0.75
+   ],
+   "model": "models/industrial.desk.gltf",
+   "thumbnail": "thumbs/industrial.desk.png",
+   "revision": "faac44aefdcb0471"
+  },
+  {
+   "id": "traditional.desk",
+   "kind": "desk",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage desk",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.15,
+    0.58,
+    0.75
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.62095,
+    0.75226
+   ],
+   "model": "models/traditional.desk.gltf",
+   "thumbnail": "thumbs/traditional.desk.png",
+   "revision": "e37477a912c2297d"
+  },
+  {
+   "id": "modern.bench",
+   "kind": "bench",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.5075
+   ],
+   "model": "models/modern.bench.gltf",
+   "thumbnail": "thumbs/modern.bench.png",
+   "revision": "5ab43b0be2b7f6fb"
+  },
+  {
+   "id": "contemporary.bench",
+   "kind": "bench",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.5075
+   ],
+   "model": "models/contemporary.bench.gltf",
+   "thumbnail": "thumbs/contemporary.bench.png",
+   "revision": "51b5552677206519"
+  },
+  {
+   "id": "scandinavian.bench",
+   "kind": "bench",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.51054
+   ],
+   "model": "models/scandinavian.bench.gltf",
+   "thumbnail": "thumbs/scandinavian.bench.png",
+   "revision": "e660b11f377b4fa0"
+  },
+  {
+   "id": "country.bench",
+   "kind": "bench",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.5075
+   ],
+   "model": "models/country.bench.gltf",
+   "thumbnail": "thumbs/country.bench.png",
+   "revision": "fef60ab20698b458"
+  },
+  {
+   "id": "industrial.bench",
+   "kind": "bench",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.5075
+   ],
+   "model": "models/industrial.bench.gltf",
+   "thumbnail": "thumbs/industrial.bench.png",
+   "revision": "b10261c7654ccd2b"
+  },
+  {
+   "id": "traditional.bench",
+   "kind": "bench",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage bench",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1.15,
+    0.38,
+    0.46
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    1.15,
+    0.38,
+    0.51054
+   ],
+   "model": "models/traditional.bench.gltf",
+   "thumbnail": "thumbs/traditional.bench.png",
+   "revision": "9dfa580445866560"
+  },
+  {
+   "id": "modern.stove",
+   "kind": "stove",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/modern.stove.gltf",
+   "thumbnail": "thumbs/modern.stove.png",
+   "revision": "9b5ba3383da476c7"
+  },
+  {
+   "id": "contemporary.stove",
+   "kind": "stove",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/contemporary.stove.gltf",
+   "thumbnail": "thumbs/contemporary.stove.png",
+   "revision": "fc1216ef3ad49d0b"
+  },
+  {
+   "id": "scandinavian.stove",
+   "kind": "stove",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/scandinavian.stove.gltf",
+   "thumbnail": "thumbs/scandinavian.stove.png",
+   "revision": "400679f431af512e"
+  },
+  {
+   "id": "country.stove",
+   "kind": "stove",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/country.stove.gltf",
+   "thumbnail": "thumbs/country.stove.png",
+   "revision": "d9b291a19f4da50a"
+  },
+  {
+   "id": "industrial.stove",
+   "kind": "stove",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/industrial.stove.gltf",
+   "thumbnail": "thumbs/industrial.stove.png",
+   "revision": "270457039e6dcec8"
+  },
+  {
+   "id": "traditional.stove",
+   "kind": "stove",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage stove",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.45,
+    0.38,
+    0.6
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.42861,
+    0.6
+   ],
+   "model": "models/traditional.stove.gltf",
+   "thumbnail": "thumbs/traditional.stove.png",
+   "revision": "a99d7d126c0508f9"
+  },
+  {
+   "id": "shared.towel",
+   "kind": "towel",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio towel",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.48,
+    0.28,
+    0.045
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.48,
+    0.28,
+    0.045
+   ],
+   "model": "models/shared.towel.gltf",
+   "thumbnail": "thumbs/shared.towel.png",
+   "revision": "211dba0a932176e5"
+  },
+  {
+   "id": "shared.shelf",
+   "kind": "shelf",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio shelf",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    1,
+    0.25,
+    0.025
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.25,
+    0.06
+   ],
+   "model": "models/shared.shelf.gltf",
+   "thumbnail": "thumbs/shared.shelf.png",
+   "revision": "c23270a88105f917"
+  },
+  {
+   "id": "shared.washer",
+   "kind": "washer",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio washer",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.6,
+    0.86
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "utility"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.6,
+    0.659,
+    0.86
+   ],
+   "model": "models/shared.washer.gltf",
+   "thumbnail": "thumbs/shared.washer.png",
+   "revision": "51d9876315f18bc0"
+  },
+  {
+   "id": "shared.dryer",
+   "kind": "dryer",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio dryer",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.6,
+    0.86
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "utility"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.6,
+    0.659,
+    0.86
+   ],
+   "model": "models/shared.dryer.gltf",
+   "thumbnail": "thumbs/shared.dryer.png",
+   "revision": "4aca2a89a471c380"
+  },
+  {
+   "id": "modern.stool",
+   "kind": "stool",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.43015,
+    0.41844,
+    1.02625
+   ],
+   "model": "models/modern.stool.gltf",
+   "thumbnail": "thumbs/modern.stool.png",
+   "revision": "aaa8f18830bfffc1"
+  },
+  {
+   "id": "contemporary.stool",
+   "kind": "stool",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.43015,
+    0.41844,
+    1.02625
+   ],
+   "model": "models/contemporary.stool.gltf",
+   "thumbnail": "thumbs/contemporary.stool.png",
+   "revision": "d5d5a2e5faf19cad"
+  },
+  {
+   "id": "scandinavian.stool",
+   "kind": "stool",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.43015,
+    0.41844,
+    1.02625
+   ],
+   "model": "models/scandinavian.stool.gltf",
+   "thumbnail": "thumbs/scandinavian.stool.png",
+   "revision": "f2c89c33d2945542"
+  },
+  {
+   "id": "country.stool",
+   "kind": "stool",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.42153,
+    0.40543,
+    1.04093
+   ],
+   "model": "models/country.stool.gltf",
+   "thumbnail": "thumbs/country.stool.png",
+   "revision": "7f5b1fbd5dba7665"
+  },
+  {
+   "id": "industrial.stool",
+   "kind": "stool",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.42153,
+    0.40762,
+    1.0186
+   ],
+   "model": "models/industrial.stool.gltf",
+   "thumbnail": "thumbs/industrial.stool.png",
+   "revision": "e9f3e34da309cb40"
+  },
+  {
+   "id": "traditional.stool",
+   "kind": "stool",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage stool",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.43,
+    0.44,
+    1.05
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.42153,
+    0.40543,
+    1.04093
+   ],
+   "model": "models/traditional.stool.gltf",
+   "thumbnail": "thumbs/traditional.stool.png",
+   "revision": "e14896ff38f27686"
+  },
+  {
+   "id": "shared.switch",
+   "kind": "switch",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio switch",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.086,
+    0.014,
+    0.086
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.086,
+    0.0175,
+    0.086
+   ],
+   "model": "models/shared.switch.gltf",
+   "thumbnail": "thumbs/shared.switch.png",
+   "revision": "e5ee7baccccf85ca"
+  },
+  {
+   "id": "shared.alarm",
+   "kind": "alarm",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio alarm",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.13,
+    0.13,
+    0.035
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.13,
+    0.13,
+    0.035
+   ],
+   "model": "models/shared.alarm.gltf",
+   "thumbnail": "thumbs/shared.alarm.png",
+   "revision": "f6cd76df4e75dadb"
+  },
+  {
+   "id": "shared.television",
+   "kind": "television",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio television",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.95,
+    0.035,
+    0.55
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.95,
+    0.16781,
+    0.54918
+   ],
+   "model": "models/shared.television.gltf",
+   "thumbnail": "thumbs/shared.television.png",
+   "revision": "0309251335eee4a7"
+  },
+  {
+   "id": "modern.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/modern.fruit_bowl.gltf",
+   "thumbnail": "thumbs/modern.fruit_bowl.png",
+   "revision": "faeda17ec3c6a1fc"
+  },
+  {
+   "id": "contemporary.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/contemporary.fruit_bowl.gltf",
+   "thumbnail": "thumbs/contemporary.fruit_bowl.png",
+   "revision": "c7b3e5daa526c0fe"
+  },
+  {
+   "id": "scandinavian.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/scandinavian.fruit_bowl.gltf",
+   "thumbnail": "thumbs/scandinavian.fruit_bowl.png",
+   "revision": "4cf7a0fe3704a964"
+  },
+  {
+   "id": "country.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/country.fruit_bowl.gltf",
+   "thumbnail": "thumbs/country.fruit_bowl.png",
+   "revision": "b9585e29ccf3ded9"
+  },
+  {
+   "id": "industrial.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/industrial.fruit_bowl.gltf",
+   "thumbnail": "thumbs/industrial.fruit_bowl.png",
+   "revision": "6bb6768a5415d616"
+  },
+  {
+   "id": "traditional.fruit_bowl",
+   "kind": "fruit_bowl",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage fruit bowl",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.3,
+    0.3,
+    0.09828
+   ],
+   "model": "models/traditional.fruit_bowl.gltf",
+   "thumbnail": "thumbs/traditional.fruit_bowl.png",
+   "revision": "b97388de15ebb0e0"
+  },
+  {
+   "id": "shared.diffuser",
+   "kind": "diffuser",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio diffuser",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.1,
+    0.1,
+    0.25
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.086,
+    0.086,
+    0.2502
+   ],
+   "model": "models/shared.diffuser.gltf",
+   "thumbnail": "thumbs/shared.diffuser.png",
+   "revision": "3f8b94384e761a5a"
+  },
+  {
+   "id": "shared.candle",
+   "kind": "candle",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio candle",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.09,
+    0.09,
+    0.12
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.09,
+    0.09,
+    0.12
+   ],
+   "model": "models/shared.candle.gltf",
+   "thumbnail": "thumbs/shared.candle.png",
+   "revision": "4dc6296d74b071fb"
+  },
+  {
+   "id": "shared.coat_hook",
+   "kind": "coat_hook",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio coat hook",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.45,
+    0.07,
+    0.14
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.06438,
+    0.06448
+   ],
+   "model": "models/shared.coat_hook.gltf",
+   "thumbnail": "thumbs/shared.coat_hook.png",
+   "revision": "f90ab3839395fd9b"
+  },
+  {
+   "id": "shared.basket",
+   "kind": "basket",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio basket",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.36,
+    0.28,
+    0.3
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.38421,
+    0.28947,
+    0.3
+   ],
+   "model": "models/shared.basket.gltf",
+   "thumbnail": "thumbs/shared.basket.png",
+   "revision": "0f668440586c715d"
+  },
+  {
+   "id": "shared.extractor",
+   "kind": "extractor",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio extractor",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.62,
+    0.35,
+    0.6
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.62,
+    0.35,
+    0.599
+   ],
+   "model": "models/shared.extractor.gltf",
+   "thumbnail": "thumbs/shared.extractor.png",
+   "revision": "2b6b5c6ad24def25"
+  },
+  {
+   "id": "shared.kettle",
+   "kind": "kettle",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio kettle",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.18,
+    0.22,
+    0.25
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.21312,
+    0.162,
+    0.235
+   ],
+   "model": "models/shared.kettle.gltf",
+   "thumbnail": "thumbs/shared.kettle.png",
+   "revision": "d757618fba56bac4"
+  },
+  {
+   "id": "shared.semi_pedestal",
+   "kind": "semi_pedestal",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio semi pedestal",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.39,
+    0.38,
+    0.85
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.39,
+    0.38,
+    0.5926
+   ],
+   "model": "models/shared.semi_pedestal.gltf",
+   "thumbnail": "thumbs/shared.semi_pedestal.png",
+   "revision": "f19888e0482e26cb"
+  },
+  {
+   "id": "modern.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.43796,
+    0.7052
+   ],
+   "model": "models/modern.wall_vanity.gltf",
+   "thumbnail": "thumbs/modern.wall_vanity.png",
+   "revision": "ac1c39eb44b92bf1"
+  },
+  {
+   "id": "contemporary.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.43796,
+    0.7052
+   ],
+   "model": "models/contemporary.wall_vanity.gltf",
+   "thumbnail": "thumbs/contemporary.wall_vanity.png",
+   "revision": "107c0a816083ffb9"
+  },
+  {
+   "id": "scandinavian.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.44095,
+    0.7052
+   ],
+   "model": "models/scandinavian.wall_vanity.gltf",
+   "thumbnail": "thumbs/scandinavian.wall_vanity.png",
+   "revision": "4089db1ed18a2f71"
+  },
+  {
+   "id": "country.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.44095,
+    0.7052
+   ],
+   "model": "models/country.wall_vanity.gltf",
+   "thumbnail": "thumbs/country.wall_vanity.png",
+   "revision": "4720e3f116638673"
+  },
+  {
+   "id": "industrial.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.43796,
+    0.7052
+   ],
+   "model": "models/industrial.wall_vanity.gltf",
+   "thumbnail": "thumbs/industrial.wall_vanity.png",
+   "revision": "e8ddbe16403a9329"
+  },
+  {
+   "id": "traditional.wall_vanity",
+   "kind": "wall_vanity",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage wall vanity",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.5,
+    0.4,
+    0.55
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.5,
+    0.44095,
+    0.7052
+   ],
+   "model": "models/traditional.wall_vanity.gltf",
+   "thumbnail": "thumbs/traditional.wall_vanity.png",
+   "revision": "425b4342e0a46873"
+  },
+  {
+   "id": "shared.wall_wc",
+   "kind": "wall_wc",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio wall wc",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.37,
+    0.55,
+    0.32
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.37,
+    0.5165,
+    0.2904
+   ],
+   "model": "models/shared.wall_wc.gltf",
+   "thumbnail": "thumbs/shared.wall_wc.png",
+   "revision": "431995dbe88b78ba"
+  },
+  {
+   "id": "shared.cistern_box",
+   "kind": "cistern_box",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio cistern box",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.7,
+    0.2,
+    1.1
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.7,
+    0.2165,
+    1.1
+   ],
+   "model": "models/shared.cistern_box.gltf",
+   "thumbnail": "thumbs/shared.cistern_box.png",
+   "revision": "9bf0ed5b56bc069d"
+  },
+  {
+   "id": "shared.mirror_cabinet",
+   "kind": "mirror_cabinet",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio mirror cabinet",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.45,
+    0.12,
+    0.6
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.45,
+    0.144,
+    0.6
+   ],
+   "model": "models/shared.mirror_cabinet.gltf",
+   "thumbnail": "thumbs/shared.mirror_cabinet.png",
+   "revision": "be80be8d52c65d55"
+  },
+  {
+   "id": "shared.integrated_fridge",
+   "kind": "integrated_fridge",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio integrated fridge",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.6,
+    2.2
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.599,
+    0.64895,
+    2.2
+   ],
+   "model": "models/shared.integrated_fridge.gltf",
+   "thumbnail": "thumbs/shared.integrated_fridge.png",
+   "revision": "7cb7ecdd3ecd789a"
+  },
+  {
+   "id": "modern.bookcase",
+   "kind": "bookcase",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/modern.bookcase.gltf",
+   "thumbnail": "thumbs/modern.bookcase.png",
+   "revision": "8abd7724f0aaf4cf"
+  },
+  {
+   "id": "contemporary.bookcase",
+   "kind": "bookcase",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/contemporary.bookcase.gltf",
+   "thumbnail": "thumbs/contemporary.bookcase.png",
+   "revision": "b4aaa613d823b242"
+  },
+  {
+   "id": "scandinavian.bookcase",
+   "kind": "bookcase",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/scandinavian.bookcase.gltf",
+   "thumbnail": "thumbs/scandinavian.bookcase.png",
+   "revision": "e0a8275a2c5d6f65"
+  },
+  {
+   "id": "country.bookcase",
+   "kind": "bookcase",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/country.bookcase.gltf",
+   "thumbnail": "thumbs/country.bookcase.png",
+   "revision": "fa1961309b3ed6a7"
+  },
+  {
+   "id": "industrial.bookcase",
+   "kind": "bookcase",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/industrial.bookcase.gltf",
+   "thumbnail": "thumbs/industrial.bookcase.png",
+   "revision": "eeef3922ff4291a6"
+  },
+  {
+   "id": "traditional.bookcase",
+   "kind": "bookcase",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage bookcase",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    1,
+    0.33,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.33,
+    1.8
+   ],
+   "model": "models/traditional.bookcase.gltf",
+   "thumbnail": "thumbs/traditional.bookcase.png",
+   "revision": "6b13b00183d112f3"
+  },
+  {
+   "id": "shared.alcove_unit",
+   "kind": "alcove_unit",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio alcove unit",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.95,
+    0.38,
+    2.0
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "living"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.95,
+    0.42095,
+    2.0
+   ],
+   "model": "models/shared.alcove_unit.gltf",
+   "thumbnail": "thumbs/shared.alcove_unit.png",
+   "revision": "f5be34812abb51fc"
+  },
+  {
+   "id": "shared.shelf_unit",
+   "kind": "shelf_unit",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio shelf unit",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.8,
+    0.35,
+    1.8
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "utility"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.8,
+    0.35,
+    1.8
+   ],
+   "model": "models/shared.shelf_unit.gltf",
+   "thumbnail": "thumbs/shared.shelf_unit.png",
+   "revision": "5e9a9cb94c4466e6"
+  },
+  {
+   "id": "shared.splashback",
+   "kind": "splashback",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio splashback",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    1,
+    0.014,
+    0.6
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.014,
+    0.6
+   ],
+   "model": "models/shared.splashback.gltf",
+   "thumbnail": "thumbs/shared.splashback.png",
+   "revision": "2ca7c3880246374e"
+  },
+  {
+   "id": "shared.upstand",
+   "kind": "upstand",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio upstand",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    1,
+    0.02,
+    0.1
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.0,
+    0.02,
+    0.1
+   ],
+   "model": "models/shared.upstand.gltf",
+   "thumbnail": "thumbs/shared.upstand.png",
+   "revision": "935973a5b40c5f74"
+  },
+  {
+   "id": "shared.flue",
+   "kind": "flue",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio flue",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.13,
+    0.13,
+    0.21
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.1352,
+    0.1352,
+    0.21
+   ],
+   "model": "models/shared.flue.gltf",
+   "thumbnail": "thumbs/shared.flue.png",
+   "revision": "8aed4d81d2b8ca69"
+  },
+  {
+   "id": "shared.flush_light",
+   "kind": "flush_light",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio flush light",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.3,
+    0.3,
+    0.06
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.3,
+    0.3,
+    0.06
+   ],
+   "model": "models/shared.flush_light.gltf",
+   "thumbnail": "thumbs/shared.flush_light.png",
+   "revision": "09cfe5e6148f829a"
+  },
+  {
+   "id": "shared.linear_pendant",
+   "kind": "linear_pendant",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio linear pendant",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    1.2,
+    0.08,
+    0.83
+   ],
+   "host": "ceiling",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": true,
+   "size_m": [
+    1.2,
+    0.08,
+    0.83
+   ],
+   "model": "models/shared.linear_pendant.gltf",
+   "thumbnail": "thumbs/shared.linear_pendant.png",
+   "revision": "81bcd35f2bd6fcb8"
+  },
+  {
+   "id": "shared.soap",
+   "kind": "soap",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio soap",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.055,
+    0.055,
+    0.17
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.0528,
+    0.05545,
+    0.1624
+   ],
+   "model": "models/shared.soap.gltf",
+   "thumbnail": "thumbs/shared.soap.png",
+   "revision": "7f973199431f62ab"
+  },
+  {
+   "id": "shared.keys",
+   "kind": "keys",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio keys",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.06,
+    0.07,
+    0.008
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.0365,
+    0.0541,
+    0.0045
+   ],
+   "model": "models/shared.keys.gltf",
+   "thumbnail": "thumbs/shared.keys.png",
+   "revision": "55613101d3f35507"
+  },
+  {
+   "id": "shared.hand_towel",
+   "kind": "hand_towel",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio hand towel",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.25,
+    0.07,
+    0.48
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "bathroom"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.209,
+    0.0688,
+    0.479
+   ],
+   "model": "models/shared.hand_towel.gltf",
+   "thumbnail": "thumbs/shared.hand_towel.png",
+   "revision": "94a426495af774b6"
+  },
+  {
+   "id": "shared.chopping_board",
+   "kind": "chopping_board",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio chopping board",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.22,
+    0.025,
+    0.3
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.22,
+    0.044,
+    0.345
+   ],
+   "model": "models/shared.chopping_board.gltf",
+   "thumbnail": "thumbs/shared.chopping_board.png",
+   "revision": "befcb2d66d3c54c7"
+  },
+  {
+   "id": "shared.utensils",
+   "kind": "utensils",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio utensils",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.12,
+    0.12,
+    0.32
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.1152,
+    0.1152,
+    0.3104
+   ],
+   "model": "models/shared.utensils.gltf",
+   "thumbnail": "thumbs/shared.utensils.png",
+   "revision": "cdf243335bd4eaa8"
+  },
+  {
+   "id": "shared.toaster",
+   "kind": "toaster",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio toaster",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.27,
+    0.17,
+    0.18
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.2797,
+    0.17,
+    0.1835
+   ],
+   "model": "models/shared.toaster.gltf",
+   "thumbnail": "thumbs/shared.toaster.png",
+   "revision": "84ae4808a7712571"
+  },
+  {
+   "id": "shared.coffee_machine",
+   "kind": "coffee_machine",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio coffee machine",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.2,
+    0.28,
+    0.32
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.2,
+    0.31,
+    0.32
+   ],
+   "model": "models/shared.coffee_machine.gltf",
+   "thumbnail": "thumbs/shared.coffee_machine.png",
+   "revision": "d99fd6515a2ee11d"
+  },
+  {
+   "id": "shared.bottles",
+   "kind": "bottles",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio bottles",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.23,
+    0.15,
+    0.28
+   ],
+   "host": "surface",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.23,
+    0.15,
+    0.296
+   ],
+   "model": "models/shared.bottles.gltf",
+   "thumbnail": "thumbs/shared.bottles.png",
+   "revision": "ae13a62b5849c4c6"
+  },
+  {
+   "id": "shared.coat",
+   "kind": "coat",
+   "style": "shared",
+   "family": "Studio",
+   "name": "Studio coat",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern",
+    "contemporary",
+    "scandinavian",
+    "country",
+    "industrial",
+    "traditional"
+   ],
+   "construction_m": [
+    0.36,
+    0.08,
+    0.8
+   ],
+   "host": "wall",
+   "roomTypes": [
+    "any"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.33224,
+    0.06282,
+    0.61652
+   ],
+   "model": "models/shared.coat.gltf",
+   "thumbnail": "thumbs/shared.coat.png",
+   "revision": "48992a685ddca2a0"
+  },
+  {
+   "id": "modern.bedside",
+   "kind": "bedside",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43696,
+    0.54
+   ],
+   "model": "models/modern.bedside.gltf",
+   "thumbnail": "thumbs/modern.bedside.png",
+   "revision": "d846c003d6f27c62"
+  },
+  {
+   "id": "contemporary.bedside",
+   "kind": "bedside",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43696,
+    0.54
+   ],
+   "model": "models/contemporary.bedside.gltf",
+   "thumbnail": "thumbs/contemporary.bedside.png",
+   "revision": "b64f2fd488ba49a9"
+  },
+  {
+   "id": "scandinavian.bedside",
+   "kind": "bedside",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43995,
+    0.54
+   ],
+   "model": "models/scandinavian.bedside.gltf",
+   "thumbnail": "thumbs/scandinavian.bedside.png",
+   "revision": "fd630cf58a3ffe3d"
+  },
+  {
+   "id": "country.bedside",
+   "kind": "bedside",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43995,
+    0.54
+   ],
+   "model": "models/country.bedside.gltf",
+   "thumbnail": "thumbs/country.bedside.png",
+   "revision": "9012692eb4550efa"
+  },
+  {
+   "id": "industrial.bedside",
+   "kind": "bedside",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43696,
+    0.54
+   ],
+   "model": "models/industrial.bedside.gltf",
+   "thumbnail": "thumbs/industrial.bedside.png",
+   "revision": "c4dcab134c7d90b3"
+  },
+  {
+   "id": "traditional.bedside",
+   "kind": "bedside",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage bedside",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.47,
+    0.39,
+    0.54
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "bedroom"
+   ],
+   "fixed": false,
+   "size_m": [
+    0.47,
+    0.43995,
+    0.54
+   ],
+   "model": "models/traditional.bedside.gltf",
+   "thumbnail": "thumbs/traditional.bedside.png",
+   "revision": "dd5ca02e6c1a1fe4"
+  },
+  {
+   "id": "modern.dishwasher",
+   "kind": "dishwasher",
+   "style": "modern",
+   "family": "Linear",
+   "name": "Linear dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "modern"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/modern.dishwasher.gltf",
+   "thumbnail": "thumbs/modern.dishwasher.png",
+   "revision": "76757333de65fa9d"
+  },
+  {
+   "id": "contemporary.dishwasher",
+   "kind": "dishwasher",
+   "style": "contemporary",
+   "family": "Arc",
+   "name": "Arc dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "contemporary"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/contemporary.dishwasher.gltf",
+   "thumbnail": "thumbs/contemporary.dishwasher.png",
+   "revision": "f2ee3e6795f947d0"
+  },
+  {
+   "id": "scandinavian.dishwasher",
+   "kind": "dishwasher",
+   "style": "scandinavian",
+   "family": "Birch",
+   "name": "Birch dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "scandinavian"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/scandinavian.dishwasher.gltf",
+   "thumbnail": "thumbs/scandinavian.dishwasher.png",
+   "revision": "31a37d3507dd6fff"
+  },
+  {
+   "id": "country.dishwasher",
+   "kind": "dishwasher",
+   "style": "country",
+   "family": "Farmhouse",
+   "name": "Farmhouse dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "country"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/country.dishwasher.gltf",
+   "thumbnail": "thumbs/country.dishwasher.png",
+   "revision": "e4059ea486d84ce7"
+  },
+  {
+   "id": "industrial.dishwasher",
+   "kind": "dishwasher",
+   "style": "industrial",
+   "family": "Foundry",
+   "name": "Foundry dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "industrial"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.66796,
+    0.91
+   ],
+   "model": "models/industrial.dishwasher.gltf",
+   "thumbnail": "thumbs/industrial.dishwasher.png",
+   "revision": "2ae00e5caa12afa1"
+  },
+  {
+   "id": "traditional.dishwasher",
+   "kind": "dishwasher",
+   "style": "traditional",
+   "family": "Heritage",
+   "name": "Heritage dishwasher",
+   "variant": "standard",
+   "compatibleStyles": [
+    "traditional"
+   ],
+   "construction_m": [
+    0.6,
+    0.62,
+    0.91
+   ],
+   "host": "floor",
+   "roomTypes": [
+    "kitchen"
+   ],
+   "fixed": true,
+   "size_m": [
+    0.604,
+    0.67095,
+    0.91
+   ],
+   "model": "models/traditional.dishwasher.gltf",
+   "thumbnail": "thumbs/traditional.dishwasher.png",
+   "revision": "2e98612ffadbe505"
+  }
+ ]
+}

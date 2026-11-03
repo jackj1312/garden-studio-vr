@@ -43,7 +43,7 @@ th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);verti
 th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 ul{margin:6px 0 12px;padding-left:20px}
 footer{margin-top:60px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
-@media print{body{background:#fff}main{padding:0}.stage{border-color:#ccc}h2{break-after:avoid}}
+@media print{figure img.kit-plate{height:142mm;width:100%;object-fit:contain;background:#eeeae3}body{background:#fff}main{padding:0}.stage{border-color:#ccc}h2{break-after:avoid}}
 @media (max-width:600px){h1{font-size:34px}.stage{padding:18px}}
 </style>
 </head>
@@ -127,15 +127,11 @@ each one makes the next house cheaper.</p>
 </section>
 
 <section class="stage">
-  <header><span class="num">4</span><h3>Furniture and fittings: the studio kit</h3><span class="badge plan">● next (Codex is building it)</span></header>
-  <p>Every item comes from one <strong>furniture kit</strong>, made to its exact size in one consistent style: sofas,
-  beds, kitchens, toilets, washing machines, lamps, cushions, art. Each item faces the same way, sits on its surface and is
-  checked for clipping as it's placed. Soft things (towels, throws, curtains) have real folds. Catalogues come in styles
-  (modern, contemporary, Scandinavian, country, industrial, traditional), each with a thumbnail.</p>
-  <p>The furniture won't be baked into the house: it's placed from a layout file, so the client (or Jack) can <strong>add and
-  move furniture inside the walkthrough</strong>, in the headset, or from a bird's-eye view of each room.</p>
-  <figure class="pics"><img src="img/18-codex-living.jpg" alt="Codex interior living and dining"><img src="img/19-codex-kitchen.jpg" alt="Codex kitchen"></figure>
-  <figcaption>The interior quality we're adopting (Codex's build): one coherent style, real proportions, soft contact light.</figcaption>
+  <header><span class="num">4</span><h3>Furniture and fittings: the studio kit</h3><span class="badge done">● catalogue built and photographed</span></header>
+  <p>The library contains 280 entries across 85 kinds. Each of the six families has 39 styled pieces and can use the same 46 shared fittings. The catalogue shows the measured outer dimensions, including handles and soft furnishings. A custom size rebuilds the parts and checks their finished envelope.</p>
+  <p>Blender produces an individual model. A local three.js studio photographs it from the front at three-quarter view. The model, textile grain, scan licence, picture and regeneration tools live together in <code>tools/library/kit/</code>.</p>
+  <figure><img class="kit-plate" src="img/23-studio-catalogue.jpg" alt="Six families of photographed chairs, sofas, tables, beds, cabinets, lamps and plants"></figure>
+  <figcaption>Selected models from each family. A full contact sheet sits beside the catalogue.</figcaption>
 </section>
 
 <section class="stage">

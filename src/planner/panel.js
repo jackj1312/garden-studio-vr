@@ -1,8 +1,9 @@
 /* Room planner: the inspector (item panel, room panel, floor overview), the catalogue picker and the change list.
  * Every control calls an action on `app` (app.js), which records a change; nothing here edits the state directly. */
-import { h, clear, fmtSize, esc, cap, compassOf, len2, sub2, norm2, segDist, add2, scale2, luminance } from "./util.js?v=p7";
-import { entryOf, slotOf, sizeM, partColour, roomWalls, roomFloor, resolveColour, mountOf } from "./data.js?v=p7";
-import { fitsAt } from "./checks.js?v=p7";
+import { h, clear, fmtSize, esc, cap, compassOf, len2, sub2, norm2, segDist, add2, scale2, luminance } from "./util.js?v=p8";
+import { entryOf, slotOf, sizeM, partColour, roomWalls, roomFloor, resolveColour, mountOf } from "./data.js?v=p8";
+import { catalogueMatch, roomTypes, styleName, wallFaces } from './shared.mjs';
+import { fitsAt } from "./checks.js?v=p8";
 
 const STYLES = ["Modern", "Contemporary", "Country", "Scandi"];
 const PART_LABEL = { all: "Colour", upholstery: "Fabric", legs: "Legs", frame: "Frame", top: "Top", body: "Body", front: "Fronts",
@@ -15,7 +16,7 @@ const GENERIC = {
 };
 const partFamily = p => /leg|frame|top|body|wood|rail|board/.test(p) ? "wood" : /metal|hook|handle/.test(p) ? "metal" : "fabric";
 let styleTab = "All";
-let catState = { q: "", group: null, style: "All" };
+let catState = { q:"", kind:"", style:"", room:"current" };
 
 /* ================================================================ overview (no room open) */
 export function renderOverview(app, el) {
@@ -27,7 +28,7 @@ export function renderOverview(app, el) {
     h("div.sec", null,
       h("h2", { text: `${H.name}: ${app.storey === "ground" ? "ground" : "first"} floor` }),
       h("p.muted.small", { text: H.key === "before" ? "The house today, furnished as in the signed-off spec (typical, not surveyed)." : "The approved scheme, finished and furnished as signed off on 1 November." }),
-      h("p.small", { html: "Tap a room to open it full screen. In a room you can <b>drag</b> pieces, <b>turn</b> them, swap them for something else that fits, change wall colours, floors, kitchen fronts, curtains and lights, and leave notes. Every change is saved at once; nothing goes to the build until you press <b>Send to build</b>." })),
+      h("p.small", { html: "Tap a room to open it full screen. In a room you can <b>drag</b> pieces, <b>turn</b> them, swap them for something else that fits, change wall colours, floors, kitchen fronts, curtains and lights, and leave notes. Use <b>Save layout</b> to see your furniture and finishes in the walkthrough. Notes and building requests stay in <b>Changes</b> until you send them to the studio." })),
     h("div.sec", null, h("h3", { text: "Rooms" }),
       h("div.list.rooms-list", null, rooms.map(r => {
         const n = [...st.items.values()].filter(it => it.room === r.id).length, w = warnCount(r.id);
@@ -62,35 +63,34 @@ export function renderRoom(app, el, room) {
       warns.size ? h("span.chip.warn", { text: `${warns.size} to check` }) : h("span.chip.ok", { text: "No clashes" })),
     room.plain ? h("p.small.muted", { text: room.plain }) : null,
     h("div.row", { style: { marginTop: "8px" } }, h("button.primary", { onclick: () => openCatalogue(app, room), text: "+ Add from the catalogue" }))));
+  el.lastChild.append(h('a',{className:'planner-walk',href:'house.html?'+new URLSearchParams({site:db.site,version:st.house.elements}),
+    target:'_blank',rel:'noopener',text:'Open this saved version in the walkthrough ↗'}));
 
   /* walls */
   const wc = roomWalls(db, st, room);
-  const acc = st.rooms.get(room.id)?.accent;
-  const palTabs = h("div.seg", null, STYLES.map(sname => h("button", { "aria-pressed": String(app.ui.wallStyle === sname), text: sname, onclick: () => { app.ui.wallStyle = sname; app.refreshPanel(); } })));
-  const pal = db.catalogue.wall_palettes[app.ui.wallStyle] || [];
-  const edges = room.polygon.map((p, i) => {
-    const q = room.polygon[(i + 1) % room.polygon.length], L = len2(sub2(q, p));
-    const t = norm2(sub2(q, p)), mid = scale2(add2(p, q), 0.5);
-    let n = [t[1], -t[0]];
-    if (app.inside(add2(mid, scale2(n, 0.05)), room.polygon)) n = [-n[0], -n[1]];
-    return { i, L, name: `${compassOf(n[0], n[1])} wall, ${L.toFixed(2)} m` };
-  }).filter(e => e.L > 0.4);
-  el.append(h("div.sec", null, h("h3", null, "Walls", h("span.grow"), h("span.tiny", { text: wc.name || wc.hex })),
-    palTabs,
-    h("div.swatches", { style: { marginTop: "10px" } }, pal.map(c => swatch(c, wc.hex, () => app.setRoom(room, "walls", { name: c.name, hex: c.hex, style: app.ui.wallStyle })))),
-    h("div.row", { style: { marginTop: "10px" } }, h("span.small.muted", { text: "Any colour" }), colourInput(wc.hex, hex => app.setRoom(room, "walls", { name: "Custom " + hex, hex }))),
-    h("div", { style: { marginTop: "12px" } }, h("div.small.muted", { text: "Accent wall" }),
-      h("div.row", { style: { marginTop: "4px" } },
-        selectEl([["", "None"], ...edges.map(e => [String(e.i), e.name])], acc ? String(acc.edge) : "", v => {
-          if (v === "") app.setRoom(room, "accent", null);
-          else app.setRoom(room, "accent", { edge: +v, name: acc?.name || "Soft clay", hex: acc?.hex || "#CDB8A3" });
-        }),
-        acc ? colourInput(acc.hex, hex => app.setRoom(room, "accent", { ...acc, hex, name: "Custom " + hex })) : null),
-      acc ? h("div.swatches", { style: { marginTop: "8px" } }, pal.map(c => swatch(c, acc.hex, () => app.setRoom(room, "accent", { ...acc, name: c.name, hex: c.hex })))) : null)));
+  const faces=wallFaces(st,room.id), unique=[...new Map(faces.map(f=>[f.id,f])).values()];
+  const face=unique.find(f=>f.id===app.ui.wallId);
+  const palette=db.catalogue.wall_palettes[app.ui.wallStyle] || [];
+  const colours=new Set(unique.map(f=>st.wallColours?.[f.id] || wc.hex));
+  const colour=face ? (st.wallColours?.[face.id] || wc.hex) : colours.size===1 ? [...colours][0] : wc.hex;
+  const paint=hex=>face ? app.changeFurniture(s=>s.setWall(face.id,hex)) : app.setRoom(room,'walls',hex?{hex}:null);
+  const options=[['','All walls in '+room.name],...unique.map(f=>{
+    const name=f.a ? compassOf(-f.normal[0],-f.normal[1])+' wall · '+len2(sub2(f.b,f.a)).toFixed(2)+' m' : 'Return';
+    return [f.id,name+' · '+f.wall];
+  })];
+  const selector=selectEl(options,face?.id || '',id=>{app.ui.wallId=id;app.refreshPanel();});
+  selector.setAttribute('aria-label','Wall face to paint');
+  el.append(h('div.sec',null,h('h3',{text:'Wall paint'}),selector,!face && colours.size>1 ? h('p.tiny',{text:'These faces have different colours.'}) : null,
+    h('div.seg',{style:{marginTop:'8px'}},STYLES.map(sty=>h('button',{'aria-pressed':String(app.ui.wallStyle===sty),text:sty,
+      onclick:()=>{app.ui.wallStyle=sty;app.refreshPanel();}}))),
+    h('div.swatches',{style:{marginTop:'8px'}},palette.map(c=>swatch(c,colour,()=>paint(c.hex)))),
+    h('div.row',{style:{marginTop:'8px'}},h('span.small.muted',{text:'Custom paint'}),colourInput(colour,paint),
+      h('button.ghost',{text:'Use signed finish',onclick:()=>paint(null)}))));
 
   /* floor */
   const fl = roomFloor(db, st, room), wet = /bath|wc|cloak|en-suite|utility|porch|lobby/i.test(room.name);
   el.append(h("div.sec", null, h("h3", null, "Floor", h("span.grow"), h("span.tiny", { text: fl.name })),
+    st.rooms.get(room.id)?.floor ? h('button.ghost',{text:'Use signed floor',onclick:()=>app.setRoom(room,'floor',null)}) : null,
     groupedList(db.catalogue.floors.filter(f => f.rooms === "any" || (wet ? f.rooms === "wet" : true)), f => f.id === fl.id,
       f => app.setRoom(room, "floor", { id: f.id, name: f.name, hex: f.hex, pattern: f.pattern, unit_mm: f.unit_mm }),
       f => (f.rooms === "dry" && wet ? "not for wet rooms" : f.rooms === "wet" ? "tile" : "")),
@@ -117,7 +117,7 @@ export function renderRoom(app, el, room) {
   /* windows: curtains and blinds */
   const wins = app.windowsOf(room);
   if (wins.length) {
-    const dressings = db.catalogue.entries.filter(e => e.slot === "window_dressing" && !e.signed_off);
+    const dressings = [...db.entries.values()].filter(e => e.kit && e.slot === "window_dressing");
     el.append(h("div.sec", null, h("h3", { text: "Curtains and blinds" }),
       wins.map(w => {
         const cur = app.dressingOf(room, w);
@@ -125,7 +125,7 @@ export function renderRoom(app, el, room) {
         return h("div", { style: { marginBottom: "12px" } },
           h("div.small", null, h("b", { text: cap(w.label) }), h("span.tiny", { text: ` · ${Math.round(w.width * 1000)} mm wide` })),
           h("div.row", { style: { marginTop: "4px" } }, selectEl([["", "Nothing (bare window)"], ...(cur ? [["cur", "Now: " + cur.type]] : []),
-            ...STYLES.flatMap(sty => dressings.filter(e => e.styles[0] === sty).map(e => [e.id, `${sty} · ${e.name}`]))], cur ? "cur" : "",
+            ...app.db.kit.styles.map(styleName).flatMap(sty => dressings.filter(e => e.styles[0] === sty).map(e => [e.id, `${sty} · ${e.name}`]))], cur ? "cur" : "",
             v => { if (v === "cur") return; app.setDressing(room, w, v ? db.entries.get(v) : null); })),
           cur ? h("div.swatches", { style: { marginTop: "6px" } }, GENERIC.fabric.map(([name, hex]) => swatch({ name, hex }, partColour(db, st, cur, cur.materials?.fabric ? "fabric" : "all").hex,
             () => app.setFinish(cur, cur.materials?.fabric ? "fabric" : "all", { name, hex })))) : null);
@@ -174,7 +174,7 @@ export function renderItem(app, el, it) {
     warns.length ? h("ul.warns", { style: { marginTop: "10px" } }, warns.map(w => h("li", { text: "⚠ " + w.text }))) : null));
 
   /* actions */
-  const fixed = slot === "fixed" || slot === "kitchen_unit" || slot === "kitchen_wall_units" || it.asset?.source === "elements";
+  const fixed = !it.shared && (slot === 'fixed' || slot === 'kitchen_unit' || slot === 'kitchen_wall_units' || it.asset?.source === 'elements');
   el.append(h("div.sec", null, h("div.actions", null,
     h("button", { text: "⟲ 15°", title: "Turn left 15° ([)", onclick: () => app.rotateBy(it, 15) }),
     h("button", { text: "15° ⟳", title: "Turn right 15° (])", onclick: () => app.rotateBy(it, -15) }),
@@ -223,24 +223,24 @@ export function renderItem(app, el, it) {
 function swapSec(app, it, e) {
   const db = app.db, st = app.state;
   const slot = e?.slot;
-  const cands = db.catalogue.entries.filter(x => x.slot === slot && x.id !== it.catalogue);
+  const cands = it.shared ? [...db.entries.values()].filter(x=>x.kit && x.kind===it.shared.kind && x.id!==it.catalogue) : db.catalogue.entries.filter(x => x.slot === slot && x.id !== it.catalogue);
   const sec = h("div.sec", null, h("h3", { text: "Change it for…" }));
   if (!cands.length) { sec.append(h("p.small.muted", { text: "Nothing else in the catalogue for this kind of piece yet." })); return sec; }
-  const tabs = h("div.seg", { style: { marginBottom: "8px" } }, ["All", ...STYLES].map(sname => h("button", { "aria-pressed": String(styleTab === sname), text: sname, onclick: () => { styleTab = sname; app.refreshPanel(); } })));
+  const availableStyles = it.shared ? app.db.kit.styles.map(styleName) : STYLES;
+  const tabs = h("div.seg", { style: { marginBottom: "8px" } }, ["All", ...availableStyles].map(sname => h("button", { "aria-pressed": String(styleTab === sname), text: sname, onclick: () => { styleTab = sname; app.refreshPanel(); } })));
   sec.append(tabs);
   const fits = [], nofit = [];
   for (const c of cands) {
     if (styleTab !== "All" && !c.styles.includes(styleTab)) continue;
-    const pose = app.swapPose(it, c);
-    const f = fitsAt(db, st, it, c, pose);
-    (f.ok ? fits : nofit).push({ c, why: f.why });
+    const f = it.shared ? app.swapCandidate(it,c) : fitsAt(db,st,it,c,app.swapPose(it,c));
+    (f.ok ? fits : nofit).push({ c, why: f.reasons || f.why });
   }
   const row = ({ c, why }) => h("button.opt" + (why.length ? ".nofit" : ""), { onclick: () => app.swap(it, c), title: why.join("; ") },
-    h("span.ic", { style: { background: Object.values(c.part_hex || {}).find(Boolean) || "#ccc" } }),
+    c.thumbnail ? h("img.ic",{src:"/tools/library/kit/"+c.thumbnail,alt:"",loading:"lazy"}) : h("span.ic", { style: { background: Object.values(c.part_hex || {}).find(Boolean) || "#ccc" } }),
     h("span", null, h("div.nm", { text: c.name }), h("div.sub", { text: `${fmtSize(c.size_mm)} mm · ${c.description}${why.length ? " · " + why[0] : ""}` })),
     h("span.tag", { html: `${c.styles.slice(0, 2).join("<br>")}<br><i>${c.model ? "3D model" : c.source.source === "polyhaven" ? "free model" : "shape"}</i>${c.signed_off ? "<br>in spec" : ""}` }));
   if (styleTab === "All") {
-    for (const sname of STYLES) {
+    for (const sname of availableStyles) {
       const g = fits.filter(x => x.c.styles[0] === sname);
       if (!g.length) continue;
       sec.append(h("div.tiny", { style: { margin: "8px 0 2px", fontWeight: 650 }, text: sname }), h("div.list", null, g.map(row)));
@@ -262,41 +262,27 @@ function notesSec(app, target, title) {
 
 /* ================================================================ catalogue picker */
 export function openCatalogue(app, room) {
-  const db = app.db, cat = db.catalogue;
-  const m = h("div.modal", { onclick: ev => { if (ev.target === m) m.remove(); } });
-  const body = h("div.body");
-  const search = h("input", { type: "search", placeholder: "Search: sofa, oak, lamp, rug…", value: catState.q, oninput: () => { catState.q = search.value; draw(); } });
-  const groupBar = h("div.chips", { style: { marginTop: "10px" } });
-  const styleBar = h("div.seg", { style: { marginTop: "10px" } });
+  const entries=app.db.kit.items, kinds=[...new Set(entries.map(e=>e.kind))].sort(), types=[...new Set(entries.flatMap(e=>e.roomTypes))].filter(t=>t!=='any').sort();
+  const modal=h('div.modal',{onclick:ev=>{if(ev.target===modal)modal.remove();}}), body=h('div.body'), count=h('span.tiny',{'aria-live':'polite'});
+  const search=h('input',{type:'search','aria-label':'Search studio catalogue',placeholder:'Search furniture and fittings',value:catState.q,
+    oninput:()=>{catState.q=search.value;draw();}});
+  const selector=(label,key,choices)=>h('label',null,label,selectEl(choices,catState[key],v=>{catState[key]=v;draw();}));
+  const filters=h('div.kit-filters',null,
+    selector('Room type','room',[['current','This room'],['','All rooms'],...types.map(t=>[t,cap(t)])]),
+    selector('Kind','kind',[['','All kinds'],...kinds.map(t=>[t,cap(t.replaceAll('_',' '))])]),
+    selector('Style','style',[['','All styles'],...app.db.kit.styles.map(t=>[t,styleName(t)])]));
   function draw() {
-    clear(groupBar); clear(styleBar); clear(body);
-    groupBar.append(...[null, ...cat.groups.map(g => g.name)].map(g => h("button.chip", { style: catState.group === g ? { background: "var(--accent-soft)", color: "var(--accent)" } : {}, text: g || "Everything", onclick: () => { catState.group = g; draw(); } })));
-    styleBar.append(...["All", ...STYLES].map(sname => h("button", { "aria-pressed": String(catState.style === sname), text: sname, onclick: () => { catState.style = sname; draw(); } })));
-    const q = catState.q.toLowerCase().trim();
-    const groups = cat.groups.filter(g => !catState.group || g.name === catState.group);
-    let shown = 0;
-    for (const g of groups) for (const slot of g.slots) {
-      const list = cat.entries.filter(e => e.slot === slot && (catState.style === "All" || e.styles.includes(catState.style))
-        && (!q || (e.name + " " + e.description + " " + slot + " " + e.styles.join(" ")).toLowerCase().includes(q))
-        && !(e.signed_off && cat.entries.some(x => x !== e && !x.signed_off && x.name === e.name)));
-      if (!list.length) continue;
-      shown += list.length;
-      body.append(h("div.tiny", { style: { margin: "12px 0 4px", fontWeight: 650 }, text: `${cat.slot_names[slot] || slot} (${list.length})` }),
-        h("div.list", null, list.slice(0, 40).map(e => h("button.opt", { onclick: () => { m.remove(); app.addEntry(e, room); } },
-          h("span.ic", { style: { background: Object.values(e.part_hex || {}).find(Boolean) || "#ccc" } }),
-          h("span", null, h("div.nm", { text: e.name }), h("div.sub", { text: `${fmtSize(e.size_mm)} mm · ${e.description}` })),
-          h("span.tag", { html: `${e.styles.slice(0, 2).join("<br>")}<br><i>${e.model ? "3D model" : e.source.source === "polyhaven" ? "free model" : "shape"}</i>` })))));
-    }
-    if (!shown) body.append(h("p.muted", { text: "Nothing matches." }));
+    const roomFilter=catState.room==='current'?roomTypes(room):catState.room;
+    const list=entries.filter(e=>catalogueMatch(e,{room:roomFilter,kind:catState.kind,style:catState.style,search:catState.q}));
+    clear(body);count.textContent=list.length+' of '+entries.length+' studio pieces';
+    if(!list.length) {body.append(h('p.muted',{text:'No pieces match these filters.'}));return;}
+    body.append(h('div.kit-results',null,list.map(e=>h('button.kit-tile',{'data-catalogue-id':e.id,onclick:()=>{modal.remove();app.addEntry(app.db.entries.get(e.id),room);}},
+      h('img',{src:'/tools/library/kit/'+e.thumbnail,alt:'',loading:'lazy',width:128,height:128}),
+      h('b',{text:e.name}),h('small',{text:styleName(e.style)+' · '+fmtSize(e.size_m.map(v=>v*1000))+' mm'})))));
   }
-  m.append(h("div.box", null,
-    h("header", null, h("h2", { text: `Add to ${room.name}` }), h("button.ghost", { text: "Close", onclick: () => m.remove() }),
-      h("div", { style: { flexBasis: "100%" } }, search, groupBar, styleBar)),
-    body,
-    h("footer", null, h("span.tiny", { style: { flex: 1 }, text: `${cat.counts.entries} pieces. "free model" = a CC0 Poly Haven model exists (not downloaded yet); "shape" = the build makes it. The new piece lands in a free spot; drag it where you want it.` }))));
-  document.body.append(m);
-  draw();
-  setTimeout(() => search.focus(), 30);
+  modal.append(h('div.box',null,h('header',null,h('h2',{text:'Add to '+room.name}),h('button.ghost',{text:'Close',onclick:()=>modal.remove()}),
+    h('div',{style:{flexBasis:'100%'}},search,filters)),body,h('footer',null,count)));
+  document.body.append(modal);draw();search.focus();
 }
 
 /* ================================================================ the change list */
@@ -304,12 +290,15 @@ export function openChanges(app, sendMode = false) {
   const store = app.store;
   const m = h("div.modal", { onclick: ev => { if (ev.target === m) m.remove(); } });
   const active = store.active, undone = store.undone, sent = store.sent;
+  const receipts=new Map([...app.sessions.values()].flatMap(s=>(s.moveReceipts||[]).map(r=>[r.sourceId,r])));
   const note = h("textarea", { placeholder: "Anything the studio should know about this batch (optional)" });
   const row = c => h("div.change" + (c.status === "undone" ? ".undone" : ""), null,
     h("span", { text: c.summary }), h("span.tiny", { text: c.version === "before" ? "Before" : "After" }),
-    h("span.tiny", { text: `${new Date(c.at).toLocaleString()}${c.status === "sent" ? " · sent in " + c.batch : ""}` }));
+    h("span.tiny", { text: `${new Date(c.at).toLocaleString()}${store.imported.has(c.id) ? ' · carried into starting layout' : ''}${c.status === "sent" ? " · sent in " + c.batch : ""}` }),
+    receipts.has(c.id) ? h('span.tiny',{text:(receipts.get(c.id).status==='adjusted'?'Adjusted by '+Math.round(Math.hypot(...receipts.get(c.id).delta)*1000)+' mm':'Pending')+' · '+receipts.get(c.id).reason}) : null);
   const body = h("div.body", null,
-    sendMode ? h("p", { html: `These <b>${active.length}</b> change${active.length === 1 ? "" : "s"} will be written as one batch. The studio makes <b>spec v2</b> from it (the signed-off spec v1 is never edited) and does one rebuild. You can keep planning afterwards.` }) : null,
+    sendMode ? h("p", { text: `Send these ${active.length} signed-spec requests as one batch for the next studio build. Furniture and room finishes have their own Save layout button.` }) : null,
+    app.session?.layout.dirty ? h('p.banner',{text:'This room has an unsaved furniture or finish edit. Close this list and choose Save layout to open it in the walkthrough.'}) : null,
     !active.length ? h("p.muted", { text: "No unsent changes." }) : null,
     active.map(row),
     !sendMode && undone.length ? [h("div.tiny", { style: { margin: "14px 0 4px", fontWeight: 650 }, text: "Undone (Redo brings them back)" }), undone.map(row)] : null,

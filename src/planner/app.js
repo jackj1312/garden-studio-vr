@@ -1,24 +1,29 @@
 /* Room planner (planner.html): review and edit the signed-off design spec, room by room.
  * Opens on the 2D plan; the 3D preview loads only when asked for. Every edit becomes one change in the change list
  * (store.js); "Send to build" writes the batch the next spec version is made from. The spec itself is read-only. */
-import { h, clear, r3, mm, normDeg, rot, add2, sub2, scale2, dot2, len2, segDist, pointInPoly, labelPoint, centroid, moveWords, axes, cap, uid } from "./util.js?v=p7";
-import { loadAll, computeState, entryOf, slotOf, sizeM, carriedBy, partColour, roomWalls, roomFloor, mountOf } from "./data.js?v=p7";
-import { ChangeStore } from "./store.js?v=p7";
-import { PlanView } from "./plan.js?v=p7";
-import { checkRoom, fitsAt } from "./checks.js?v=p7";
-import { renderOverview, renderRoom, renderItem, openCatalogue, openChanges } from "./panel.js?v=p7";
+import { h, clear, r3, mm, normDeg, rot, add2, sub2, scale2, dot2, len2, segDist, pointInPoly, labelPoint, centroid, moveWords, axes, cap, uid } from "./util.js?v=p8";
+import { loadAll, entryOf, slotOf, sizeM, carriedBy, mountOf } from "./data.js?v=p8";
+import { ChangeStore } from "./store.js?v=p8";
+import { PlanView } from "./plan.js?v=p8";
+import { checkRoom, fitsAt } from "./checks.js?v=p8";
+import { renderOverview, renderRoom, renderItem, openCatalogue, openChanges } from "./panel.js?v=p8";
+import { plannerEntry, projectRoomState, wallFaces } from './shared.mjs';
+import { FurnitureLayout } from '../furnish/layout.mjs';
+import { buildRoomContext, snapPlacement, checkGroup, validateFurnishDelta, moveGroup } from '../furnish/placement.mjs';
 
-const SITE = new URLSearchParams(location.search).get("site") || "house";
+const params = new URLSearchParams(globalThis.location?.search || '');
+const SITE = params.get("site") || "house-wip";
 const $ = id => document.getElementById(id);
 const label = it => `${it.type} (#${it.num})`;
 const clone = o => JSON.parse(JSON.stringify(o));
 const pose = it => ({ position_m: it.position_m.slice(), yaw_deg: it.yaw_deg || 0, room: it.room });
 
-class App {
+export class App {
   constructor() {
     this.vkey = "after"; this.storey = "ground"; this.roomId = null; this.selected = null;
     this.ui = { wallStyle: "Contemporary", three: false };
     this.warnings = new Map(); this.roomWarn = new Map();
+    this.sessions = new Map(); this.editOrder=[]; this.redoOrder=[];
   }
   async start() {
     this.applyTheme(localStorage.getItem("planner:theme"));
@@ -26,22 +31,34 @@ class App {
     insp.append(h("div.sec", null, h("p.muted", { text: "Loading the spec and the house plan…" })));
     try { this.db = await loadAll(SITE); }
     catch (e) { clear(insp).append(h("div.sec", null, h("h2", { text: "Could not load the spec" }), h("p.small", { text: String(e.message || e) }))); return; }
-    this.store = new ChangeStore(SITE);
+    for (const raw of this.db.kit.items) this.db.entries.set(raw.id, plannerEntry(raw));
+    this.store = new ChangeStore(this.db.specSite);
     this.store.on(r => { if (r === "offline") this.toast("Lost the studio server: changes now stay on this device until it is back."); if (String(r).startsWith("uploaded")) this.toast(`Uploaded ${r.split(":")[1]} change(s) made on this device.`); });
     await this.store.load();
-    this.plan = new PlanView($("plan"), { db: this.db, onSelect: id => this.select(id), onOpenRoom: (r, it) => this.openRoom(r, it), onCommit: c => this.commitDrag(c) });
+    this.plan = new PlanView($("plan"), { db: this.db, onSelect: id => this.select(id), onOpenRoom: (r, it) => this.openRoom(r, it), onCommit: c => this.commitDrag(c),
+      onPose:(it,position,yaw,free)=>this.assessPose(it,position,yaw,free), onDrop:row=>this.putFurniture(row), onBlocked:r=>this.toast(r) });
+    this.plan.o.placeAt=p=>{if (!this.pendingEntry) return false; const {entry,room}=this.pendingEntry; this.placeEntry(entry,room,p); return true;};
     this.bindUI();
     this.fromHash();
+    await this.loadFurniture();
     this.recompute(); this.render();
-    window.addEventListener("hashchange", () => { if (this._settingHash) return; this.fromHash(); this.recompute(); this.render(); });
-    setInterval(async () => { if (document.visibilityState === "visible" && await this.store.refresh()) this.afterChange(true); }, 15000);
-    document.addEventListener("visibilitychange", async () => { if (document.visibilityState === "visible" && await this.store.refresh()) this.afterChange(true); });
+    window.addEventListener("hashchange", async () => { if (this._settingHash) return; this.fromHash(); await this.loadFurniture(); this.recompute(); this.render(); });
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible' || this.plan.drag) return;
+      const shared=this.session;
+      try {
+        if (shared?.ready && !shared.layout.dirty && !shared.layout.saving) await shared.layout.refresh();
+        else if (shared && !shared.ready) await this.loadFurniture(true);
+      } catch(e) { if (shared) shared.message=e.message; }
+      if (await this.store.refresh()) this.afterChange(true);
+    };
+    setInterval(refresh,15000); document.addEventListener('visibilitychange',refresh);
     window.planner = this;      // for checks from the console
   }
 
   /* ---------------------------------------------------------------- state */
   recompute() {
-    this.state = computeState(this.db, this.vkey, this.store.applied);
+    this.state = projectRoomState(this.db, this.vkey, this.store.applied, this.session);
     this.roomWarn = new Map();
     this.warnings = this.roomId ? this.warningsFor(this.roomId) : new Map();
     if (this.selected && !this.state.items.has(this.selected)) this.selected = null;
@@ -52,11 +69,37 @@ class App {
   }
   get house() { return this.state.house; }
   get room() { return this.roomId ? this.house.roomById.get(this.roomId) : null; }
+  get session() { return this.sessions.get(this.vkey); }
+  async loadFurniture(retry=false) {
+    const key=this.vkey, version=this.db.versions[key].elements;
+    if (!retry && this.sessions.has(key)) return this.sessions.get(key).loading;
+    const s=this.sessions.get(key) || {ready:false, version, message:''};
+    this.sessions.set(key,s);
+    if (s.loading) return s.loading;
+    s.layout ??= new FurnitureLayout({site:SITE,version,onChange:()=>{
+      if (s.ready && this.session===s && this.state) this.afterChange();
+    }});
+    s.loading=(async()=>{
+      try {
+        const read=async name=>{const r=await fetch(`assets/sites/${SITE}/furnish/${version}/${name}.json`);if(!r.ok) throw Error('Room '+name+' unavailable ('+r.status+').');return r.json();};
+        const [variants,seed]=await Promise.all([read('variants'),read('seed'),s.layout.load()]);
+        const context=buildRoomContext({site:SITE,version,spec:this.db.spec,elements:this.db.elements[key],doors:this.db.doors,
+          catalogue:this.db.kit,floorCatalogue:this.db.catalogue,variants,seed});
+        for(const id of seed.appliedChangeIds || []) this.store.imported.add(id);
+        s.moveReceipts = seed.moveReceipts || [];
+        s.context=context; s.variants=variants; s.ready=true; s.message='';
+      } catch(e) { s.message='Shared layout unavailable. '+e.message; }
+      finally { s.loading=null; }
+    })();
+    return s.loading;
+  }
 
   /* ---------------------------------------------------------------- navigation */
   fromHash() {
     const p = location.hash.replace(/^#/, "").split("/");
-    if (p[0] === "before" || p[0] === "after") this.vkey = p[0];
+    const requested=new URLSearchParams(location.search).get('version');
+    const byVersion=Object.entries(this.db.versions).find(([k,v])=>k===requested || v.elements===requested)?.[0];
+    if (p[0] === "before" || p[0] === "after") this.vkey = p[0]; else if (byVersion) this.vkey=byVersion;
     const H = this.db.versions[this.vkey];
     if (p[1] === "room" && p[2] && H.roomById.has(decodeURIComponent(p[2]))) { this.roomId = decodeURIComponent(p[2]); this.storey = H.roomById.get(this.roomId).storey; }
     else { this.roomId = null; if (p[1] === "first" || p[1] === "ground") this.storey = p[1]; }
@@ -68,20 +111,23 @@ class App {
     setTimeout(() => (this._settingHash = false), 0);
   }
   openRoom(roomId, itemId = null) {
+    this.pendingEntry=null;
     this.roomId = roomId; this.storey = this.house.roomById.get(roomId).storey; this.selected = itemId;
     this.warnings = this.warningsFor(roomId);
     this.setHash(); this.render();
   }
-  back() { this.roomId = null; this.selected = null; this.setHash(); this.render(); }
+  back() { this.pendingEntry=null; this.roomId = null; this.selected = null; this.setHash(); this.render(); }
   select(id, scroll = false) {
     this.selected = id;
     this.render(true);
     if (scroll) $("inspector").scrollTop = 0;
   }
-  setVersion(v) {
+  async setVersion(v) {
     if (v === this.vkey) return;
     const keepRoom = this.roomId && this.db.versions[v].roomById.has(this.roomId) ? this.roomId : null;
-    this.vkey = v; this.recompute();
+    this.vkey = v; await this.loadFurniture(); if (this.vkey !== v) return;
+    const url=new URL(location.href); url.searchParams.set('version',this.db.versions[v].elements); history.replaceState(null,'',url);
+    this.recompute();
     this.roomId = keepRoom; this.selected = null;
     if (!this.house.storeys.includes(this.storey)) this.storey = "ground";
     this.warnings = this.roomId ? this.warningsFor(this.roomId) : new Map();
@@ -96,7 +142,7 @@ class App {
     for (const b of $("storeySeg").children) { b.setAttribute("aria-pressed", String(b.dataset.s === this.storey)); b.hidden = !H.storeys.includes(b.dataset.s); }
     $("roomCard").hidden = !room; $("roomTools").hidden = !room;
     $("roomTitle").textContent = room ? cap(room.name) : "";
-    $("hint").textContent = room ? "Drag to move · handle to turn · double-tap empty floor to re-fit" : "Tap a room to open it";
+    $("hint").textContent = this.pendingEntry?'Tap a position for '+this.pendingEntry.entry.name+' · Esc cancels':room ? "Drag to move · handle to turn · red blocks the drop" : "Tap a room to open it";
     $("main").classList.toggle("nosel", !room);
     this.plan.show({ state: this.state, storey: this.storey, mode: room ? "room" : "overview", roomId: this.roomId, selected: this.selected, warnings: this.warnings, keepView });
     this.refreshPanel();
@@ -115,11 +161,14 @@ class App {
   renderTop() {
     const s = this.store, n = s.active.length;
     $("changeCount").textContent = n; $("changeCount").classList.toggle("zero", !n);
-    $("undoBtn").disabled = !s.canUndo(); $("redoBtn").disabled = !s.canRedo();
+    const shared=this.session, layout=shared?.layout;
+    $("undoBtn").disabled = !(layout?.canUndo || s.canUndo(this.vkey)); $("redoBtn").disabled = !(layout?.canRedo || s.canRedo(this.vkey));
     $("sendBtn").disabled = !n;
     const c = $("conn"); c.className = s.mode;
-    c.querySelector("span").textContent = s.mode === "server" ? "Saved to the studio" : "On this device only";
-    c.title = s.mode === "server" ? "Every change is written to the studio's change list as you go" : `The studio server is not reachable (${s.lastError || ""}). Changes are kept in this browser and uploaded when it is.`;
+    const status=layout?.conflict?'Another device saved · local draft kept':shared?.message || (layout?.dirty?'Unsaved room layout':s.mode==='server'?'Saved to the studio':'On this device');
+    c.querySelector("span").textContent = status; c.title=status;
+    $("saveLayout").disabled = !shared?.ready || !layout?.dirty || layout.saving || layout.conflict;
+    $("reloadLayout").hidden = !layout?.conflict;
   }
   async afterChange(remote) {
     this.recompute();
@@ -144,7 +193,7 @@ class App {
     if (this.ui.three && !this.view3d) {
       $("threeEmpty").textContent = "Loading the 3D preview…";
       try {
-        const { Preview3D } = await import("./view3d.js?v=p7");
+        const { Preview3D } = await import("./view3d.js?v=p8");
         this.view3d = new Preview3D($("threePane"), { db: this.db, onSelect: id => { if (id) this.select(id); } });
       } catch (e) { $("threeEmpty").textContent = "The 3D preview could not load (it needs the internet for three.js): " + (e.message || e); return; }
     }
@@ -159,8 +208,92 @@ class App {
   }
 
   /* ---------------------------------------------------------------- recording changes */
+  changeFurniture(work) {
+    const s=this.session;
+    if (!s?.ready) { this.toast(s?.message || 'Load this room layout before editing.'); return false; }
+    try {
+      if(work(s.layout)===false)return false;
+      this.editOrder.push({key:this.vkey, lane:'layout'}); this.redoOrder=[];
+      this.afterChange(); return true;
+    } catch(e) { this.toast(e.message); return false; }
+  }
+  assessPose(it, position, yaw, free=false) {
+    if (!it.shared || !this.session?.ready) return null;
+    const {context,layout}=this.session, row={...it.shared,position:[...position],rotation:yaw};
+    const room=this.house.roomAt(position[0],position[2],this.house.roomById.get(it.room)?.storey);
+    row.room=room?.id || it.room;
+    if (row.host.type==='floor'||row.host.type==='ceiling') row.host={type:row.host.type,id:row.host.type+'/'+row.room};
+    const snapped=snapPlacement(context,layout.items,row,{free});
+    return {row:snapped,...checkGroup(context,layout.items,snapped)};
+  }
+  putFurniture(row) {
+    const {context,layout}=this.session, check=checkGroup(context,layout.items,row);
+    if (!check.ok) { this.toast(check.reasons[0]); this.render(true); return false; }
+    this.selected=row.id; return this.changeFurniture(s=>s.put(row));
+  }
+  placeEntry(entry,room,point=null) {
+    const session=this.session;
+    if (!session?.ready) { this.toast(session?.message || 'The shared layout is still loading.'); return; }
+    const {context,layout}=session, center=labelPoint(room.polygon), hostType=entry.host;
+    const id='P-'+crypto.randomUUID();
+    const base={id,catalogueId:entry.id,variant:entry.id,kind:entry.kind,style:entry.style,room:room.id,size:entry.size_m.slice(),rotation:0};
+    const points=[];
+    if (hostType==='wall') {
+      const faces=wallFaces(this.state,room.id).filter(f=>f.a).sort((a,b)=>len2(sub2(b.b,b.a))-len2(sub2(a.b,a.a)));
+      for (const f of faces) for (const t of [.5,.25,.75]) {
+        const mid=point || add2(f.a,scale2(sub2(f.b,f.a),t));
+        points.push({p:mid,host:f, y:room.floor+Math.max(.05,(room.ceiling-room.floor-base.size[2])*.5),rot:Math.atan2(-f.normal[0],-f.normal[1])*180/Math.PI});
+      }
+    } else if (hostType==='surface') {
+      const supports=[...layout.items.filter(o=>o.room===room.id && o.host.type==='floor').map(o=>({id:o.id,p:[o.position[0],o.position[2]],y:o.position[1]+o.size[2]})),
+        ...context.hosts.filter(o=>o.room===room.id && o.type==='surface' && o.bounds).map(o=>({id:o.id,p:[(o.bounds[0][0]+o.bounds[1][0])/2,(o.bounds[0][2]+o.bounds[1][2])/2],y:o.bounds[1][1]}))];
+      const origin=point||center;
+      supports.sort((a,b)=>len2(sub2(a.p,origin))-len2(sub2(b.p,origin)));
+      for(const s of supports) points.push({p:point||s.p,y:s.y,host:{type:'surface',id:s.id}});
+    } else {
+      const host={type:hostType,id:hostType+'/'+room.id}, y=hostType==='ceiling'?room.ceiling-base.size[2]:room.floor;
+      if (point) points.push({p:point,host,y});
+      else {
+        const xs=room.polygon.map(p=>p[0]), zs=room.polygon.map(p=>p[1]);
+        for(let x=Math.min(...xs)+.1;x<=Math.max(...xs);x+=.26) for(let z=Math.min(...zs)+.1;z<=Math.max(...zs);z+=.26)
+          if(pointInPoly([x,z],room.polygon)) points.push({p:[r3(x),r3(z)],host,y});
+        points.sort((a,b)=>len2(sub2(a.p,center))-len2(sub2(b.p,center)));
+        points.unshift({p:center,host,y});
+      }
+    }
+    let reason='Choose a suitable host in this room.';
+    for (const {p,host,y,rot=0} of points) {
+      const row=snapPlacement(context,layout.items,{...base,host:{type:host.type,id:host.id},position:[p[0],y,p[1]],rotation:rot},{free:false});
+      const check=checkGroup(context,layout.items,row);
+      if (check.ok) { this.pendingEntry=null; return this.putFurniture(row); }
+      reason=check.reasons[0] || reason;
+    }
+    this.pendingEntry={entry,room}; this.toast(reason+' Tap another spot in the room.'); this.render(true);
+  }
+  async saveLayout() {
+    const s=this.session;
+    if (!s?.ready) return;
+    try { await s.layout.save(); s.message=''; this.toast('Layout saved for '+this.house.name+'.'); }
+    catch(e) { s.message=e.message; this.toast('Your room draft is still here. '+e.message); }
+    this.renderTop();
+  }
   async commit(change) {
+    const it=this.state.items.get(change.target?.item);
+    if (it?.shared) {
+      if (change.op==='item.move') {
+        const pose=this.assessPose(it,change.after.position_m,change.after.yaw_deg,true);
+        if (!pose.ok) { this.toast(pose.reasons[0]); this.render(true); return; }
+        return this.putFurniture(pose.row);
+      }
+      if (change.op==='item.delete') return this.changeFurniture(s=>s.remove(it.id));
+      if (change.op==='item.finish') return this.changeFurniture(s=>s.put({...it.shared,finishes:{...it.shared.finishes,[change.after.part]:change.after.value.hex}}));
+      if (change.op==='item.lamp') return this.changeFurniture(s=>s.put({...it.shared,lampOn:change.after.on}));
+    }
+    if (!this.session?.ready && (/^item\.(move|swap|add|delete)$/.test(change.op) || ['room.walls','room.accent','room.floor'].includes(change.op))) {
+      this.toast(this.session?.message || 'Load the shared room layout before editing.'); return;
+    }
     const c = await this.store.add({ version: this.vkey, room: change.room || this.roomId, ...change });
+    this.editOrder.push({key:this.vkey,lane:'spec',id:c.id}); this.redoOrder=[];
     this.afterChange();
     return c;
   }
@@ -204,6 +337,7 @@ class App {
   }
   newId(room) { return ("N-" + room.id.replace(/^R-/, "").slice(0, 14) + "-" + uid("").slice(-6)).replace(/[^A-Za-z0-9_-]/g, ""); }
   duplicate(it) {
+    if (it.shared) return this.copyFurniture(it);
     const room = this.house.roomById.get(it.room), [W] = sizeM(it), { u } = axes(it.yaw_deg || 0);
     const carried = carriedBy(this.db, this.state, it);
     let off = scale2(u, W + 0.05);
@@ -220,6 +354,24 @@ class App {
     this.selected = items[0].id;
     return this.commit({ op: "item.add", target: { item: items[0].id }, summary: `Duplicated ${label(it)} as #${items[0].num}${carried.length ? ` with the ${carried.length} thing(s) on it` : ""}`,
       before: null, after: { items } });
+  }
+  copyFurniture(it) {
+    const session=this.session, all=session.layout.items, group=[it.shared];
+    for (let i=0;i<group.length;i++) for (const o of all)
+      if (['surface','item'].includes(o.host.type) && o.host.id===group[i].id && !group.some(p=>p.id===o.id)) group.push(o);
+    const ids=new Map(group.map(o=>[o.id,'P-'+crypto.randomUUID()]));
+    const [w,d]=it.shared.size;
+    let why='No space to duplicate this item.';
+    for(const [dx,dz] of [[w+.03,0],[-w-.03,0],[0,d+.03],[0,-d-.03],[w+.03,d+.03],[-w-.03,-d-.03]]) {
+      const source=it.shared;
+      const shifted=moveGroup(all,{...source,position:[r3(source.position[0]+dx),source.position[1],r3(source.position[2]+dz)]});
+      const copied=shifted.map(o=>({...o,id:ids.get(o.id),host:{...o.host,id:ids.get(o.host.id)||o.host.id}}));
+      const before={items:all,wallColours:session.layout.wallColours,roomFloors:session.layout.roomFloors};
+      try { validateFurnishDelta(session.context,before,{...before,items:[...all,...copied]}); }
+      catch(e) {why=e.message;continue;}
+      this.selected=copied[0].id; return this.changeFurniture(s=>s.putMany(copied));
+    }
+    this.toast(why);
   }
   /* where a new piece can go: nearest free floor to the room's middle */
   freeSpot(room, entry, base) {
@@ -245,6 +397,7 @@ class App {
              num: this.state.nextNum, ...extra };
   }
   addEntry(entry, room) {
+    if (entry.kit) return this.placeEntry(entry,room);
     const it = this.itemFromEntry(entry, room);
     const [W, D, H] = entry.size_mm.map(v => v / 1000);
     if (entry.mount === "window") { const w = this.windowsOf(room)[0]; if (w) return this.setDressing(room, w, entry); }
@@ -292,7 +445,20 @@ class App {
              provenance: entry.signed_off ? it.provenance : "proposed", status: entry.signed_off ? "back to the signed-off piece" : "swapped in the planner",
              evidence: `swapped in the planner (was ${it.type}, ${it.size_mm.join("x")} mm)` };
   }
+  swapCandidate(it,entry) {
+    const {layout,context}=this.session;
+    const row={...it.shared,catalogueId:entry.id,variant:entry.id,kind:entry.kind,style:entry.style,size:entry.size_m.slice(),
+      position:this.swapPose(it,entry),finishes:{}};
+    const candidate=snapPlacement(context,layout.items,row,{free:true});
+    return {row:candidate,...checkGroup(context,layout.items,candidate)};
+  }
   swap(it, entry, sizeOverride) {
+    if (it.shared) {
+      if (!entry.kit) { this.toast('Choose a Studio kit model for this item.'); return; }
+      const change=this.swapCandidate(it,entry);
+      if(!change.ok) {this.toast(change.reasons[0]);return;}
+      return this.putFurniture(change.row);
+    }
     const after = this.swapFields(it, entry, sizeOverride);
     const before = Object.fromEntries(Object.keys(after).map(k => [k, clone(it[k] ?? null)]));
     return this.commit({ op: "item.swap", target: { item: it.id }, summary: `Changed ${label(it)} for ${after.type} (${entry.styles.join("/")})`,
@@ -307,10 +473,15 @@ class App {
     return this.commit({ op: "item.lamp", target: { item: it.id }, summary: `${label(it)} switched ${it.lampOn ? "off" : "on"}`, before: { on: !!it.lampOn }, after: { on: !it.lampOn } });
   }
   setLamps(room, lights, on) {
+    const shared=lights.filter(l=>l.shared);
+    if(shared.length) this.changeFurniture(s=>s.putMany(shared.map(l=>({...l.shared,lampOn:on})),'Room lamps'));
+    lights=lights.filter(l=>!l.shared); if(!lights.length)return;
     return this.commit({ op: "room.lamps", target: { room: room.id }, summary: `All ${lights.length} lights in the ${room.name} ${on ? "on" : "off"}`,
       before: { states: lights.map(l => [l.id, !!l.lampOn]) }, after: { ids: lights.map(l => l.id), on } });
   }
   setRoom(room, field, value) {
+    if (field==='floor') return this.changeFurniture(s=>s.setFloor(room.id,value?.id || null));
+    if (field==='walls') return this.changeFurniture(s=>s.setWalls([...new Set(wallFaces(this.state,room.id).map(f=>f.id))],value?.hex || null));
     const cur = this.state.rooms.get(room.id)?.[field] ?? null;
     const words = { walls: "Walls", accent: "Accent wall", floor: "Floor", fronts: "Kitchen fronts", island_fronts: "Island fronts", worktop: "Worktops" }[field];
     const summary = value ? `${words} of the ${room.name}: ${value.name}${value.hex ? " (" + value.hex + ")" : ""}` : `${words} of the ${room.name}: removed`;
@@ -320,8 +491,18 @@ class App {
     const what = target.item ? label(this.state.items.get(target.item)) : `the ${this.house.roomById.get(target.room).name}`;
     return this.commit({ op: "note", target, summary: `Note on ${what}: “${text.slice(0, 80)}${text.length > 80 ? "…" : ""}”`, before: null, after: { text } });
   }
-  async undo() { const c = await this.store.undo(); if (c) { this.toast("Undone: " + c.summary); this.afterChange(); } }
-  async redo() { const c = await this.store.redo(); if (c) { this.toast("Redone: " + c.summary); this.afterChange(); } }
+  async history(redo=false) {
+    const s=this.session?.layout, order=redo?this.redoOrder:this.editOrder, other=redo?this.editOrder:this.redoOrder;
+    const i=order.findLastIndex(c=>c.key===this.vkey), event=order[i];
+    const roomOp=redo?'canRedo':'canUndo', op=redo?'redo':'undo';
+    if ((event?.lane==='layout' || !event) && s?.[roomOp]) {
+      s[op](); if(event) order.splice(i,1); other.push({key:this.vkey,lane:'layout'}); this.afterChange(); return;
+    }
+    const c=await this.store[op](this.vkey);
+    if(c) { if(event) order.splice(i,1); other.push({key:this.vkey,lane:'spec',id:c.id}); this.toast(c.summary); this.afterChange(); }
+  }
+  undo() { return this.history(); }
+  redo() { return this.history(true); }
 
   /* ---------------------------------------------------------------- windows and their dressings */
   inside(p, poly) { return pointInPoly(p, poly); }
@@ -338,6 +519,11 @@ class App {
   }
   setDressing(room, w, entry) {
     const cur = this.dressingOf(room, w);
+    if(entry?.kit && (!cur || cur.shared)) {
+      const point=scale2(add2(w.p0,w.p1),.5);
+      if(cur) return this.swap(cur,entry);
+      return this.placeEntry(entry,room,point);
+    }
     const isBlind = entry && /blind|shutter|venetian/i.test(entry.name);
     const width = Math.round((w.width + (isBlind ? 0 : 0.3)) * 1000);
     const height = Math.round(((isBlind ? w.head - w.sill : w.head + 0.2 - room.floor - 0.01)) * 1000);
@@ -369,6 +555,9 @@ class App {
     $("snapBtn").onclick = () => { this.plan.snapOn = !this.plan.snapOn; $("snapBtn").setAttribute("aria-pressed", String(this.plan.snapOn)); $("snapBtn").textContent = this.plan.snapOn ? "Snap on" : "Snap off"; };
     $("addBtn").onclick = () => this.room && openCatalogue(this, this.room);
     $("threeBtn").onclick = () => this.toggle3D();
+    $("saveLayout").onclick=()=>this.saveLayout();
+    $("reloadLayout").onclick=async()=>{ if (!window.confirm('Discard this local room draft and load the studio layout?')) return;
+      try { await this.session.layout.load({discardDraft:true}); this.session.message=''; this.afterChange(); } catch(e){this.toast(e.message);} };
     $("undoBtn").onclick = () => this.undo();
     $("redoBtn").onclick = () => this.redo();
     $("changesBtn").onclick = () => openChanges(this);
@@ -384,7 +573,7 @@ class App {
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? this.redo() : this.undo(); return; }
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); this.redo(); return; }
-      if (e.key === "Escape") { if (this.selected) this.select(null); else if (this.roomId) this.back(); return; }
+      if (e.key === "Escape") { if (this.pendingEntry) {this.pendingEntry=null;this.render(true);} else if (this.selected) this.select(null); else if (this.roomId) this.back(); return; }
       const it = this.selected && this.state.items.get(this.selected);
       if (!it || !this.room) return;
       const step = e.shiftKey ? 0.01 : 0.05;
@@ -393,10 +582,12 @@ class App {
       if (e.key === "r" || e.key === "R") this.rotateBy(it, e.shiftKey ? 90 : -90);
       else if (e.key === "[") this.rotateBy(it, 15);
       else if (e.key === "]") this.rotateBy(it, -15);
+      else if (e.key.toLowerCase() === "q") this.rotateBy(it, 15);
+      else if (e.key.toLowerCase() === "e") this.rotateBy(it, -15);
       else if (e.key === "d" || e.key === "D") this.duplicate(it);
       else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); this.remove(it); }
     });
   }
 }
 
-new App().start();
+if (globalThis.document) new App().start();

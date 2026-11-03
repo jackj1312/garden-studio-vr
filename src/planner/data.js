@@ -1,7 +1,7 @@
 /* Room planner data: the signed-off spec (read-only), the catalogue, the house's walls / openings / doors / stairs
  * (read live from the elements file of each spec version), and the planner state = spec + replayed changes.
  * Frame: spec SCHEMA.md (x along the front towards the north flank, z = minus depth, y up; yaw 0 faces -z). */
-import { pointInPoly, footprint, axes, bbox, norm2, sub2, add2, scale2, dot2, rot, len2, polyArea } from "./util.js?v=p7";
+import { pointInPoly, footprint, axes, bbox, norm2, sub2, add2, scale2, dot2, rot, len2, polyArea } from "./util.js?v=p8";
 
 const SITE_ROOT = site => `assets/sites/${site}/`;
 const bust = () => `?t=${Date.now()}`;
@@ -13,24 +13,28 @@ async function getJSON(url, fresh = false) {
 
 export async function loadAll(site) {
   const root = SITE_ROOT(site);
-  const specs = ["spec_v1.json"];                 // the newest signed spec; the planner never writes it
-  const [spec, catalogue, doors] = await Promise.all([
-    getJSON(root + "spec/" + specs[specs.length - 1], true),
-    getJSON(root + "spec/catalogue_v1.json", true),
-    getJSON(`assets/planner/${site}/doors.json`, true).catch(() => ({ versions: {} })),
+  const specSite = site === 'house-wip' ? 'house' : site;
+  const specRoot = SITE_ROOT(specSite);
+  const specs = ["spec_v1.json"];
+  const [spec, catalogue, doors, kit] = await Promise.all([
+    getJSON(specRoot + "spec/" + specs[specs.length - 1], true),
+    getJSON(specRoot + "spec/catalogue_v1.json", true),
+    getJSON(`assets/planner/${specSite}/doors.json`, true).catch(() => ({ versions: {} })),
+    getJSON('tools/library/kit/catalogue.json'),
   ]);
-  const versions = {};
+  const versions = {}, elements = {};
   await Promise.all(Object.entries(spec.versions).map(async ([key, sv]) => {
     const el = await getJSON(root + `${sv.elements}_elements.json`, true);
+    elements[key]=el;
     versions[key] = buildHouse(key, sv, el, doors.versions?.[key], spec);
   }));
   const finishes = Object.fromEntries(spec.finishes.map(f => [f.id, f]));
   const entries = new Map(catalogue.entries.map(e => [e.id, e]));
-  return { site, specName: specs[specs.length - 1], spec, catalogue, entries, finishes, versions };
+  return { site, specSite, specName: specs[specs.length - 1], spec, catalogue, entries, kit, finishes, versions, elements, doors };
 }
 
 /* ---------------------------------------------------------------- the house (walls, openings, rooms) per version */
-function buildHouse(key, sv, elFile, doorData, spec) {
+export function buildHouse(key, sv, elFile, doorData, spec) {
   const E = elFile.elements;
   const byId = new Map(E.map(e => [e.id, e]));
   const replaced = new Set(E.filter(e => e.layer === "as_built").flatMap(e => e.replaces || []));
@@ -278,6 +282,14 @@ export function roomFloor(db, state, room) {
 
 /* which items sit on another (cushions on a sofa, a lamp on a side table): carried when the support moves */
 export function carriedBy(db, state, parent) {
+  if(parent.shared) {
+    const ids=new Set([parent.id]), children=[], rows=[...state.items.values()];
+    for(const id of ids) for(const row of rows) {
+      if (!row.shared || !['surface','item'].includes(row.shared.host.type) || row.shared.host.id!==id || ids.has(row.id)) continue;
+      ids.add(row.id); children.push(row);
+    }
+    return children;
+  }
   const [W, D, H] = sizeM(parent), py = parent.position_m[1], top = py + H;
   const pf = itemFootprint(parent, [W + 0.1, D + 0.1]);
   const out = [];

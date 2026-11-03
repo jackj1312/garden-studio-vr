@@ -165,6 +165,15 @@
   #plan .it.mine:active { cursor: grabbing; }
   #plan .it.warn .body, #plan .it.warn .rug { stroke: var(--warn); stroke-width: 2; }
   #plan .it.selected .body, #plan .it.selected .rug, #plan .it.selected .soft { stroke: var(--sel); stroke-width: 2.2; }
+  #plan .it.blocked :is(.body,.rug,.soft,.front-line,.curtain,.ceiling,.plant) { fill:#cb423855; stroke:#bc302c; stroke-width:2.8; }
+  .kit-filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; }
+  .kit-filters label { font-size:12px; color:var(--ink-2); }
+  .kit-results { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+  .kit-tile { display:flex; flex-direction:column; align-items:flex-start; text-align:left; padding:8px; }
+  .kit-tile img { width:100%; aspect-ratio:1.25; object-fit:contain; border-radius:5px; background:#edece7; }
+  .kit-tile small { color:var(--ink-2); }
+  .planner-walk { display:inline-block; margin-top:9px; color:var(--accent); }
+  @media (max-width:450px) { .kit-filters {gap:4px;} .kit-filters select { padding:6px 2px; } .kit-results {grid-template-columns:repeat(2,minmax(0,1fr));} }
   #plan .badge circle { fill: var(--panel); stroke: var(--item-line); stroke-width: .9; vector-effect: non-scaling-stroke; }
   #plan .badge text { text-anchor: middle; font-weight: 700; fill: var(--ink); font-family: var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
   #plan .badge.s circle { fill: var(--paper); }
@@ -239,7 +248,9 @@
       <button data-s="first" aria-pressed="false">First</button>
     </div>
     <div class="spacer"></div>
-    <span id="conn" title=""><i></i><span class="wide-only">Connecting…</span></span>
+    <span id="conn" title="" role="status"><i></i><span>Connecting…</span></span>
+    <button type="button" id="saveLayout" title="Save furniture and finishes to this house version">Save layout</button>
+    <button type="button" id="reloadLayout" hidden>Discard local draft</button>
     <button class="icon ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="ico" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
     <button class="icon ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="ico" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
     <button type="button" data-editor-help="planner">How to use</button>
@@ -271,7 +282,7 @@
       <div class="pane-hint" id="hint">Tap a room to open it</div>
     </section>
     <section id="threePane" hidden>
-      <div class="three-label">3D preview · simple shapes and colours · drag to turn</div>
+      <div class="three-label">Room preview · drag to orbit · tap a piece to inspect</div>
       <div class="three-empty" id="threeEmpty">Open a room to see it in 3D.</div>
     </section>
     <aside id="inspector" aria-label="Details"></aside>
@@ -285,6 +296,6 @@
   }
 }
 </script>
-<script type="module" src="src/planner/app.js?v=p7"></script>
+<script type="module" src="src/planner/app.js?v=p8"></script>
 </body>
 </html>

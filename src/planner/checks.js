@@ -5,8 +5,8 @@
  *   clearance    not enough free floor in front of doors / drawers to open them (wall or another piece in the way);
  *   floating     something meant to sit on a surface has nothing under it.
  * fitsAt() runs the same tests for a candidate swap at the item's place. */
-import { convexOverlap, insideFraction, pointInPoly, footprint, axes, add2, scale2, mm } from "./util.js?v=p7";
-import { sizeM, itemFootprint, mountOf, slotOf, entryOf, shapeOf } from "./data.js?v=p7";
+import { convexOverlap, insideFraction, pointInPoly, footprint, axes, add2, scale2, mm } from "./util.js?v=p8";
+import { sizeM, itemFootprint, mountOf, slotOf, entryOf, shapeOf } from "./data.js?v=p8";
 
 const SOLID_SKIP = new Set(["rug", "cushion", "throw", "towels", "window_dressing", "fixed", "downlights", "pendant", "ceiling_light",
                             "art", "mirror", "wall_light", "tv", "kitchen_small", "vase", "bowl", "books", "candles", "photo_frame",

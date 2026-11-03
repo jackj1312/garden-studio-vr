@@ -2,9 +2,10 @@
  * and the garden at the top, as on the architect's plans). Overview = a whole storey, tap a room to open it.
  * Room view = that room large, items draggable with snapping (50 mm grid, walls, other items), a rotate handle,
  * keyboard nudges; other rooms are dimmed. */
-import { s, clear, clamp, mm, r3, bbox, labelPoint, pointInPoly, axes, add2, sub2, scale2, dot2, rot, len2, normDeg, mix, D2R } from "./util.js?v=p7";
-import { sizeM, itemFootprint, shapeOf, mountOf, slotOf, partColour, roomWalls, roomFloor, carriedBy, entryOf } from "./data.js?v=p7";
-import { swingPolys } from "./checks.js?v=p7";
+import { s, clear, clamp, mm, r3, bbox, labelPoint, pointInPoly, axes, add2, sub2, scale2, dot2, rot, len2, normDeg, mix, D2R } from "./util.js?v=p8";
+import { sizeM, itemFootprint, shapeOf, mountOf, slotOf, partColour, roomWalls, roomFloor, carriedBy, entryOf } from "./data.js?v=p8";
+import { wallFaces } from './shared.mjs';
+import { swingPolys } from "./checks.js?v=p8";
 
 const GRID = 0.05;
 const MOUNT_ORDER = { floor: 1, surface: 2, wall: 3, window: 4, ceiling: 5 };
@@ -82,6 +83,10 @@ export class PlanView {
         style: `--floor:${fl.hex}` }, s("title", { text: `${r.name} · ${r.area.toFixed(1)} m²` })));
       if (!dim) {
         gBands.append(s("polygon", { points: pts, class: "band", style: `stroke:${wc.hex}`, "stroke-width": this.mode === "room" ? 7 : 3 }));
+        for (const f of wallFaces(st,r.id)) {
+          const colour=st.wallColours?.[f.id];
+          if (f.a && colour) gBands.append(s('line',{x1:f.a[0],y1:f.a[1],x2:f.b[0],y2:f.b[1],class:'band accent',style:'stroke:'+colour,'stroke-width':this.mode==='room'?9:4}));
+        }
         const acc = st.rooms.get(r.id)?.accent;
         if (acc && acc.edge !== undefined && r.polygon[acc.edge]) {
           const a = r.polygon[acc.edge], b = r.polygon[(acc.edge + 1) % r.polygon.length];
@@ -250,10 +255,11 @@ export class PlanView {
     this.svg.setPointerCapture?.(ev.pointerId);
     const w = this.toWorld(ev);
     this.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, w });
-    if (this.pointers.size === 2) { this.drag = null; this.pinch = this.pinchStart(); return; }
+    if (this.pointers.size === 2) { const first=this.drag; this.drag=null; this.pinch=this.pinchStart(first); return; }
     const rotEl = ev.target.closest("[data-rot]");
     const itEl = ev.target.closest(".it.mine, .badge");
     const roomEl = ev.target.closest("[data-room]");
+    if (this.mode==='room' && !rotEl && this.o.placeAt?.(w)) {this.drag=null;ev.preventDefault();return;}
     if (this.mode === "room" && rotEl) {
       const it = this.state.items.get(rotEl.dataset.rot);
       this.drag = { kind: "rotate", it, start: w, yaw0: it.yaw_deg || 0, carried: carriedBy(this.db, this.state, it).map(c => ({ it: c, p0: c.position_m.slice(), y0: c.yaw_deg || 0 })) };
@@ -270,9 +276,10 @@ export class PlanView {
     }
     this.drag = { kind: "pan", start: w, sx: ev.clientX, sy: ev.clientY, vb0: { ...this.vb }, room: roomEl?.dataset.room || null, item: itEl?.dataset.id || null, moved: false };
   }
-  pinchStart() {
+  pinchStart(first) {
     const [a, b] = [...this.pointers.values()];
-    return { d0: Math.hypot(a.x - b.x, a.y - b.y), vb0: { ...this.vb }, mid: [(a.w[0] + b.w[0]) / 2, (a.w[1] + b.w[1]) / 2] };
+    return { d0: Math.hypot(a.x - b.x, a.y - b.y), vb0: { ...this.vb }, mid: [(a.w[0] + b.w[0]) / 2, (a.w[1] + b.w[1]) / 2],
+      it:first?.it?.shared?first.it:null, angle:Math.atan2(b.y-a.y,b.x-a.x) };
   }
   move(ev) {
     const p = this.pointers.get(ev.pointerId);
@@ -280,6 +287,14 @@ export class PlanView {
     p.x = ev.clientX; p.y = ev.clientY;
     if (this.pinch && this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const gesture=this.pinch;
+      if(gesture.it) {
+        const delta=normDeg((gesture.angle-Math.atan2(b.y-a.y,b.x-a.x))/D2R);
+        if(Math.abs(delta)<2 && !gesture.pose)return;
+        const it=gesture.it;gesture.pose=this.o.onPose(it,it.position_m,normDeg(it.yaw_deg+delta),true);
+        this.preview(it,gesture.pose.row.position,gesture.pose.row.rotation);
+        this.itemEls.get(it.id)?.classList.toggle('blocked',!gesture.pose.ok);return;
+      }
       this.vb = { ...this.pinch.vb0 }; this.zoomAt(this.pinch.mid, this.pinch.d0 / d); return;
     }
     const d = this.drag; if (!d) return;
@@ -298,6 +313,13 @@ export class PlanView {
       let nx = d.p0[0] + (w[0] - d.start[0]), nz = d.p0[2] + (w[1] - d.start[1]);
       const snapped = this.snapOn && !ev.altKey && !ev.shiftKey ? this.snap(d.it, nx, nz) : { x: nx, z: nz, guides: [] };
       d.cur = [snapped.x, snapped.z];
+      if (d.it.shared) {
+        d.pose=this.o.onPose(d.it,[nx,d.p0[1],nz],d.it.yaw_deg||0,ev.shiftKey||ev.altKey||!this.snapOn);
+        const {position,rotation}=d.pose.row;
+        this.preview(d.it,position,rotation); this.itemEls.get(d.it.id)?.classList.toggle('blocked',!d.pose.ok);
+        for (const ch of d.carried) this.preview(ch.it,[ch.p0[0]+position[0]-d.p0[0],ch.p0[1]+position[1]-d.p0[1],ch.p0[2]+position[2]-d.p0[2]],ch.y0);
+        return;
+      }
       this.drawGuides(snapped.guides);
       this.preview(d.it, [snapped.x, d.p0[1], snapped.z], d.it.yaw_deg || 0);
       for (const c of d.carried) this.preview(c.it, [c.p0[0] + snapped.x - d.p0[0], c.p0[1], c.p0[2] + snapped.z - d.p0[2]], c.y0);
@@ -308,8 +330,10 @@ export class PlanView {
       let yaw = Math.atan2(-v[0], -v[1]) / D2R;
       yaw = ev.shiftKey ? Math.round(yaw) : Math.round(yaw / 15) * 15;
       d.cur = normDeg(yaw);
+      if (d.it.shared) d.pose=this.o.onPose(d.it,d.it.position_m,d.cur,true);
       const dy = d.cur - d.yaw0;
       this.preview(d.it, d.it.position_m, d.cur);
+      if(d.pose) this.itemEls.get(d.it.id)?.classList.toggle('blocked',!d.pose.ok);
       for (const ch of d.carried) {
         const rel = rot([ch.p0[0] - c[0], ch.p0[2] - c[1]], dy);
         this.preview(ch.it, [c[0] + rel[0], ch.p0[1], c[1] + rel[1]], normDeg(ch.y0 + dy));
@@ -318,11 +342,23 @@ export class PlanView {
   }
   up(ev, cancel) {
     this.pointers.delete(ev.pointerId);
-    if (this.pinch) { if (this.pointers.size < 2) { this.pinch = null; this.renderLabelsSoon(); } this.drag = null; return; }
+    if (this.pinch) {
+      if (this.pointers.size<2) {
+        const pose=this.pinch.pose;this.pinch=null;
+        if (pose && !cancel && pose.ok) this.o.onDrop(pose.row);
+        else {if(pose && !cancel)this.o.onBlocked(pose.reasons[0]);this.render();}
+      }
+      this.drag=null;return;
+    }
     const d = this.drag; this.drag = null;
     if (!d) return;
     this.drawGuides([]);
     if (cancel) { this.render(); return; }
+    if(d.pose) {
+      if(d.pose.ok) this.o.onDrop(d.pose.row);
+      else { this.o.onBlocked(d.pose.reasons[0]); this.render(); }
+      return;
+    }
     if (d.kind === "pan") {
       if (d.moved) { this.renderLabelsSoon(); return; }
       if (d.item && this.mode !== "room") { const it = this.state.items.get(d.item); if (it) this.o.onOpenRoom?.(it.room, it.id); return; }

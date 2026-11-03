@@ -2,9 +2,9 @@
 const pages = {
   planner: ["Room planner", [
     ["Choose a room", "Choose Before or After and the storey, then click or tap a room. Use Floor to return. Scroll or pinch to zoom. Drag empty space to pan."],
-    ["Place furniture", "Use + Add in the room, then drag a piece on the plan. Snap uses a 50 mm grid, walls and nearby furniture. Hold Shift or Alt to move freely."],
-    ["Turn and edit", "Drag the rotation handle, or press R for a quarter turn. The bracket keys turn 15°. Arrow keys move 50 mm, or 10 mm with Shift. D duplicates and Delete removes the selected piece."],
-    ["Review changes", "Use Undo or Redo, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z. Show 3D preview to inspect the room. Changes lists the edits before Send to build."],
+    ["Place furniture", "Use + Add and filter by room type, kind and style. Drag a piece on the plan. A red footprint cannot be dropped. Snap uses a 50 mm grid, walls and nearby furniture. Hold Shift or Alt to move freely."],
+    ["Turn and edit", "Drag the rotation handle on screen or touch. Q/E or bracket keys turn 15°. R turns a quarter turn. Arrow keys move 50 mm, or 10 mm with Shift. D duplicates and Delete removes the selected piece."],
+    ["Review changes", "Use Undo or Redo, or Ctrl/⌘ Z and Ctrl/⌘ Shift Z. Show 3D preview to inspect the actual furniture. Choose a wall face to repaint, or a covering for the room floor. Save layout shares these changes with the walkthrough. Changes and Send to build record architectural requests for the next build."],
   ]],
   site: ["Garden and site review", [
     ["Walk", "On this screen use W A S D or the arrow keys to move. Click the view for mouse look. Escape releases the pointer for the toolbar. The ? key opens these controls while walking."],
@@ -18,6 +18,13 @@ const pages = {
     ["Inspect the building", "Choose a stage and select a part to read its details. In Architect mode the selected element’s board contains its editable dimensions. Undo and Redo step through changes. Save edits keeps the current revision."],
     ["Doors and views", "Select an operable door to use it. In the homeowner controls choose Before or After and Furnished or Unfurnished. In Quest, the left stick walks, the right stick turns, and pushing the right stick forward and releasing teleports."],
     ["Review marks", "In Studio review, click Mark or press M. Draw on a surface with the mouse or right trigger. In Quest, X changes mark kind and Y undoes. Select its label to edit a note."],
+  ]],
+  furnish: ["Furnish a room", [
+    ["Choose a piece", "Choose a room. Filter the catalogue by room type, kind or style and click a thumbnail. Point at the floor, wall, ceiling or compatible supporting piece. Place with a click or tap."],
+    ["Move and turn", "Select and drag a piece. A green outline can be placed. A red outline shows why the position is blocked and releasing keeps the original placement. Use Q/E, the two rotation buttons, or twist with two fingers. Hold Shift or Alt to bypass snapping."],
+    ["Change a finish", "Choose one measured wall face and a colour. Choose a floor covering for the current room. Original wall colour or Original covering restores its signed finish."],
+    ["Walking and overhead", "Bird’s-eye shows this room from directly above. Switch to Walking or select another room to inspect the same layout. Copy, Delete, Undo and Redo act on the selected version. Save layout to share it with the planner and other devices."],
+    ["Quest", "Choose tools and thumbnails on the left wrist. Point the right ray and hold the trigger to move furniture, then release to place it. Push the right stick sideways to turn a selected piece. Bird’s-eye brings the measured room plan into reach."],
   ]],
   garden: ["Garden design", [
     ["Draw in metres", "Pick a feature and a drawing method. Drag from the centre for a circle or square, or between opposite corners for a rectangle. Sweep an outline for a smooth curve. Complete the loop to fill an area."],

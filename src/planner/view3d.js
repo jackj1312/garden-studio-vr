@@ -4,9 +4,11 @@
  * disk, no shadows; it renders only when something changes. Walls between the camera and the room fade out. */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { bbox, dot2, sub2, add2, scale2, len2, norm2, segDist, hexToRgb, mix } from "./util.js?v=p7";
-import { sizeM, shapeOf, mountOf, partColour, roomWalls, roomFloor } from "./data.js?v=p7";
-import { mainPart } from "./plan.js?v=p7";
+import { bbox, dot2, sub2, add2, scale2, len2, norm2, segDist, hexToRgb, mix } from "./util.js?v=p8";
+import { sizeM, shapeOf, mountOf, partColour, roomWalls, roomFloor } from "./data.js?v=p8";
+import { mainPart } from "./plan.js?v=p8";
+import {createFurnitureModels} from '../furnish/models.js';
+import {wallFaces} from './shared.mjs';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 const CYL = new THREE.CylinderGeometry(0.5, 0.5, 1, 20);
@@ -38,14 +40,16 @@ export class Preview3D {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
       const b = r.domElement.getBoundingClientRect();
       this.ray.setFromCamera(new THREE.Vector2(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1), this.camera);
-      const hit = this.ray.intersectObjects(this.items.children, true)[0];
+      const hit = this.ray.intersectObjects(this.items.children.filter(o=>!o.userData.helper), true)[0];
+      const runtime=this.furniture?.pick(this.ray.ray,hit?.distance ?? Infinity);
+      if(runtime) { this.onSelect?.(runtime.id); return; }
       let o = hit?.object; while (o && !o.userData.itemId) o = o.parent;
       this.onSelect?.(o?.userData.itemId || null);
     });
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
   }
-  dispose() { this.renderer.dispose(); this.renderer.domElement.remove(); this.disposed = true; }
+  dispose() { this.furniture?.dispose(); this.renderer.dispose(); this.renderer.domElement.remove(); this.disposed = true; }
   resize() {
     const w = this.el.clientWidth || 1, h = this.el.clientHeight || 1;
     this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.request();
@@ -76,9 +80,17 @@ export class Preview3D {
   /* ---------------------------------------------------------------- the room shell */
   show(state, roomId, selected) {
     const first = this.roomId !== roomId || this.vkey !== state.vkey;
+    if ((!state.runtime || this.modelVersion!==state.house.elements) && this.furniture) {this.furniture.dispose();this.furniture=null;}
+    if(state.runtime && !this.furniture) {
+      this.modelVersion=state.house.elements;
+      this.furniture=createFurnitureModels({THREE,scene:this.scene,site:this.db.site,version:this.modelVersion,variants:state.variants,catalogue:this.db.kit,onChange:()=>this.request()});
+    }
     this.state = state; this.roomId = roomId; this.vkey = state.vkey;
     this.buildShell();
     this.buildItems(selected);
+    if(this.furniture) this.furniture.set(state.layoutItems,{room:roomId}).catch(e=>{
+      const label=this.el.querySelector('.three-label'); if(label) label.textContent='Room model unavailable · '+e.message;
+    });
     if (first) this.frameCamera();
     this.request();
   }
@@ -128,12 +140,20 @@ export class Preview3D {
       const colour = acc && acc.edge === i ? acc.hex : wc.hex;
       const wm = this.mat(colour, { unique: true, rough: 0.95 });
       const grp = new THREE.Group(); grp.userData = { mid, out: outN, mats: [wm] };
+      const painted=wallFaces(st,room.id,i).filter(face=>face.a && st.wallColours?.[face.id]).map(face=>{
+        const ends=[face.a,face.b].map(p=>dot2(sub2(p,a),t)).sort((x,y)=>x-y);
+        const mat=this.mat(st.wallColours[face.id],{unique:true,rough:.95});grp.userData.mats.push(mat);
+        return {from:Math.max(0,ends[0]),to:Math.min(L,ends[1]),mat,bottom:Math.max(0,face.bottom-f),top:Math.min(ht,face.top-f)};
+      });
       const thick = 0.1, cx = (u, y, w, hh) => {
-        const p = add2(a, scale2(t, u + w / 2)), q = add2(p, scale2(outN, thick / 2));
-        const m = new THREE.Mesh(UNIT, wm);
-        m.scale.set(w, hh, thick); m.position.set(q[0], f + y + hh / 2, q[1]);
-        m.rotation.y = Math.atan2(-t[1], t[0]);
-        grp.add(m);
+        const breaks=(low,high,values)=>[low,...new Set(values.filter(v=>v>low+.0001 && v<high-.0001).sort((a,b)=>a-b)),high];
+        const us=breaks(u,u+w,painted.flatMap(p=>[p.from,p.to])),ys=breaks(y,y+hh,painted.flatMap(p=>[p.bottom,p.top]));
+        for(let j=1;j<us.length;j++) for(let k=1;k<ys.length;k++) {
+          const z=(us[j-1]+us[j])/2, elev=(ys[k-1]+ys[k])/2, mat=painted.find(p=>p.from<=z && p.to>=z && p.bottom<=elev && p.top>=elev)?.mat;
+          const p=add2(a,scale2(t,z)), q=add2(p,scale2(outN,thick/2)), m=new THREE.Mesh(UNIT,mat||wm);
+          m.scale.set(us[j]-us[j-1],ys[k]-ys[k-1],thick); m.position.set(q[0],f+elev,q[1]);
+          m.rotation.y=Math.atan2(-t[1],t[0]);grp.add(m);
+        }
       };
       cuts.sort((p, q) => p.u0 - q.u0);
       let u = 0;
@@ -195,6 +215,19 @@ export class Preview3D {
     let lampCount = 0;
     for (const it of st.items.values()) {
       if (it.room !== this.roomId || !it.size_mm[0]) continue;
+      if(it.shared) {
+        if(it.id===selected) {
+          const [w,d,h]=sizeM(it), p=it.position_m;
+          const geo=new THREE.BoxGeometry(w,h,d), lines=new THREE.EdgesGeometry(geo);geo.dispose();
+          const box=new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0x377bb2}));
+          box.position.set(p[0],p[1]+h/2,p[2]);box.rotation.y=it.yaw_deg*Math.PI/180;box.userData.helper=true;this.items.add(box);
+        }
+        if(it.lampOn && lampCount<6 && it.category==='lighting') {
+          const lamp=new THREE.PointLight(0xffd9a0,2.2,5,1.6);
+          lamp.position.set(it.position_m[0],it.position_m[1]+it.size_mm[2]/1000*.75,it.position_m[2]);this.scene.add(lamp);this.lamps.push(lamp);lampCount++;
+        }
+        continue;
+      }
       const g = this.itemMesh(it);
       g.userData.itemId = it.id;
       g.position.set(it.position_m[0], it.position_m[1], it.position_m[2]);
@@ -376,7 +409,7 @@ function insideTest([x, z], poly) {
 }
 function disposeGroup(g, geo = true) {
   for (const c of [...g.children]) {
-    c.traverse(o => { if (o.userData?.helper) o.geometry?.dispose(); if (o.isMesh && o.geometry !== UNIT && o.geometry !== CYL && o.geometry !== CONE && o.geometry !== SPH && geo) { o.geometry.dispose(); if (o.material?.map) o.material.map.dispose(); } });
+    c.traverse(o => { if (o.userData?.helper) {o.geometry?.dispose();o.material?.dispose();} if (o.isMesh && o.geometry !== UNIT && o.geometry !== CYL && o.geometry !== CONE && o.geometry !== SPH && geo) { o.geometry.dispose(); if (o.material?.map) o.material.map.dispose(); } });
     g.remove(c);
   }
 }

@@ -5,7 +5,7 @@
  * Undo / redo work on unsent changes only (status active <-> undone). "Send to build" turns every active change into
  * one batch file (spec/changes/batch-<stamp>.json); sent changes stay applied and can no longer be undone.
  * The spec file itself is never written. */
-import { uid } from "./util.js?v=p7";
+import { uid } from "./util.js?v=p8";
 
 const LS = site => `planner:${site}:changes:v1`;
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
@@ -16,13 +16,14 @@ export class ChangeStore {
     this.site = site;
     this.changes = [];          // every change, in order, each with status active | undone | discarded | sent
     this.batches = [];
+    this.imported = new Set();
     this.mode = "connecting";   // server | device
     this.listeners = new Set();
     this.lastError = null;
   }
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(reason) { for (const fn of this.listeners) fn(reason); }
-  url() { return `/spec/changes?site=${encodeURIComponent(this.site)}`; }
+  url() { return `/spec/changes?site=${encodeURIComponent(this.site)}&view=planner`; }
 
   async load() {
     const local = lsGet(LS(this.site)) || { changes: [] };
@@ -78,13 +79,13 @@ export class ChangeStore {
   get undone() { return this.changes.filter(c => c.status === "undone"); }
   get sent() { return this.changes.filter(c => c.status === "sent"); }
   get applied() { return this.changes.filter(c => c.status === "active" || c.status === "sent"); }
-  canUndo() { return this.active.length > 0; }
-  canRedo() { return this.undone.length > 0; }
+  canUndo(version) { return this.active.some(c=>!this.imported.has(c.id) && (!version || c.version===version)); }
+  canRedo(version) { return this.undone.some(c=>!this.imported.has(c.id) && (!version || c.version===version)); }
 
   /* a new edit: saved immediately; anything that was undone can no longer be redone */
   async add(change) {
     const c = { id: uid("c"), at: new Date().toISOString(), site: this.site, ...change, status: "active" };
-    const drop = this.undone.map(x => x.id);
+    const drop = this.undone.filter(x=>!this.imported.has(x.id)).map(x => x.id);
     for (const x of this.changes) if (drop.includes(x.id)) x.status = "discarded";
     if (this.mode !== "server") c.unsynced = true;
     this.changes.push(c);
@@ -95,15 +96,15 @@ export class ChangeStore {
     if (this.mode !== "server") this.saveLocal();
     return c;
   }
-  async undo() {
-    const c = this.active.at(-1); if (!c) return null;
+  async undo(version) {
+    const c = this.active.findLast(c=>!this.imported.has(c.id) && (!version || c.version===version)); if (!c) return null;
     c.status = "undone"; this.emit("undo");
     await this.safePost({ action: "status", ids: [c.id], status: "undone" });
     if (this.mode !== "server") this.saveLocal();
     return c;
   }
-  async redo() {
-    const u = this.undone; const c = u[0]; if (!c) return null;   // the earliest undone comes back first
+  async redo(version) {
+    const c = this.undone.find(c=>!this.imported.has(c.id) && (!version || c.version===version)); if (!c) return null;
     c.status = "active";
     /* keep the list in replay order: move it after the last active change */
     this.changes.splice(this.changes.indexOf(c), 1);

@@ -15,6 +15,7 @@ const pages = {
   ]],
   house: ["House walkthrough and editing", [
     ["Walk and inspect", "Choose a location with Go to. In Walk, use W A S D and move the mouse to look. Escape frees the pointer. Phones use the on-screen controls. In orbit view, drag to orbit and scroll or pinch to zoom."],
+    ["Room lighting", "While walking, aim at a lamp and press E to switch it. With no lamp in view, E switches the lamps in your room. L switches lamps throughout the house. On a phone, open Tools and choose Room lamps or All lamps. The room name appears briefly when you cross its doorway."],
     ["Inspect the building", "Choose a stage and select a part to read its details. In Architect mode the selected element’s board contains its editable dimensions. Undo and Redo step through changes. Save edits keeps the current revision."],
     ["Doors and views", "Select an operable door to use it. In the homeowner controls choose Before or After and Furnished or Unfurnished. In Quest, the left stick walks, the right stick turns, and pushing the right stick forward and releasing teleports."],
     ["Review marks", "In Studio review, click Mark or press M. Draw on a surface with the mouse or right trigger. In Quest, X changes mark kind and Y undoes. Select its label to edit a note."],

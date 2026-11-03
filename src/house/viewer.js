@@ -22,6 +22,8 @@ import { createMarks, createEditorStroke, KINDS as MARK_KINDS } from "../marks.j
 import { createVRBoard, renderBoardDOM, createCard, createBoardTab } from "./board.js?v=h15";
 import { createDoors, isLeaf } from "./doors.js?v=h15";
 import { createPerf } from "./perf.js?v=h15";
+import { createRoomLighting } from "./room-lighting.js";
+import { createHousePresentation, createXRRoomTitle } from "./presentation.js";
 import { createCull } from "./cull.js?v=h33";
 import { wallFrame, layerSpans, CATALOGUE, setTiles } from "./geom.js?v=h11";
 import { moveWall, addWall, addOpening, swapFixture } from "./editops.js?v=h11";
@@ -74,6 +76,9 @@ const IS_QUEST = /OculusBrowser|Quest/i.test(navigator.userAgent);
    was loading the full GLB, the 4k sky, 2048 shadows, GTAO at pixel ratio 2 and preloading the second version) */
 const IS_PHONE = !IS_QUEST && (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 900));
 const LITE = IS_QUEST || IS_PHONE;
+const LOOK_PROFILE = params.get("look")==="off" ? "off" : "on";
+const AO = LOOK_PROFILE === "on" ? {radius:.30, distanceExponent:1.3, thickness:.60, scale:1, samples:12, blend:.75} :
+  {radius:.40, distanceExponent:1.2, thickness:.50, scale:1, samples:16, blend:1};
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
@@ -204,6 +209,53 @@ player.add(camera);
 scene.add(player);
 const EYE = 1.65;                            // the DESKTOP walk's eye height; in the headset the real head height is used, nothing added
 const fade = createFade(camera);
+const roomLights = createRoomLighting({scene,desktop:!LITE});
+const xrTitle = createXRRoomTitle(THREE,camera);
+const presentation = createHousePresentation({onLamp:scope=>switchLamps(scope),onXRRoom:(name,detail)=>xrTitle.show(name,detail)});
+let lightSpec=null, lightingAt=-Infinity, shownRoomKey='', indicatedRoom=null;
+const lightEye = new THREE.Vector3();
+function updateRoomLook(now=performance.now(),force=false,quiet=false) {
+  if (!V) return;
+  const immersive=inVR(), editing=!!(garden?.enabled||furnisher?.enabled);
+  const observe=force || now-lightingAt>=120;
+  if(!observe && !xrTitle.mesh?.visible)return;
+  const wristOpen=immersive && (SIM.on?sim.wristUp:SIMPLE?boardFacing(baPanel):vrBoard.mesh.visible);
+  const eligible=!editing && $("start").hidden && !card.mesh.visible && !marks?.active && !gotoMenu.isOpen && !wristOpen;
+  xrTitle.update(now,immersive && eligible && !quiet);
+  if(!observe)return;
+  lightingAt=now;
+  camera.getWorldPosition(lightEye);
+  const room=V.model.roomAt(lightEye.x,lightEye.y,lightEye.z);
+  const shadow=roomLights.update({eye:lightEye,stage:stageValue,profile:LOOK_PROFILE,inXR:immersive,
+    furnished:!unfurnished&&!gardenLean,items:furnisher?.layout?.items});
+  if (shadow) renderer.shadowMap.needsUpdate=true;
+  indicatedRoom=room;
+  const key=V.def.id+"|"+(room?.id||"");
+  if (force||key!==shownRoomKey) {
+    shownRoomKey=key;
+    presentation.setLamps({...roomLights.status(room?.id),roomName:room&&plainRoomName(room.params.name)});
+  }
+  if (!quiet) presentation.observeRoom(room,{immersive,eligible:eligible&&(walk||immersive)});
+}
+function switchLamps(scope,id=null) {
+  if(!V)return null;
+  updateRoomLook(performance.now(),true);
+  const on=id?roomLights.toggle(id):scope==="all"?roomLights.toggleAll():roomLights.toggleRoom(indicatedRoom?.id);
+  updateRoomLook(performance.now(),true);
+  if(on==null)toast("No switchable lamp here");
+  else toast((id?"Lamp":scope==="all"?"House lamps":"Room lamps")+(on?" on":" off"));
+  baPanel.userData.draw();
+  return on;
+}
+function aimedLamp(ray,houseHit) {
+  const furniture=furnisher?.runtime?.pick(ray,houseHit?.distance??Infinity);
+  return furniture ? roomLights.pick(furniture.item) : roomLights.pick(partOf(houseHit));
+}
+function pressLamp(ray,houseHit) {
+  const id=aimedLamp(ray,houseHit);
+  if(!id)return false;
+  switchLamps("item",id);return true;
+}
 /* eye adaptation (see LOOK.exposureIn / exposureOut): is there a roof, ceiling or floor over the camera within 6 m? Foliage does not count (a tree is shade, not a room). Checked 5 times a second. */
 const _upRay = new THREE.Raycaster(), _camPos = new THREE.Vector3(), SHADE = /leaves|branches|VertexPlant|hedge|conifer|foliage|ivy/i;
 _upRay.ray.direction.set(0, 1, 0); _upRay.far = 6; _upRay.layers.enableAll();      // (cull.js moves a batch with nothing in view off the camera's layer: the probe must still see its ceiling)
@@ -292,7 +344,8 @@ if (!LITE) {
   composer.addPass(new RenderPass(scene, camera));
   gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
   gtao.output = GTAOPass.OUTPUT.Default;
-  gtao.updateGtaoMaterial({ radius: 0.4, distanceExponent: 1.2, thickness: 0.5, scale: 1.0, samples: 16 });
+  gtao.updateGtaoMaterial(AO);
+  gtao.blendIntensity=AO.blend;
   /* GTAO's depth / normal pass skips points and lines but drew SPRITES (the marks' labels, the scale figure's tags) as
      solid quads, which came out as black boxes over every label (r7b). Sprites are left out of it too. */
   gtao._overrideVisibility = function () {
@@ -356,8 +409,13 @@ let attachEdits = MODE.edit;
 /* ------------------------------------------------------------------ *
  *  Loading
  * ------------------------------------------------------------------ */
-let loadLabel = "", loadingNow = false;
+let loadLabel = "", loadingNow = false, visitReady=false, requestedVersion=null, versionTicket=0;
+function finishLoading(id) {
+  if(!visitReady || id!==requestedVersion)return;
+  loadingNow=false;setLoad(1,"Ready");$("loading").hidden=true;
+}
 const setLoad = (f, text) => {
+  presentation.progress(f,text);
   $("loadBar").style.width = `${Math.round(f * 100)}%`;
   if (text) { $("loadText").textContent = text; loadLabel = text; }
   if (renderer.xr.isPresenting) {                          // the page's bar is invisible in the headset
@@ -375,10 +433,9 @@ async function loadVersion(id, quiet = false) {
   if (versions.get(id)?.loading) return versions.get(id).loading;
   const def = manifest.versions.find(v => v.id === id);
   const job = (async () => {
-    const show = !quiet, t0 = performance.now();
+    const show = ()=>!quiet && requestedVersion===id, t0 = performance.now();
     let entryFile = null;
-    if (show) loadingNow = true;
-    if (show) { $("loading").hidden = false; setLoad(0.05, `Loading ${def.name}…`); }
+    if (show()) { $("loading").hidden = false; setLoad(0.05, `Loading ${def.name}…`); }
     const [sidecar, elements] = await Promise.all([
       fetchJSON(BASE + def.stages),
       def.elements ? fetchJSON(BASE + def.elements).catch(() => null) : null,
@@ -390,17 +447,17 @@ async function loadVersion(id, quiet = false) {
     const questGlb = want !== "full" && def.glb_quest;
     const tries = [...(want === "meshopt" && def.glb_quest_meshopt ? [def.glb_quest_meshopt] : []), questGlb || def.glb];
     const load = file => new Promise((res, rej) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(BASE + file, res,
-      xhr => show && xhr.total && setLoad(0.08 + 0.72 * xhr.loaded / xhr.total, `Loading the model · ${(xhr.loaded / 1e6).toFixed(1)} MB`), rej));
+      xhr => show() && xhr.total && setLoad(0.08 + 0.72 * xhr.loaded / xhr.total, `Loading the model · ${(xhr.loaded / 1e6).toFixed(1)} MB`), rej));
     let gltf = null;
     for (const file of tries) {
       try { gltf = await load(file); entryFile = file; break; }
       catch (err) { console.warn(`house: ${file} failed (${err?.message || err}); trying the next`); perf.note({ event: "glb failed", file, error: String(err?.message || err).slice(0, 200) }); if (file === tries[tries.length - 1]) throw err; }
     }
-    if (show) setLoad(0.82, "Sorting parts into stages…");
+    if (show()) setLoad(0.82, "Sorting parts into stages…");
     if (LITE && !questGlb) await shrinkTextures(gltf.scene, 512);
     prepareForBatching(gltf.scene);
     await new Promise(r => setTimeout(r));
-    const model = createModel({ gltf, sidecar, elements, section, materials: materialsJson, onBuildProgress: f => show && setLoad(0.82 + 0.12 * f) });
+    const model = createModel({ gltf, sidecar, elements, section, materials: materialsJson, onBuildProgress: f => show() && setLoad(0.82 + 0.12 * f) });
     model.root.visible = false;
     scene.add(model.root);
     const entry = { def, sidecar, model, bvh: buildBVH(model.parts), rules: [] };
@@ -416,16 +473,19 @@ async function loadVersion(id, quiet = false) {
       for (const t of s.targets) t.material = s.current;
       for (const k of ["map", "normalMap", "aoMap", "roughnessMap", "metalnessMap"]) if (s.normal[k]) s.normal[k].anisotropy = Math.min(MAX_ANISO, 8);
     }
-    versions.set(id, entry);
     model.applyStage(sidecar.stages.length, true);        // compile with everything visible: no hitch on the first stage change
     /* the shaders compile in parallel where the browser can (KHR_parallel_shader_compile), not in one blocking call */
-    if (show) { setLoad(0.97, "Preparing the materials…"); await renderer.compileAsync(scene, camera); loadingNow = false; setLoad(1, "Ready"); $("loading").hidden = true; }
+    if (show()) { setLoad(0.97, "Preparing the materials…"); await renderer.compileAsync(scene, camera); if(show())setLoad(.98,"Preparing the furnished rooms…"); }
     entry.file = entryFile;
+    versions.set(id,entry);
     perf.note({ event: "version loaded", version: id, file: entryFile, ms: Math.round(performance.now() - t0), bvh_ms: Math.round(entry.bvh.ms), parts: model.parts.length, triangles: entry.bvh.triangles });
     return entry;
   })();
   versions.set(id, { def, loading: job });
-  return job;
+  try {return await job;} catch(err) {
+    if(versions.get(id)?.loading===job)versions.delete(id);
+    throw err;
+  }
 }
 
 /* batching (model.js normaliseGeometry) keeps position, normal and one UV set, "uv". Two things rendered the furniture
@@ -479,12 +539,22 @@ function dropVersion(entry) {
   versions.delete(entry.def.id);
   perf.note({ event: "version freed", version: entry.def.id });
 }
-async function useVersion(id) {
+async function useVersion(id,{deferReady=false}={}) {
+  const ticket=++versionTicket;requestedVersion=id;loadingNow=true;
+  $("loading").hidden=false;setLoad(.04,"Preparing this version…");
   perf.tag("version load");
-  const entry = await loadVersion(id);
+  let entry;
+  try {entry=await loadVersion(id);} catch(err) {
+    if(ticket===versionTicket){loadingNow=false;setLoad(0,"Could not open this version");toast(err.message);}
+    throw err;
+  }
+  if(ticket!==versionTicket)return false;
   if (V && V !== entry && gardenLean) gardenQuality(false);
   if (V && V !== entry) { furnisher?.releaseView(V); V.model.root.visible = false; if (KEEP_ONE || renderer.xr.isPresenting) dropVersion(V); }
   V = entry;
+  roomLights.setView(V,lightSpec);
+  presentation.setVersion({siteName:manifest.name,versionName:V.def.name,versionId:V.def.id});
+  lightingAt=-Infinity;shownRoomKey='';
   V.model.root.visible = true;
   if (renderer.xr.isPresenting && VRQ[vrQuality].lean) leanMaterials(true);
   if (inVR() && garden?.enabled) gardenQuality(true);
@@ -523,6 +593,9 @@ async function useVersion(id) {
   refreshBoard();
   if (garden) await garden.useVersion(entry);
   if (furnisher || entry.def.furnish_runtime) await syncFurnitureVersion(entry);
+  if(ticket!==versionTicket)return false;
+  if(!deferReady)finishLoading(id);
+  return true;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1241,6 +1314,8 @@ function toolsBlocks() {
   const tools = [
     { id:"arrange",label:"Furnish a room",press:openFurniture },
     { id:"how", label:"How to use", press:showHouseHelp },
+    { id:"roomlamps",label:"Room lamps",press:()=>switchLamps("room") },
+    { id:"alllamps",label:"House lamps",press:()=>switchLamps("all") },
     { id:"garden", label:"Garden design", press:()=>garden?.enter() },
     { id: "info", label: "Info", on: () => tool === "info", press: () => setTool("info") },
     ...(MODE.measure ? [{ id: "meas", label: "Measure", on: () => tool === "measure", press: () => setTool("measure") },
@@ -1437,6 +1512,7 @@ function editSwap() {
 function onEdit(entry, current, ids) {
   const keepEl = target?.part?.element, keepPoint = target?.point;
   entry.model.applyElements(current, ids);
+  roomLights.invalidate();
   entry.edited = true;                         // a wall may have moved: the room culling's cells and portals are stale, so it stays off for this version (cull.js)
   entry.bvh = buildBVH(entry.model.parts);
   entry.doors = createDoors({ model: entry.model, bvh: entry.bvh, roomAt: entry.model.roomAt, table: current });   // rebuilt leaves open too (hinges derived)
@@ -1563,7 +1639,8 @@ const centreRay = () => { rc.setFromCamera(ndc.set(0, 0), camera); return rc.ray
 const eventRay = e => locked() ? centreRay() : screenRay(e.clientX, e.clientY);
 /* a click under the crosshair: homeowner / review jump to a floor spot (walls, roofs, worktops refused), else act() */
 function lockedClick() {
-  const h = pickRay(centreRay());
+  const ray=centreRay(),h=pickRay(ray);
+  if (pressLamp(ray,h))return;
   if (SIMPLE) {
     const p = partOf(h), d = p && V.doors?.doorOf(p);
     if (d) { toggleDoor(p); return; }
@@ -1728,7 +1805,8 @@ addEventListener("pointerup", e => {
   pointer.down = null;
   if (locked() || d?.capture) return;
   if (!d || e.target !== renderer.domElement || pointer.moved > 6 || !V || d.marking || marks?.active) return;
-  const h = pickRay(eventRay(e));
+  const ray=eventRay(e),h=pickRay(ray);
+  if ((SIMPLE||tool==="info")&&pressLamp(ray,h))return;
   act(h, h ? screenReach(h) : 0);
 });
 /* one click / trigger, whatever the tool */
@@ -1842,6 +1920,13 @@ function setAllDoors(open) {
 const keys = new Set();
 addEventListener("keydown", e => {
   if (/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName)) return;
+  if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !marks?.active && !garden?.enabled && !furnisher?.enabled &&
+      !document.querySelector("dialog[open]") && (e.code==="KeyL" || (e.code==="KeyE" && walk && !flying && !hovering))) {
+    e.preventDefault();
+    if(e.code==="KeyL")switchLamps("all");
+    else {const ray=centreRay();if(!pressLamp(ray,pickRay(ray)))switchLamps("room");}
+    return;
+  }
   keys.add(e.code);
   if (SIMPLE) {                                   // homeowners: walk, fly, Before / After, the frame HUD
     if (e.code === "KeyV") { if (flying) setFly(false); setWalk(!walk); }
@@ -2269,7 +2354,7 @@ const wristTab = createBoardTab();
 let heightOffer = false;
 /* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
 /* round 8: Furnished / Unfurnished next to No doors */
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", "arrange"]];
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", "arrange"], ["roomlamps","alllamps",null]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -2282,7 +2367,7 @@ const baPanel = (() => {
   mesh.renderOrder = 905; mesh.visible = false;
   mesh.position.set(0, 0.05, 0.075); mesh.rotation.set(-Math.PI / 2.6, 0, 0);          // on the back of the left wrist
   const LABEL = { before: "Before", after: "After", height: "Height", doors: "No doors", goto: "Go to", fast: "Fast",
-                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use", arrange:"Arrange" };
+                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use", arrange:"Arrange", roomlamps:"Room lamps", alllamps:"All lamps" };
   const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
     : id === "height" ? !!floorOffset : id === "fast" ? fastWalk : id === "goto" ? gotoMenu.isOpen : id === "mark" ? !!marks?.active : false;
   const sub = id => id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
@@ -2319,6 +2404,7 @@ const baPanel = (() => {
       const id = typeof uv === "string" ? uv : at(uv);
       if (!id) return null;
       if (id === "height") heightCheck();
+      else if (id === "roomlamps" || id === "alllamps") switchLamps(id === "roomlamps"?"room":"all");
       else if (id === "doors") setDoorsHidden(!doorsHidden);
       else if (id === "furnish") setUnfurnished(!unfurnished);
       else if (id === "goto") gotoMenu.toggle();
@@ -2824,11 +2910,13 @@ function lookAtMark(s) {
 async function beforeAfter(after) {
   const today = !after && manifest.as_built_now;
   const want = today ? manifest.as_built_now : lastProposal;
-  if (want && V?.def.id !== want) await useVersion(want);
+  if (want && (V?.def.id !== want || requestedVersion!==want) && !await useVersion(want,{deferReady:true}))return;
   if (inVR()) { fade.black(); fade.to(0, 0.5); }
   playing = false; tween = null;
   setStage(after || today ? stageN : 1, true);
   if(furnisher){furnisher.setStage(stageValue);await furnisher.readyModels;}
+  if(want && requestedVersion!==want)return;
+  finishLoading(want||V.def.id);
   $("baBefore").setAttribute("aria-pressed", String(!after)); $("baAfter").setAttribute("aria-pressed", String(after));
   baPanel.userData.draw();
   if (!inVR()) toast(after ? "After: the finished extension and the garden" : manifest.as_built_now ? "Before: your house as it is today" : "Before: the house before the works");
@@ -2900,11 +2988,12 @@ function headRay() {
   camera.getWorldDirection(_ray.direction);
   return _ray;
 }
-function boardFacing() {
+const wristPosition=new THREE.Vector3(),headPosition=new THREE.Vector3(),wristNormal=new THREE.Vector3();
+function boardFacing(mesh=vrBoard.mesh) {
   if (!hands.left) return false;
-  const bp = vrBoard.mesh.getWorldPosition(new THREE.Vector3()), hp = camera.getWorldPosition(new THREE.Vector3());
-  const n = new THREE.Vector3(0, 0, 1).applyQuaternion(vrBoard.mesh.getWorldQuaternion(_q));
-  return n.dot(hp.sub(bp).normalize()) > 0.45;            // turned towards you, like reading a clipboard
+  mesh.getWorldPosition(wristPosition);camera.getWorldPosition(headPosition);
+  wristNormal.set(0,0,1).applyQuaternion(mesh.getWorldQuaternion(_q));
+  return wristNormal.dot(headPosition.sub(wristPosition).normalize()) > 0.45;            // turned towards you, like reading a clipboard
 }
 function setBoardMin(on) {
   boardMin = on;
@@ -3125,7 +3214,8 @@ function vrFrame(dt, now) {
     }
   }
   dragScrub = false;
-  const h = pickRay(controllerRay(R));
+  const groundRay=controllerRay(R),h=pickRay(groundRay);
+  if(tDown && (SIMPLE||tool==="info") && pressLamp(groundRay,h)){hapticPulse([R],.3,20);return;}
   laser.scale.z = h ? h.distance : 8;
   if (h) {
     laserDot.position.copy(h.point); laserDot.visible = true;
@@ -3381,6 +3471,7 @@ async function boot() {
   $("modeLabel").textContent = MODE.label;
   try {
     manifest = await fetchJSON(BASE + "versions.json");
+    presentation.setVersion({siteName:manifest.name});
   } catch (err) {
     $("xrNote").textContent = `No house data for "${SITE}" (${err.message}).`;
     return;
@@ -3395,6 +3486,7 @@ async function boot() {
       return m ? fetchJSON(`assets/sites/${m[1]}/spec/spec_v1.json`).catch(() => null) : null;
     })]);
   /* Furnished / Unfurnished: the spec's item categories (the fallback for builds without the furnishing extra) */
+  lightSpec=spec;
   specCategory = new Map(Object.values(spec?.versions || {}).flatMap(v => (v.items || []).map(it => [it.id, it.category])));
   specCameras = Array.isArray(spec?.cameras) ? spec.cameras : [];        // Go to: the spec's named cameras (eye_m / target_m, viewer frame)
   specWalk = spec?.walkthrough || null;
@@ -3431,12 +3523,12 @@ async function boot() {
     lg.appendChild(s);
   }
   updateHelp();
-  $("startDesktop").disabled = false;
   console.info(`house: ${V.model.parts.length} parts · house ${V.model.drawCalls()} batches + setting ${V.model.settingCalls()} · ${V.bvh.triangles} ray triangles · mode ${MODE.key}`);
   /* make the Before / After switch instant on a laptop; the Quest loads a version only when asked (memory) */
   if (!LITE && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
+  visitReady=true;$("startDesktop").disabled=false;finishLoading(V.def.id);
   dispatchEvent(new Event("house-ready"));
   /* ?test=walk: climb and descend every stair, and walk each storey's rooms, in every version and stage */
   if (params.get("test") === "walk") import("./walktest.js?v=h15").then(m => m.runWalkTest(window.__house)).catch(err => console.error("walk test", err));
@@ -3461,6 +3553,7 @@ const sim = {
   eye: 1.74, wristUp: false, aimAt: null, holds: [],
   start(eye = 1.74) {
     if (SIM.on) return;
+    $("start").hidden=true;
     sim.eye = eye;
     const pad = () => ({ buttons: [...Array(6)].map(() => ({ pressed: false, value: 0 })), axes: [0, 0, 0, 0] });
     for (const hand of ["left", "right"]) { const c = new THREE.Group(); player.add(c); attachHand(c, hand, { handedness: hand, gamepad: pad() }); }
@@ -3497,7 +3590,7 @@ function simPose() {
   const place = (c, pos, q) => { c.position.copy(player.worldToLocal(pos.clone())); c.quaternion.copy(pq).multiply(q); c.updateMatrixWorld(true); };
   if (L) {
     if (sim.wristUp) {         // the board square to the eyes, 38 cm away and a little low and left
-      const bq = cq.clone(), bl = vrBoard.mesh;
+      const bq = cq.clone(), bl = SIMPLE && !garden?.enabled && !furnisher?.enabled ? baPanel : vrBoard.mesh;
       const lq = bq.clone().multiply(bl.quaternion.clone().invert());
       const bp = cam.clone().addScaledVector(fwd, 0.38).addScaledVector(up, -0.1).addScaledVector(right, -0.04);
       place(L, bp.sub(bl.position.clone().applyQuaternion(lq)), lq);
@@ -3558,12 +3651,13 @@ function loop(fakeNow) {
   }
   if (stageDirty) applyStageNow();
   else V.cull?.prepare();                      // the wall holes are found once, on the first frame at the last stage (not on the first frame in the headset)
-  if (V.doors?.moving) { V.doors.update(dt); perf.tag("doors"); if (hoverPart?.pose) { const h = hoverPart; hoverPart = null; setHover(h); } }
+  if (V.doors?.moving) { V.doors.update(dt); if(!V.doors.moving) roomLights.invalidate(); perf.tag("doors"); if (hoverPart?.pose) { const h = hoverPart; hoverPart = null; setHover(h); } }
   garden?.frame(hands.left,now);furnisher?.setStage(stageValue);furnisher?.frame(hands.left);
   if (inVR()) { if (SIM.on) simPose(); vrFrame(dt, now); }
   else if (garden?.bird || furnisher?.bird) { /* The measured plan has its own camera. Preserve the standing pose. */ }
   else if (walk) desktopWalk(dt);
   else orbit.update();
+  updateRoomLook(now);
   if (target && (playing || tween || target.part.pose)) updateHighlight();
   measure.update(camera);
   if (marks) { marks.update(dt); if (marksListDirty) renderMarksList(); }
@@ -3614,6 +3708,7 @@ renderer.setAnimationLoop(() => loop());
 /* a hook for tests from the console; not a user-facing API */
 window.__house = {
   THREE, scene, camera, renderer, player, orbit, measure, section, walker, feet, yawPitch, vrBoard, requests, regs: () => regs,
+  look:{snapshot:()=>({...roomLights.snapshot(),profile:LOOK_PROFILE,gtao:{...AO,enabled:!!gtao&&!inVR()},toneMapping:renderer.toneMapping}),switch: switchLamps},presentation,
   get V() { return V; }, get stage() { return stageValue; }, get tool() { return tool; }, get target() { return target; },
   get walk() { return walk; }, get xray() { return xray; }, get boardTab() { return boardTab; }, set boardTab(t) { boardTab = t; refreshBoard(); },
   MODE, inspections,
@@ -3692,7 +3787,7 @@ if (params.get("capture") === "1") {
       camera.rotation.set(yawPitch.pitch, yawPitch.yaw, 0, "YXZ");
       camera.fov = fov; camera.aspect = w / h; camera.updateProjectionMatrix();
       player.updateMatrixWorld(true);
-      adaptExposure(0, true);
+      adaptExposure(0, true);updateRoomLook(performance.now(),true,true);
       let url;
       if (ids) url = renderIds(w, h);
       else { render(post, w, h); url = renderer.domElement.toDataURL("image/jpeg", quality); }

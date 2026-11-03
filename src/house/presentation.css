@@ -1,0 +1,130 @@
+/* Studio surfaces belong to the walkthrough. Leave inspection, editing and
+   marking overlays in their own stacking contexts. */
+:root {
+  --studio-ink:#24372e;
+  --studio-paper:#faf9f2;
+  --studio-muted:#57685d;
+  --studio-line:#c7d0c2;
+  --studio-green:#315941;
+}
+.studio-kicker {font:650 10px/1.3 var(--font);color:var(--studio-muted);letter-spacing:.15em;text-transform:uppercase}
+#start {
+  overflow:auto;justify-content:safe center;padding:max(20px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));
+  color:var(--studio-ink);
+  background-color:#e8ede3;
+  background-image:linear-gradient(125deg,transparent 55%,#dfe7dc 55%,transparent 76%),
+    linear-gradient(35deg,transparent 42%,#f3f4eb 42%,transparent 64%);
+}
+.studio-welcome {
+  width:min(100%,520px);padding:clamp(22px,5vw,52px);text-align:left;
+  background:var(--studio-paper);border:1px solid #fff9;border-radius:18px;box-shadow:0 20px 80px #223c2b1c;
+}
+.studio-wordmark {display:flex;align-items:center;gap:11px;padding-bottom:clamp(22px,5vh,45px);color:var(--studio-green)}
+.studio-wordmark span {font:600 15px/1.1 var(--font);letter-spacing:.015em}
+#start p.studio-kicker {margin-bottom:8px;color:var(--studio-muted);font:650 10px/1.3 var(--font);letter-spacing:.16em}
+#start h2 {font:500 clamp(32px,5vw,49px)/1.02 Georgia,'Times New Roman',serif;letter-spacing:-.045em}
+#start .studio-intro {margin-top:12px;color:var(--studio-muted);font-size:15px;line-height:1.55}
+#start #loading {width:100%;margin-top:23px}
+#loadTrack {height:5px;background:#dae1d5}
+#loadBar {background:#486b4c}
+.studio-load-line {display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+#loadText,#studioLoadValue {color:var(--studio-muted);margin:8px 0 0;font-variant-numeric:tabular-nums}
+#studioLoadValue {white-space:nowrap}
+#start .actions {margin-top:20px;justify-content:flex-start;gap:7px}
+#start .actions button {min-height:44px;padding:8px 12px;border-color:var(--studio-line);background:transparent;color:var(--studio-ink)}
+#start .actions #startDesktop {order:-1;border-color:var(--studio-green);background:var(--studio-green);color:#fff}
+#start .actions button:focus-visible,#baBar :is(button,select):focus-visible {outline:3px solid #7d9f82;outline-offset:2px}
+#start #xrNote {margin-top:10px;font-size:12px;color:var(--studio-muted);overflow-wrap:anywhere}
+#start #xrNote:empty {display:none}
+#start #startLiability {border-left:0;border-top:1px solid var(--studio-line);margin-top:16px;padding:12px 0 0;font-size:11px;color:#657166;line-height:1.45}
+.studio-identity {display:grid;grid-template-columns:auto auto;align-items:baseline;gap:2px 7px}
+.studio-identity .studio-kicker {grid-column:1/-1;font-size:8px;letter-spacing:.19em}
+#top .studio-identity h1 {display:block;margin:0;font:500 21px/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.025em}
+.studio-review-lamps {display:flex;gap:4px}
+[data-mode="customer"] #top {
+  left:max(14px,env(safe-area-inset-left));right:auto;top:max(14px,env(safe-area-inset-top));max-width:calc(100vw - 28px);
+  gap:10px;padding:10px 14px;border-color:#fff9;background:#faf9f2ec;color:var(--studio-ink);
+}
+[data-mode="customer"] #top :is(#modeLabel,.sep,.spacer,.architect-only,.studio-review-lamps,[data-editor-help],[data-garden-open],[data-furnish-open]) {display:none}
+[data-mode="customer"] #top #vr {min-height:40px;border-color:var(--studio-green);background:var(--studio-green);color:#fff}
+html:not([data-mode="customer"]) #baBar {display:none}
+html[data-mode="customer"] #baBar {display:flex}
+#baBar {
+  bottom:max(14px,env(safe-area-inset-bottom));width:max-content;max-width:calc(100vw - 28px);padding:7px;
+  gap:6px;justify-content:center;color:var(--studio-ink);background:#faf9f2ee;border-color:#fff9;
+  box-shadow:0 4px 24px #20322b20;
+}
+#baBar :is(button,select) {min-height:39px;padding:6px 10px;font:550 13px/1.15 var(--font);color:var(--studio-ink);border:1px solid var(--studio-line);background:var(--studio-paper)}
+#baBar button[aria-pressed="true"] {background:var(--studio-green);border-color:var(--studio-green);color:white}
+#baBar button:disabled {cursor:default;opacity:.52}
+.studio-main-tools,.studio-tool-group,#baTools,.studio-version-buttons {display:flex;align-items:center;gap:5px}
+.studio-version-buttons {gap:0}
+#baBar .studio-version-buttons button:first-child {border-radius:7px 0 0 7px;border-right-width:0}
+#baBar .studio-version-buttons button:last-child {border-radius:0 7px 7px 0}
+#baBar #baGoto {max-width:142px}
+#baTools {flex-wrap:wrap;justify-content:center;gap:7px}
+.studio-tool-group {padding-left:7px;border-left:1px solid var(--studio-line)}
+#baToolsToggle,#baBar #baHelp {display:none}
+#baBar #baMark[aria-pressed="true"] {background:#f06f3d;border-color:#bd5428;color:#23180e}
+button[data-lamp-scope]::before {content:'';display:inline-block;width:.48em;height:.48em;margin-right:.42em;border:1px solid currentColor;border-radius:50%;vertical-align:.08em}
+button[data-lamp-scope][aria-pressed="true"]::before {background:#ffdda1;border-color:#ffdda1}
+button[data-lamp-scope][aria-pressed="mixed"]::before {background:linear-gradient(to right,#ffdda1 50%,transparent 50%)}
+#studioRoomTitle,#studioSwitchProgress {position:fixed;z-index:5;pointer-events:none;color:var(--studio-ink);background:#faf9f2ef;border:1px solid #fff9;border-radius:9px;box-shadow:0 3px 18px #22382b1c}
+#studioRoomTitle {top:max(17px,env(safe-area-inset-top));right:max(17px,env(safe-area-inset-right));max-width:min(292px,calc(100vw - 32px));padding:11px 16px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .22s,transform .22s,visibility .22s}
+#studioRoomTitle[data-visible="true"] {opacity:1;visibility:visible;transform:none}
+.room-title-detail {font:650 9px/1.3 var(--font);color:var(--studio-muted);letter-spacing:.12em;text-transform:uppercase}
+.room-title-name {font:500 24px/1.12 Georgia,'Times New Roman',serif;letter-spacing:-.025em;margin-top:3px;overflow-wrap:anywhere}
+#studioSwitchProgress {left:50%;top:max(16px,env(safe-area-inset-top));transform:translateX(-50%);padding:9px 14px;display:flex;gap:15px;align-items:center;font:550 13px/1.3 var(--font)}
+.studio-switch-value {font-variant-numeric:tabular-nums;color:var(--studio-green)}
+body:has(#start:not([hidden])) :is(#studioRoomTitle,#studioSwitchProgress),body.in-vr :is(#studioRoomTitle,#studioSwitchProgress,#baBar),body:is(.garden-editing,.furniture-editing) :is(#studioRoomTitle,#studioSwitchProgress) {display:none}
+/* Keep plan and wrist workspaces clear regardless of the selected mode. */
+body:is(.garden-editing,.furniture-editing) #baBar {display:none!important}
+#toast {pointer-events:none}
+html[data-mode="customer"] body #toast {top:auto;bottom:calc(var(--studio-bar-height,60px) + 28px + env(safe-area-inset-bottom,0px))}
+body:has(#studio-help-dialog[open]) #toast,body:has(#start:not([hidden])) #toast {visibility:hidden}
+@media (max-width:1090px), (pointer:coarse) {
+  #baBar,body.touch-sticks #baBar,body:not(.touch-sticks) #baBar {
+    left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));top:calc(max(8px,env(safe-area-inset-top)) + 52px);bottom:auto;
+    transform:none;margin:0 auto;width:fit-content;max-width:calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));padding:5px;flex-direction:column;align-items:stretch;gap:4px;
+  }
+  .studio-main-tools {justify-content:center;flex-wrap:wrap;gap:4px}
+  #baBar #baToolsToggle {display:inline-flex;align-items:center;gap:4px}
+  #baToolsToggle[aria-expanded="true"] span {transform:rotate(180deg)}
+  #baTools {display:none;padding:6px 1px 1px;border-top:1px solid var(--studio-line);max-height:min(46dvh,260px);overflow:auto;align-content:start}
+  #baToolsToggle[aria-expanded="true"] {background:#e3ecdf}
+  #baBar.is-expanded #baTools {display:flex}
+  .studio-tool-group {padding:2px 0;border:0;flex-wrap:wrap;justify-content:center}
+  #baBar :is(button,select),body.touch-sticks #baBar :is(button,select) {min-height:44px;padding:5px 8px;font-size:13px}
+  #baBar #baGoto,body.touch-sticks #baBar #baGoto {max-width:115px}
+  html[data-mode="customer"] body #toast {bottom:auto;top:calc(var(--studio-bar-bottom,118px) + 8px)}
+  [data-mode="customer"] #top {left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));padding:5px 10px;gap:8px}
+  html[data-mode="customer"] #top #title {display:block;font-size:19px}
+  #studioRoomTitle {top:auto;right:auto;left:50%;bottom:calc(max(155px,env(safe-area-inset-bottom)) + 22px);transform:translate(-50%,3px);width:max-content;max-width:calc(100vw - 32px);text-align:center;padding:8px 12px}
+  #studioRoomTitle[data-visible="true"] {transform:translate(-50%,0)}
+  .room-title-name {font-size:20px}
+  #studioSwitchProgress {top:auto;bottom:calc(155px + env(safe-area-inset-bottom));max-width:calc(100vw - 28px)}
+}
+@media (max-height:500px) {
+  #start {padding:8px;justify-content:flex-start}
+  .studio-welcome {padding:16px 22px}
+  .studio-wordmark {padding-bottom:8px} #start h2 {font-size:30px}
+  #start .studio-intro,#start #loading,#start .actions,#start #startLiability {margin-top:8px}
+  #studioRoomTitle {bottom:20px}
+}
+@media (min-width:1091px) and (pointer:fine) {
+  #top {max-height:36vh;overflow:auto}
+  [data-mode="customer"] #top {overflow:visible}
+  html:not([data-mode="customer"]) #studioRoomTitle {top:var(--top-h,110px)}
+}
+@media (max-width:410px) {
+  #baBar #baGoto,body.touch-sticks #baBar #baGoto {max-width:88px}
+  #baBar :is(button,select),body.touch-sticks #baBar :is(button,select) {font-size:12px;padding:4px 6px}
+}
+@media (min-width:385px) and (max-width:410px) {
+  /* Mark is an extra control in studio review. Its compact room picker still
+     opens the complete native option list and keeps its full touch height. */
+  html[data-review] #baBar #baGoto {max-width:68px}
+}
+@media (prefers-reduced-motion:reduce) {
+  #studioRoomTitle,#loadBar {transition:none}
+}

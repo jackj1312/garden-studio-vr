@@ -79,5 +79,5 @@ export function lampPower(kind,asset={}) {
   // bounded for this scene. Spot intensity accounts for its solid angle.
   const angle=50*Math.PI/180;
   const candela=lm/(spot?2*Math.PI*(1-Math.cos(angle)):4*Math.PI);
-  return {spot,kelvin,lumens:lm,intensity:clamp(candela*.12,1,45),angle,range:clamp(2.4+Math.sqrt(lm)/24,3,6)};
+  return {spot,kelvin,lumens:lm,intensity:clamp(candela*.04,.12,45),angle,range:clamp(2.4+Math.sqrt(lm)/24,3,6)};
 }

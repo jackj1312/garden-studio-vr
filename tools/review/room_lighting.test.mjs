@@ -49,7 +49,9 @@ test('open-plan membership, selection hysteresis, ceiling and intensity cap',()=
   const rows=[base,...[1,2,3,4].map(i=>({...base,id:'i'+i,room:'dining',centre:[i,1,0],position:[i,1,.2],area:i===4?60:1}))];
   const found=rankApertures(rows,g,[0,1,1],[],3);assert.equal(found.length,3);
   assert.equal(found.find(a=>a.id==='i4').intensity,80);assert.equal(rankApertures(rows,null,[0,1,1],[],3).length,0);
-  assert.equal(lampPower('table_lamp',{lamp:'3000 K 470 lm'}).kelvin,3000);
+  const lamp=lampPower('table_lamp',{lamp:'3000 K 470 lm'});
+  assert.equal(lamp.kelvin,3000);
+  assert(Math.abs(lamp.intensity-470/(4*Math.PI)*.04)<.001);
 });
 test('actual scene limits standalone sources to the selected room, follows state of built panes, releases resources',()=>{
   const scene=new T.Scene(),v=view(),l=createRoomLighting({scene,desktop:true});l.setView(v,schedule);

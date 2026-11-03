@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>House Build Stages</title>
+<meta name="theme-color" content="#263a33">
+<title>Garden Studio · House walkthrough</title>
 <style>
   :root {
     --bg: #eef0ee; --panel: #fffffff0; --ink: #1f2320; --ink-soft: #5b6159; --line: #d6d8d2;
@@ -262,6 +263,7 @@
 <link rel="stylesheet" href="src/editor-help.css">
 <link rel="stylesheet" data-garden-panel-style href="src/garden/garden.css">
 <link rel="stylesheet" href="src/furnish/furnish.css">
+<link rel="stylesheet" href="src/house/presentation.css?v=look1">
 <script type="module" src="src/editor-help.js"></script>
 <script>if(location.protocol==='https:' && location.port==='8443' && (new URLSearchParams(location.search).get('edit')==='1'||new URLSearchParams(location.search).get('garden')==='1')){const u=new URL(location.href);u.port='8450';location.replace(u);}</script>
 </head>
@@ -269,8 +271,7 @@
 
 <div id="top" class="card">
   <button id="menuToggle" class="phone-only" aria-label="More tools">☰</button>
-  <h1 id="title">House</h1>
-  <span id="modeLabel"></span>
+  <div class="studio-identity"><span class="studio-kicker">Garden Studio</span><h1 id="title">House walkthrough</h1><span id="modeLabel"></span></div>
   <div class="group" id="versions">
     <button id="before" aria-pressed="false" title="As built now">Before</button>
     <button id="after" aria-pressed="false" title="The chosen proposal">After</button>
@@ -313,6 +314,7 @@
   </div>
   <button id="rulesSummary" class="rules-only" data-status="pass">Regs</button>
   <div class="spacer"></div>
+  <div class="studio-review-lamps"><button type="button" id="reviewRoomLamps" data-lamp-scope="room" aria-pressed="false" disabled>Room lamps</button><button type="button" id="reviewAllLamps" data-lamp-scope="all" aria-pressed="false">All lamps</button></div>
   <button type="button" data-editor-help="house">How to use</button>
   <button type="button" data-garden-open>Garden design</button>
   <button type="button" data-furnish-open>Furnish a room</button>
@@ -321,21 +323,33 @@
 
 <div id="stageListWrap" class="card customer-only"><ol id="stageList"></ol></div>
 
-<!-- homeowners (round 6c): Before / After and Fly, nothing else -->
-<div id="baBar" class="card customer-only">
-  <button id="baBefore" aria-pressed="false">Before</button>
-  <button id="baAfter" aria-pressed="true">After</button>
-  <button id="baFly" aria-pressed="false" title="F · W A S D, Q / E down / up">Fly</button>
-  <select id="baGoto" aria-label="Go to a room or place"><option value="">Go to…</option></select>
-  <button id="baFast" aria-pressed="false" title="G · twice the walking speed (fly unchanged)">Fast</button>
-  <button id="baFurnish" aria-pressed="false" title="Furnished / Unfurnished: hide the furniture, soft furnishings, decor and plants to see the house itself">Furnished</button>
-  <button id="baComfort" title="While turning fast: subtle blur, a dark vignette, or nothing">Comfort: subtle blur</button>
-  <button type="button" data-garden-open>Garden design</button>
-  <button type="button" data-furnish-open>Furnish a room</button>
-  <button type="button" data-editor-help="house">How to use</button>
-  <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
+<div id="baBar" class="card customer-only" aria-label="Walkthrough tools" role="region">
+  <div class="studio-main-tools">
+    <div class="studio-version-buttons" role="group" aria-label="House version"><button id="baBefore" aria-pressed="false">Before</button><button id="baAfter" aria-pressed="true">After</button></div>
+    <select id="baGoto" aria-label="Go to a room or place"><option value="">Go to…</option></select>
+    <button id="baFurnish" aria-pressed="false" title="Show or hide furniture, soft furnishings and plants">Furnished</button>
+    <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
+    <button type="button" id="baToolsToggle" aria-controls="baTools" aria-expanded="false">Tools <span aria-hidden="true">⌄</span></button>
+  </div>
+  <div id="baTools">
+    <div class="studio-tool-group" role="group" aria-label="Lighting">
+      <button type="button" id="baRoomLamps" data-lamp-scope="room" aria-pressed="false" disabled>Room lamps</button>
+      <button type="button" id="baAllLamps" data-lamp-scope="all" aria-pressed="false">All lamps</button>
+    </div>
+    <div class="studio-tool-group" role="group" aria-label="Movement">
+      <button id="baFly" aria-pressed="false" title="F · W A S D, Q / E down / up">Fly</button>
+      <button id="baFast" aria-pressed="false" title="G · twice the walking speed (fly unchanged)">Fast</button>
+      <button id="baComfort" title="Turn comfort setting">Comfort</button>
+    </div>
+    <div class="studio-tool-group" role="group" aria-label="Design tools">
+      <button type="button" data-garden-open>Garden design</button><button type="button" data-furnish-open>Furnish a room</button>
+      <button type="button" data-editor-help="house">How to use</button>
+    </div>
+  </div>
   <div id="baHelp" class="meta"></div>
 </div>
+<div id="studioRoomTitle" role="status" aria-live="polite" data-visible="false"><div class="room-title-detail"></div><div class="room-title-name"></div></div>
+<div id="studioSwitchProgress" hidden role="status"><span class="studio-switch-label"></span><span class="studio-switch-value"></span></div>
 
 <!-- the studio review (?mode=review): the marking tool (src/marks.js, src/notes.js) -->
 <div id="markHint" hidden>
@@ -415,12 +429,14 @@
 </div>
 
 <div id="start">
-  <h2>How the extension gets built</h2>
-  <p>Walk through the house at true scale and watch it go up stage by stage, from the first props to the finished rooms.
-     Tap anything to see what it is.</p>
+  <div class="studio-welcome">
+  <div class="studio-wordmark"><svg width="42" height="34" viewBox="0 0 48 38" fill="none" aria-hidden="true"><path d="M3 21 24 4l21 17M9 19v14h30V19M18 33V22h12v11" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Garden Studio</span></div>
+  <p class="studio-kicker">House walkthrough</p>
+  <h2 id="studioSiteName">Opening the house</h2>
+  <p class="studio-intro">Walk from room to room at true scale. Compare the house today with the approved design.</p>
   <div id="loading">
-    <div id="loadTrack"><div id="loadBar"></div></div>
-    <span id="loadText">Loading…</span>
+    <div id="loadTrack" role="progressbar" aria-label="House loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="loadBar"></div></div>
+    <div class="studio-load-line"><span id="loadText">Opening the house…</span><span id="studioLoadValue">0%</span></div>
   </div>
   <div class="actions">
     <button type="button" data-editor-help="house">How to use</button>
@@ -430,6 +446,7 @@
   <p class="note" id="xrNote"></p>
   <p class="liability" id="startLiability">Not for construction: drawn from the planning and building-regulations drawings to explain the work.
      Do not set out, order or build from it. Building Regulations notes are guidance, not approval.</p>
+  </div>
 </div>
 
 <script type="importmap">
@@ -440,6 +457,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=furnish3"></script>
+<script type="module" src="src/house/viewer.js?v=look1"></script>
 </body>
 </html>

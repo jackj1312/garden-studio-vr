@@ -533,6 +533,14 @@ def _sofa(b):
             b.rod("leg",(sx*(w/2-0.13),sy*(d/2-0.12),0),(sx*(w/2-0.16),sy*(d/2-0.15),leg+0.02),0.021,"oak",0.026)
     if b.options.get("style") in ("modern","industrial","contemporary"):
         b.box("recessed-plinth",(w-.22,d-.21,leg),(0,0,leg/2),"black",.009)
+    if b.options.get('cane'):
+        for side in [-1,1]:
+            x=side*(w/2-.025)
+            for y in [-d*.39,d*.39]:b.rod("cane-upright",(x,y,leg),(x,y,h*.78),.018,"oak")
+            for i in range(12):
+                y=-d*.38+i*d*.76/11
+                b.rod("woven-cane",(x,y,h*.38),(x,y,h*.76),.005,"oak")
+            b.rod("cane-arm",(x,-d*.41,h*.76),(x,d*.41,h*.76),.021,"oak")
     base=b.soft("upholstered-base",(w-0.07,d-0.06,h*0.24),(0,0,leg+h*0.12),puff=0.15,seam=False)
     arm=max(0.13,min(0.20,w*0.082))
     for s in (-1,1):
@@ -1187,6 +1195,18 @@ def _books(b,stack=False):
 
 def _vase(b,bowl=False):
     w,d,h=b.w,b.d,b.h
+    if not bowl and b.options.get('stems'):
+        eucalyptus=b.options['stems']=='eucalyptus'
+        for j in range(5):
+            a=j*TAU/5
+            stem=[(0,0,h*.18),(math.cos(a)*w*.15,math.sin(a)*d*.15,h*.55),
+                  (math.cos(a)*w*.39,math.sin(a)*d*.39,h*(.84+.13*(j%2)))]
+            b.tube('cut-stem',stem,min(w,d)*.009,'leaf' if eucalyptus else 'oak',sides=6)
+            for k in range(4):
+                t=.25+k*.16;start=Vector(stem[1]).lerp(Vector(stem[2]),t)
+                tip=start+Vector((math.cos(a+k)*w*.13,math.sin(a+k)*d*.13,h*.04))
+                _leaf(b,'eucalyptus-leaf' if eucalyptus else 'seed-head',start,tip,w*(.14 if eucalyptus else .035),'leaf_light' if eucalyptus else 'art_sand')
+        h*=.56
     if bowl:
         b.lathe("stoneware",[(w*.24,0),(w*.30,h*.08),(w*.48,h*.78),(w*.50,h),(w*.47,h),(w*.43,h*.78),(w*.25,h*.16),(0,h*.13)],(0,0,0),"ceramic",64,ellipse=d/w)
     else:
@@ -1256,6 +1276,16 @@ def _art(b,mirror=False):
     def shape(suffix,points,mat):
         verts=[(x*iw,y,z*ih+h/2) for x,z in points]
         return b.mesh(suffix,verts,[tuple(range(len(verts)))],mat,False,collide=False)
+    if b.options.get('palette')=='sage_sand':
+        shape("sage-block",[(-.48,-.45),(.08,-.45),(.08,.10),(-.48,.10)],"art_sage")
+        shape("sand-block",[(.14,-.20),(.48,-.20),(.48,.45),(.14,.45)],"art_sand")
+        return
+    if "leaf" in b.options.get('motif','').lower():
+        for j in range(5):
+            z=-.32+j*.13;side=1 if j%2 else -1
+            shape("sage-leaf",[(0,z),(side*.19,z+.025),(side*.37,z+.15),(side*.13,z+.12)],"art_sage")
+        b.tube("botanical-stem",[(0,y-.001,h*.21),(0,y-.001,h*.83)],.0015,"art_sage",sides=7)
+        return
     shape("sand-field",[(-.50,-.50),(.50,-.50),(.50,-.12),(.31,.01),(-.15,-.09),(-.50,.03)],"art_sand")
     circle=[(math.cos(TAU*i/48)*.20+.16,math.sin(TAU*i/48)*.20+.19) for i in range(48)]
     shape("clay-disc",circle,"art_clay")

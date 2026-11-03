@@ -112,6 +112,11 @@ def elevations(records,roof):
                 from hb_geom import prism_varz
                 P=[(x0,a),(x1,a),(x1,b),(x0,b)]
                 # Close the wedge between the straight sash rail and the pitched roof.
-                v=prism_varz(P,lambda p:wall.z1-.001,lambda p:ceiling(p[1]))
-                out.append(atom(id_+'-raked-head','mesh','existing',meta,sig=sig_of(id_,a,b,wall.z1),mesh=v,mat='upvc_white'))
+                mid=(x0+x1)/2
+                pane=[(mid-.006,a),(mid+.006,a),(mid+.006,b),(mid-.006,b)]
+                v=prism_varz(pane,lambda p:wall.z1-.001,lambda p:ceiling(p[1]))
+                out.append(atom(id_+'-raked-head','mesh','existing',meta,sig=sig_of(id_,a,b,wall.z1),mesh=v,mat='glass'))
+                seal=[(mid-.019,a),(mid+.019,a),(mid+.019,b),(mid-.019,b)]
+                v=prism_varz(seal,lambda p:ceiling(p[1])-.025,lambda p:ceiling(p[1]))
+                out.append(atom(id_+'-raking-seal','mesh','existing',meta,sig=sig_of(id_,a,b,'seal'),mesh=v,mat='upvc_white'))
     return out

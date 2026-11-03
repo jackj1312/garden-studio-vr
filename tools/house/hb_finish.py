@@ -612,6 +612,30 @@ def recolour_finished(objs, fin, log):
     log(f"finishes: {n_c} ceilings/vault linings -> FIN-CEIL, {n_s} stair parts -> FIN-STAIR (oak treads, white risers)")
 
 
+def scribe_to_room_finish(trim,linings):
+    """Cut a moulding back to an intersecting room lining, as a joiner scribes the profile."""
+    def geometry(ob):
+        vs=[ob.matrix_world@v.co for v in ob.data.vertices]
+        return vs,[tuple(p.vertices) for p in ob.data.polygons]
+    tv,tf=geometry(trim)
+    lo=[min(v[i] for v in tv) for i in range(3)];hi=[max(v[i] for v in tv) for i in range(3)]
+    tree=BVHTree.FromPolygons(tv,tf)
+    for ob,mn,mx in linings:
+        if min(min(hi[i],mx[i])-max(lo[i],mn[i]) for i in range(3))<.0038:continue
+        lv,lf=geometry(ob)
+        if not tree.overlap(BVHTree.FromPolygons(lv,lf)):continue
+        cutter=ob.copy();cutter.data=ob.data.copy()
+        for v in cutter.data.vertices:v.co+=v.normal*.0005
+        cutter.data.update();trim.users_collection[0].objects.link(cutter)
+        mod=trim.modifiers.new('Scribe architrave to finished return','BOOLEAN');mod.operation='DIFFERENCE';mod.object=cutter
+        deps=bpy.context.evaluated_depsgraph_get()
+        clipped=bpy.data.meshes.new_from_object(trim.evaluated_get(deps),preserve_all_data_layers=True,depsgraph=deps)
+        trim.modifiers.remove(mod);bpy.data.objects.remove(cutter,do_unlink=True)
+        if not clipped.polygons:
+            bpy.data.meshes.remove(clipped);print('Scribe retained original at coplanar contact:',trim.name,ob.name);continue
+        trim.data=clipped
+        tv,tf=geometry(trim);tree=BVHTree.FromPolygons(tv,tf)
+
 def scribe_architraves(objs, N, log, reach=0.035):
     """an architrave that stops 1-35 mm short of a return wall is scribed to it (a joiner widens or cuts it to fit): the
     leg's outer edge moves to touch the wall, so no sliver shows at the corner (integrity gap check)"""
@@ -662,6 +686,13 @@ def scribe_architraves(objs, N, log, reach=0.035):
                 h = tree.ray_cast(o, -nn * face, 0.016)
                 if h[0] is not None and h[3] - 0.001 > 0.0008:
                     me.vertices[i].co = Mi @ (W[i] - nn * face * (h[3] - 0.001 - 0.0003))
+    linings=[]
+    for ob,p in objs:
+        if ob.type=='MESH' and p['props'].get('surface_role')=='wall' and not p['props'].get('as_built'):
+            verts=[ob.matrix_world@v.co for v in ob.data.vertices]
+            linings.append((ob,[min(v[k] for v in verts) for k in range(3)],[max(v[k] for v in verts) for k in range(3)]))
+    for ob,p in objs:
+        if ob.name.endswith('_architraves') and not p['props'].get('as_built'):scribe_to_room_finish(ob,linings)
     log(f"joinery: {moved} architrave legs scribed to the return wall beside them")
 
 

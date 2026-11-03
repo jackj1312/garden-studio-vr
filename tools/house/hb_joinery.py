@@ -124,7 +124,7 @@ def porch_leaf(w,lo,hi,z0,z1,c):
         if high>low:
             glass.append(box_uc(w,a,b,low,high,c-.006,c+.006))
             for side in (-1,1):
-                yy=c+side*.024
+                yy=c+side*.0068
                 for path in motif_paths(gw,high-low):
                     stroke=stroke_mesh([(a+u*gw,yy,low+v*(high-low)) for u,v in path])
                     leading.append(([( *w.point(u,t),z) for u,t,z in stroke['vertices']],stroke['faces']))

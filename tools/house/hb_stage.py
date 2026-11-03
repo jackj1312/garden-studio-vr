@@ -633,6 +633,10 @@ def parts_of(a, ctx):
         new_infill = getattr(W, "new_infill", False)
         for (li, lay, lift, nl, mesh) in wall_parts(W):
             name = f"{a['id']}_L{li}_{lay['group']}_lift{lift}"
+            if ctx.get('spec_rooms') and lay.get('lining'):
+                from hb_room_faces import clipped_conservatory_lining
+                mesh=clipped_conservatory_lining(W,lay,lift,ctx['spec_rooms'],mesh)
+                if mesh is None:continue
             mat = lay["mat"]
             if new_infill: mat = (NEW_MAT_INNER if lay["group"] == "wall_inner" else NEW_MAT).get(mat, mat)
             for pre, mm in ctx["spec"].get("wall_material_overrides", {}).items():
@@ -829,6 +833,7 @@ def fixture_parts(a):
         import hb_joinery as J
         fw = 0.03
         cl_, ch_ = W.full_extent_c()
+        if a.get("finished_jamb"):cl_-=.0025;ch_+=.0025
         fr.append(bx(u0, u1, z1 - fw, z1, cl_, ch_))
         fr.append(bx(u0, u0 + fw, z0, z1 - fw, cl_, ch_)); fr.append(bx(u1 - fw, u1, z0, z1 - fw, cl_, ch_))
         sc_ = -side                                              # the stops stand on the side the leaf closes against

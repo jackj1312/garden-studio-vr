@@ -8,6 +8,8 @@ from mathutils import Matrix, Vector
 import studio
 from studio import F
 
+FINISH_COLOURS={}
+
 ALIASES={
  'bench_box':'bench','hook_rail':'coat_hook','flush_disc':'flush_light','pendant_drum':'pendant','radiator_panel':'radiator',
  'framed_print':'art','throw_drape':'throw','modern_coffee_table_01':'coffee_table','slab':'hearth','tv':'television',
@@ -47,7 +49,14 @@ def recipe(it):
     if source=='mirror_round':opts['round']=True
     if source=='tile_band':opts['metro']=True
     if kind=='towel_rail':opts['towel']=False
+    if kind=='shower' and 'walk-in' in label:opts['walk_in']=True;opts['screen']='walk_in'
+    if kind=='alcove_unit':
+        opts.update(cupboard_h=asset.get('cupboard_h_mm',900)/1000,
+                    shelf_t=asset.get('shelf_t_mm',30)/1000,levels=asset.get('shelves_y_m',[]))
     if kind=='sofa':opts.update(throw=False,scatter=False)
+    if kind=='art':opts.update(motif=asset.get('motif',''),palette=asset.get('palette',''))
+    if kind=='vase':opts['stems']='eucalyptus' if 'eucalyptus' in label else 'dried' if 'dried' in label else ''
+    if kind=='sofa' and it.get('materials',{}).get('frame')=='RATTAN':opts['cane']=True
     if kind=='kettle':opts['ellipse']=it['size_mm'][1]/it['size_mm'][0]
     if 'source_sofa' in it:opts['source_sofa']=it['source_sofa']
     return source,kind,opts
@@ -58,8 +67,8 @@ def fingerprint(it):
 
 ROLES={'legs':'oak','frame':'oak','rail':'oak','hooks':'black','shade':'linen','fabric':'linen','pole':'bronze',
        'front':'kitchen','cupboard':'kitchen','shelves':'oak','top':'stone','worktop':'stone','upholstery':'upholstery',
-       'base':'ceramic','linen':'white_fabric','throw':'throw','glaze':'ceramic'}
-PRIMARY={'bench':'oak','coat_hook':'oak','rug':'rug','flush_light':'black','radiator':'white','cushion':'linen',
+       'base':'ceramic','linen':'white_fabric','throw':'throw','glaze':'ceramic','glass':'glass','tray':'glaze','vanity':'oak','basin':'glaze','cushions':'upholstery'}
+PRIMARY={'extractor':'metal','bench':'oak','coat_hook':'oak','rug':'rug','flush_light':'black','radiator':'white','cushion':'linen',
          'throw':'throw','stove':'black','hearth':'hearth_slate','television':'black','bookcase':'kitchen',
          'splashback':'metro_tile','upstand':'stone','roman_blind':'linen','linear_pendant':'black','mirror':'oak',
          'toilet':'glaze','wall_wc':'glaze','vanity':'glaze','semi_pedestal':'glaze','wall_vanity':'glaze',
@@ -70,13 +79,20 @@ def schedule_palette(it,kind):
         if not isinstance(fid,str) or not re.fullmatch(r'[A-Z0-9-]+',fid):continue
         key=PRIMARY.get(kind,'oak') if role=='all' else ROLES.get(role)
         if role=='frame' and kind=='bed':key='upholstery'
+        if role=='frame' and kind=='shower':key='black'
         if role=='base' and kind=='floor_lamp':key='bronze'
         if role=='top' and kind=='alcove_unit':key='oak'
         if key is None:continue
-        source=m[key];name='spec_'+fid+'.'+source.name
+        source=m['oak'] if fid=='KIT-ISLAND' else m[key];name='spec_'+fid+'.'+source.name
         mat=bpy.data.materials.get(name)
         if mat is None:
             mat=source.copy();mat.name=name;mat['finish_id']=fid
+            hex_colour=FINISH_COLOURS.get(fid)
+            if hex_colour:
+                colour=F._rgba(hex_colour);shader=mat.node_tree.nodes.get('Principled BSDF')
+                mat.diffuse_color=colour;shader.inputs['Base Color'].default_value=colour
+                if shader.inputs['Base Color'].is_linked and fid!='KIT-ISLAND':
+                    mat['studio_tint']=list(colour[:3])
         m[key]=mat
         if key=='oak':m['frame']=mat
         if key=='upholstery' and kind=='dining_chair':m['linen']=mat
@@ -110,12 +126,16 @@ def build_item(it,collection):
         # The original bowl remains the measured host. Only the seated fruit
         # and stems of its kit assembly are exported at the host datum.
         host=it['fruit_host']
-        w,d,_=host['size_mm'];w/=1000;d/=1000
-        objects=studio.make('fruit_bowl','scandinavian',it['id'],collection,(max(.24,w),max(.24,d),.12),m)
-        keep=[objects[0]]+[o for o in objects[1:] if '.apple' in o.name or 'fruit-stem' in o.name]
-        for o in objects[1:]:
-            if o not in keep:bpy.data.objects.remove(o,do_unlink=True)
-        made=keep
+        w,d,h=tuple(n/1000 for n in host['size_mm'])
+        b=F._Builder('fruit_bowl',it['id'],(w,d,h),collection,m,False,{})
+        positions=[(-.052,-.025),(.045,-.026),(0,.047)] if min(w,d)>.24 else [(0,0)]
+        for i,(x,y) in enumerate(positions):
+            v,f=F.apple_geometry((.074,.074,.072),i*.73)
+            z=max(F.fruit_bowl_inner_height(x+px,y+py,w,d,height=h)-pz for px,py,pz in v)+.0004
+            b.mesh('apple',[(px+x,py+y,pz+z) for px,py,pz in v],f,'apple_red' if i==0 else 'apple',True)
+            top=v[0][2]+z
+            b.rod('stem',(x,y,top-.001),(x+.003,y,top+.012),.0018,'oak',sides=7)
+        made=b.objects
     elif it['asset'].get('source')=='addendum':
         made=studio.make(kind,'scandinavian',it['id'],collection,dims,m)
 
@@ -140,7 +160,7 @@ def build_item(it,collection):
                 if o not in made:bpy.data.objects.remove(o,do_unlink=True)
         else:
             # A towel folds over its host bar. The long dimension runs down.
-            rad=min(.012,d*.32);verts=[];faces=[]
+            rad=.007 if source=='tea_towel' else .012;verts=[];faces=[]
             for j in range(15):
                 a=max(0,min(math.pi,(j-1)*math.pi/12))
                 for i in range(25):
@@ -183,13 +203,30 @@ def build_item(it,collection):
                 v=start+(end-start)*(i+.5)/count
                 offset=-(v-px)*math.cos(yaw) if 'segments_x' in a else (v-pz)*math.sin(yaw)
                 add('kitchen_wall',(length/count,d,h),(offset,0,0),exact=True)
-    elif kind in ('kitchen_base','kitchen_tall','integrated_fridge','dishwasher'):
-        # The signed H is the worktop datum. Taps, hob rings and pulls may project.
-        opts['worktop_bounds_m']=[-w/2,w/2,-d/2,d/2]
-        add(kind,dims,**opts)
+    elif kind in ('kitchen_base','kitchen_tall','integrated_fridge','dishwasher','alcove_unit','towel_rail'):
+        # Custom-size the component construction in plan. The signed top
+        # datum governs H for counters with a tap, oven or hob above it.
+        shape=list(dims)
+        for attempt in range(10):
+            cw,cd,ch=shape
+            if kind in ('kitchen_base','dishwasher'):
+                opts['worktop_bounds_m']=[-cw/2,cw/2,-cd/2,cd/2]
+            objects=studio.make(kind,'scandinavian',it['id'],collection,shape,m,**opts)
+            observed=tuple(objects[0]['size_m'])
+            active=3 if kind=='towel_rail' else 2
+            if max(abs(observed[k]-dims[k]) for k in range(active))<.001:break
+            studio.discard(objects)
+            for k in range(active):shape[k]=max(.001,shape[k]*dims[k]/observed[k])
+        else:raise ValueError('Cabinet/rail cannot fit measured opening: '+it['id']+' '+str(observed))
+        made=objects
     elif source in ('linear_pendant','pendant_drum'):
         drop=(it['asset'].get('drop_mm',0)/1000+h) if source=='pendant_drum' else max(h,it['position_m'][1]-it['asset'].get('bottom_y',it['position_m'][1]))
-        add(kind,(w,d,drop),**opts)
+        add(kind,(w,d,drop),(0,0,-drop if source=='linear_pendant' else 0),**opts)
+    elif kind=='wall_wc':
+        add(kind,(w,d*.72,.32),(0,-d*.14,.17))
+        add('cistern_box',(w,d*.28,h),(0,d*.36,0))
+    elif kind=='semi_pedestal':
+        add(kind,dims,(0,0,max(0,h-.44)),**opts)
     elif kind=='kettle':
         for _ in range(7):
             objects=studio.make(kind,'scandinavian',it['id'],collection,(w,d,h),m,**opts)
@@ -203,11 +240,23 @@ def build_item(it,collection):
         add(kind,dims,**opts)
     else:
         add(kind,dims,exact=True,**opts)
+    bpy.context.view_layer.update()
+    bars=[o for o in made if o.type=='MESH' and ('.oven-pull' in o.name or '.towel-bar' in o.name)]
+    bar=None
+    if bars:
+        rows=[(o,[o.matrix_world@v.co for v in o.data.vertices]) for o in bars]
+        if kind=='towel_rail':
+            o,verts=min(rows,key=lambda pair:abs(sum(p.z for p in pair[1])/len(pair[1])-.62*h))
+            bar=sum(verts,Vector())/len(verts)
+        else:
+            o,verts=rows[0]
+            bar=Vector(((min(v.x for v in verts)+max(v.x for v in verts))/2,min(v.y for v in verts)+.006,(min(v.z for v in verts)+max(v.z for v in verts))/2))
     empties=[o.name for o in made if o.type=='EMPTY']
     anchor=merge_objects(made,collection,name)
     for key in empties:
         obj=bpy.data.objects.get(key)
         if obj:bpy.data.objects.remove(obj,do_unlink=True)
+    if bar is not None:anchor.data["textile_bar_local"]=list(Matrix.Rotation(math.pi,3,"Z")@bar)
     anchor.data.name=name
     return anchor
 
@@ -224,6 +273,10 @@ def load_meshes(site,vkey):
 def schedule(spec,vkey,addendum):
     items=[dict(i) for i in spec['versions'][vkey]['items']]
     for it in items:
+        if it['asset'].get('kind') in ('towels','tea_towel'):
+            towel=it['asset']['kind']=='towels'
+            carriers=[i for i in items if i['room']==it['room'] and (i['asset'].get('kind')=='towel_rail' if towel else 'oven' in i['type'].lower() and i['asset'].get('kind')=='kitchen_unit')]
+            if carriers:it['host']=min(carriers,key=lambda i:math.dist(i['position_m'],it['position_m']))['id']
         if it['asset'].get('kind')=='throw_drape':
             sofas=[i for i in items if i['room']==it['room'] and i['asset'].get('kind')=='sofa']
             it['source_sofa']=min(sofas,key=lambda i:math.dist(it['position_m'],i['position_m']))
@@ -242,7 +295,7 @@ def schedule(spec,vkey,addendum):
 def place_schedule(spec,vkey,N,coll,house_objs,site,spec_path,log):
     from mathutils.bvhtree import BVHTree
     from hb_items import place,SHELL_HOLD_CATS,SOLID_CATS
-    from hb_furnish import snap_loose,validate
+    from hb_furnish import snap_loose,validate,bvh_of
     version=spec['versions'][vkey]
     extra=Path(spec_path).with_name('spec_v1_addendum2_details.json')
     items=schedule(spec,vkey,json.loads(extra.read_text())['items'] if extra.exists() else [])
@@ -268,13 +321,12 @@ def place_schedule(spec,vkey,N,coll,house_objs,site,spec_path,log):
             house_objs[:]=[(ob,p) for ob,p in house_objs if p['props'].get('element')!=target]
             for old in replaced:bpy.data.objects.remove(old,do_unlink=True)
         if 'drop_to_bottom_y' in it['asset']:pos[1]=it['asset']['drop_to_bottom_y']
-        if source=='linear_pendant':pos[1]=it['asset'].get('bottom_y',pos[1])
         if source=='flush_disc' and 'ray-cast' in it['asset'].get('place',''):
             hit=shell.ray_cast(Vector((pos[0],-pos[2],1.2)),Vector((0,0,1)),4)[0]
             if hit:pos[1]=hit.z-.002
         obj=bpy.data.objects.new('SPEC-'+it['id'],mesh)
         coll.objects.link(obj);place(obj,pos,yaw)
-        host=it.get('host') or ''
+        host=it.get('host') or (it.get('source_sofa') or {}).get('id','')
         movable=it['category'] in SHELL_HOLD_CATS or kind in {'table_lamp','floor_lamp','washer','dryer','fridge'}
         room=next(r for r in version['rooms'] if r['id']==it['room'])
         props=dict(element='SPEC-'+it['id'],spec_id=it['id'],spec_kind=source,kit_kind=kind,kit_variant=key,
@@ -286,5 +338,36 @@ def place_schedule(spec,vkey,N,coll,house_objs,site,spec_path,log):
         placed.append((obj,dict(props=props,atom=dict(id=props['element'],kind='spec',meta=props,provenance='studio kit'))))
         by_id[it['id']]=obj
     snap_loose(placed,house_objs,N,log,items)
+    for it in items:
+        child=by_id.get(it['id']);host=by_id.get(child.get('host_id','')) if child else None
+        if host is None:continue
+        if it['asset'].get('kind') in ('towels','tea_towel') and host.data and 'textile_bar_local' in host.data:
+            radius=.007 if it['asset']['kind']=='tea_towel' else .012
+            height=it['size_mm'][2]/1000
+            bar=Vector(host.data['textile_bar_local'])
+            local=bar-Vector((0,0,height-radius))
+            child.matrix_world=host.matrix_world@Matrix.Translation(local)
+            # Published host mounting datum, expressed in glTF metre axes.
+            child['host_offset_m']=[local.x,local.z,-local.y]
+            child['host_bar_m']=[bar.x,bar.z,-bar.y]
+            host['textile_bar_m']=child['host_bar_m']
+        elif it.get('fruit_host'):
+            child.matrix_world=host.matrix_world.copy()
+        elif it.get('source_sofa'):
+            # The drape was authored on this exact host in the schedule frame.
+            original=it['source_sofa']['position_m'];delta=host.matrix_world.translation-Vector((original[0],-original[2],original[1]))
+            child.matrix_world=Matrix.Translation(delta)@Matrix.Translation(Vector((it['position_m'][0],-it['position_m'][2],it['position_m'][1])))@Matrix.Rotation(math.radians(it['yaw_deg']),4,'Z')
+        elif it['asset'].get('source')=='addendum' and not it.get('fruit_host'):
+            # Select a real upward facing surface of the named host near the
+            # scheduled point. Avoid lowering a bottle through a basin aperture.
+            tree=bvh_of(host);centre=child.matrix_world.translation;best=None
+            for radius in (0,.025,.05,.075,.105,.14):
+                for k in range(1 if radius==0 else 12):
+                    x=centre.x+radius*math.cos(k*math.pi/6);y=centre.y+radius*math.sin(k*math.pi/6)
+                    hit=tree.ray_cast(Vector((x,y,centre.z+.16)),Vector((0,0,-1)),.65)
+                    if hit[0] is None or hit[1].z<.70:continue
+                    score=radius+abs(hit[0].z-centre.z)
+                    if best is None or score<best[0]:best=(score,Vector((x,y,hit[0].z+.0003)))
+            if best:child.matrix_world=Matrix.Translation(best[1]-centre)@child.matrix_world
     validate(vkey,placed,house_objs,log)
     return placed

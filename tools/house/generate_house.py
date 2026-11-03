@@ -1121,10 +1121,13 @@ class VersionBuild:
         return out
 
     def parts(self):
-        ctx = dict(spec=SPEC, clip_slab=self.clip_slab, clip_member=self.clip_member)
+        key=SPEC_V1_MAP.get(self.v['id'])
+        ctx = dict(spec=SPEC, clip_slab=self.clip_slab, clip_member=self.clip_member,spec_rooms=SPEC_V1['versions'][key]['rooms'] if key else [])
+
         P = []
         for a in self.atoms:
             if a["meta"].get("skip"): continue
+            if a['kind']=='fixture' and ctx['spec_rooms']:a['finished_jamb']=True
             for p in S.parts_of(a, ctx):
                 p["atom"] = a
                 P.append(p)
@@ -2199,7 +2202,20 @@ def glb_texture_guard(path):
     b = open(path, "rb").read(); j = json.loads(b[20:20 + struct.unpack("<I", b[12:16])[0]])
     def src(t): return t.get("source", next((e.get("source") for e in t.get("extensions", {}).values() if isinstance(e, dict) and "source" in e), None))
     changed=False
-    for mat in j.get('materials',[]):
+    uses={}
+    for mesh in j.get('meshes',[]):
+        for primitive in mesh['primitives']:
+            if 'material' in primitive:uses.setdefault(primitive['material'],[]).append(primitive)
+    def validate_uv(value,primitives):
+        if isinstance(value,dict):
+            if 'index' in value and value.get('texCoord',0)<0:
+                if not all('TEXCOORD_0' in pr['attributes'] for pr in primitives):raise ValueError('Missing metric UV0 in '+path)
+                del value['texCoord']
+                return True
+            return any([validate_uv(v,primitives) for v in value.values()])
+        return False
+    for idx,mat in enumerate(j.get('materials',[])):
+        changed=validate_uv(mat,uses.get(idx,[])) or changed
         tint=mat.get('extras',{}).get('studio_tint');pbr=mat.get('pbrMetallicRoughness',{})
         if tint and 'baseColorTexture' in pbr:
             pbr['baseColorFactor']=[*tint,1.];changed=True

@@ -1266,6 +1266,11 @@ class StateBuilder:
             xs = [p[0] for p in P]; ys = [p[1] for p in P]
             inside = lambda p: min(xs) - 0.05 <= p[0] <= max(xs) + 0.05 and min(ys) - 0.05 <= p[1] <= max(ys) + 0.05
             for W in self.walls:
+                if fr.get('mat')=='polycarbonate' and 'conservatory side wall' in W.meta.get('type','').lower():
+                    # Datum is clear height under the roof. The masonry carrier
+                    # is outside the sheet footprint with its inner face on the edge.
+                    W.profile=[(u,under(W.point(u,0))+.016) for u in (W.ua,W.ub)]
+                    W.z1=max(z for _,z in W.profile);continue
                 if W.profile or not (inside(W.point(W.ua, 0)) and inside(W.point(W.ub, 0))): continue
                 zu = [under(W.point(u, 0)) for u in (W.ua, (W.ua + W.ub) / 2, W.ub)]
                 if all(0 < z - W.z1 <= reach for z in zu):

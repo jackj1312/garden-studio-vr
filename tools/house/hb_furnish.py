@@ -718,7 +718,13 @@ def validate(vkey, items_out, house_objs, log):
             if min(wv[vi].z for vi in pa.vertices) > zb + 0.01:          # wholly above its own footing: a real pass-through
                 deep += 1; who[tri_own[ib]] = who.get(tri_own[ib], 0) + 1
         soft_ = str(ob.get("asset_library", "")).startswith("soft:") or bool(ob.get("soft_dressed"))
-        gap = None if soft_ else support_gap(ob, T_all, None)          # cloth rests by simulation, hung items hang
+        host_id=ob.get("host_id")
+        if host_id and ob.get("spec_kind")=="throw_drape":
+            host=next((h for h,_ in items_out if h.get("spec_id")==host_id),None)
+            if host is None:raise ValueError("Draped textile has no host: "+str(host_id))
+            surface=bvh_of(host)
+            gap=min(surface.find_nearest(v)[3] for v in wv)
+        else:gap = None if soft_ else support_gap(ob, T_all, None)          # cloth rests by simulation, hung items hang
         rec = dict(id=ob.get("spec_id"), version=vkey, shell_overlap_faces=deep, into=sorted(who, key=lambda k: -who[k])[:4],
                    support_gap_mm=None if gap is None else round(gap * 1000, 1))
         REPORT["validator"].append(rec)
@@ -864,14 +870,17 @@ def snap_loose(items_out, house_objs, N, log, spec_items):
     # 1. push furniture and plants out of the walls along their front
     for ob, p in items_out:
         it = pos_of.get(ob.get("spec_id"))
-        if it is None or ob.type != "MESH" or it["category"] not in ("furniture", "plant") or ob.get("spec_kind") in HUNG: continue
+        if it is None or ob.type != "MESH" or (it["category"] not in ("furniture", "plant") and ob.get("kit_kind") != "floor_lamp") or ob.get("spec_kind") in HUNG: continue
         if deep_hits(ob, WALLS) <= 2: continue
         R3 = ob.matrix_world.to_3x3(); M0 = ob.matrix_world.copy(); done = None
         dirs = []
         for lv in (Vector((0, 1, 0)), Vector((1, 0, 0)), Vector((-1, 0, 0))):      # out along the front first, then sideways
             d_ = R3 @ lv; d_.z = 0; dirs.append(d_.normalized())
+        if ob.get("kit_kind")=="floor_lamp":
+            dirs.extend(Vector((math.cos(k*math.pi/4),math.sin(k*math.pi/4),0)) for k in range(8))
+        steps=65 if ob.get("kit_kind")=="floor_lamp" else 25 if it["category"]=="furniture" else 10
         for d_ in dirs:
-            for k in range(1, 25 if it["category"] == "furniture" else 10):       # up to 120 mm (a bed drawn 25 mm into the wall, duvet overhang)
+            for k in range(1, steps):       # up to 120 mm (a bed drawn 25 mm into the wall, duvet overhang)
                 ob.matrix_world = Matrix.Translation(d_ * 0.005 * k) @ M0
                 if deep_hits(ob, WALLS) <= 2: done = k * 5; break
             if done: break
@@ -919,7 +928,7 @@ def snap_loose(items_out, house_objs, N, log, spec_items):
     T = tree_of([(ob, p) for ob, p in house_objs if not p.get("context") and (p["props"].get("stage_out") or 99) > N] + list(items_out))
     for ob, p in items_out:
         it = pos_of.get(ob.get("spec_id"))
-        if it is None or ob.type != "MESH" or it["category"] not in ("decor", "plant", "soft_furnishing") or ob.get("spec_kind") in HUNG: continue
+        if it is None or ob.type != "MESH" or (it["category"] not in ("decor", "plant", "soft_furnishing") and ob.get("kit_kind")!="table_lamp") or ob.get("spec_kind") in HUNG: continue
         fl = 2.6755 if it["position_m"][1] > 2.0 else 0.0
         if it["position_m"][1] - fl < 0.005: continue
         M = ob.matrix_world; wv = [M @ v.co for v in ob.data.vertices]

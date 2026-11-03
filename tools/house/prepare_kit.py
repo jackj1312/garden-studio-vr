@@ -14,6 +14,7 @@ def prepare(site,spec_path):
     stamp=site/'kit/revision'
     if stamp.exists() and stamp.read_text()==revision and all(kit.library_path(site,v).exists() for v in ('before','after')):return
     spec=json.loads(spec_path.read_text())
+    kit.FINISH_COLOURS={f['id']:f['colour_srgb'] for f in spec['finishes']}
     for vkey,v in spec['versions'].items():
         bpy.ops.wm.read_factory_settings(use_empty=True)
         collection=bpy.context.scene.collection

@@ -80,11 +80,23 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
         sdz = (nd.get("extras") or {}).get("snap_dz_mm")
         if sdz is not None and abs(sdz) <= 60:                # lowered/lifted onto its surface (written description governs, row 188)
             p[1] += sdz / 1000; r["note"] = f"snapped {sdz:+.0f} mm onto its surface (spec height off; written description governs)"
+        expected_yaw=it["yaw_deg"]
+        mount=nd.get("extras",{}).get("host_offset_m")
+        if mount is not None and kind in ("towels","tea_towel"):
+            host_id=nd["extras"].get("host_id")
+            host=next((n for n in by.get(host_id,[]) if n.get("extras",{}).get("textile_bar_m")),None)
+            if host is None:raise ValueError("Unsupported textile "+it["id"])
+            bar=host["extras"]["textile_bar_m"]
+            crown=np.array(mount)+[0,it['size_mm'][2]/1000-(.007 if kind=='tea_towel' else .012),0]
+            if np.linalg.norm(crown-bar)>.002:raise ValueError("Textile misses the bar: "+it['id'])
+            expected_yaw=quat_yaw(host.get("rotation",[0,0,0,1]));angle=math.radians(expected_yaw)
+            x,y,z=mount;p=np.array(host.get('translation',[0,0,0]))+[math.cos(angle)*x+math.sin(angle)*z,y,-math.sin(angle)*x+math.cos(angle)*z]
+            r['note']='fixed to the measured bar of '+host_id
         ndg = (nd.get("extras") or {}).get("nudge_mm")
         d = float(np.linalg.norm(t - p)) * 1000; r["pos_mm"] = round(d, 1)
         if ndg is not None and ndg <= 650 and d <= ndg + 20:      # set clear of a wall / onto its surface by the build (written description governs)
             r["note"] = f"set {ndg} mm clear of a wall or onto its surface by the build (hb_furnish.snap_loose; written description governs)"; d = 0.0
-        yaw = quat_yaw(q); dy = (yaw - it["yaw_deg"] + 180) % 360 - 180
+        yaw = quat_yaw(q); dy = (yaw - expected_yaw + 180) % 360 - 180
         if kind == "downlight_set": dy = 0.0
         r["yaw_err_deg"] = round(dy, 2)
         if "mesh" in nd:

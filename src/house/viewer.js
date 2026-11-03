@@ -1524,41 +1524,54 @@ const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUti
  *  capture keep drag-to-look.
  * ------------------------------------------------------------------ */
 const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
-const locked = () => document.pointerLockElement === renderer.domElement;
-let lockRefused = false, lockWanted = false;
+const nativeLock = () => document.pointerLockElement === renderer.domElement;
+let windowLook=false,edgeTurn=0,windowPoint=null,lockWanted=false,lockAttempt=0;
+const locked = () => nativeLock() || windowLook;
 const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse");
+function windowLookMode(on) {
+  windowLook=on;edgeTurn=0;windowPoint=null;
+  renderer.domElement.style.cursor=on?'none':'';
+  document.body.classList.toggle('window-mouse-look',on);
+  updateLookUI();
+}
 function captureMouse() {
   if(locked()||lockWanted)return;
-  lockWanted = true;
+  lockWanted=true;const attempt=++lockAttempt;
+  const refused=error=>{if(attempt===lockAttempt)lockFailed(error);};
+  setTimeout(()=>refused('capture did not complete'),650);
   try {
-    const p = renderer.domElement.requestPointerLock({ unadjustedMovement: false });
-    if (p?.catch) p.catch(err => lockFailed(err));
-  } catch (err) { lockFailed(err); }
+    const request=renderer.domElement.requestPointerLock();
+    request?.catch(refused);
+  } catch(error) { lockFailed(error); }
 }
-/* a refusal: browsers also refuse a re-capture within about a second of Esc, so a browser that has captured before
-   only gets a "click again"; one that refuses twice and never captured falls back to drag-to-look for the visit */
-let lockOk = false, lockFails = 0;
-function lockFailed(err) {
-  if (!lockWanted) return;
-  lockWanted = false;
-  if(pointer.down?.capture)pointer.down.capture=false;
-  console.info("house: pointer lock refused", err?.message || err);
-  if (lockOk || ++lockFails < 2) { toast("Click the view again to look around with the mouse (or drag to look)"); return; }
-  lockRefused = true;
-  toast("This browser would not capture the mouse: drag to look around instead");
-  updateLookUI(); updateHelp();
+function lockFailed(error) {
+  if(!lockWanted||nativeLock())return;
+  lockWanted=false;
+  if(!walk||inVR())return;
+  pointer.down=null;windowLookMode(true);
+  console.info('house: window mouse look active',error?.message||error);
+  toast('Mouse look on · move to turn · Esc to release');
 }
-document.addEventListener("pointerlockerror", () => lockFailed("pointerlockerror"));
-document.addEventListener("pointerlockchange", () => {
-  if (!locked()) { lockWanted = false; pointer.down = null; setHover(null); }
-  else { blurPass?.reset(); lockOk = true; lockRefused=false; lockWanted=false; lockFails = 0; }
-  updateLookUI();
+document.addEventListener('pointerlockerror',()=>lockFailed('pointerlockerror'));
+document.addEventListener('pointerlockchange',()=>{
+  lockWanted=false;windowLookMode(false);pointer.down=null;setHover(null);
+  if(nativeLock())blurPass?.reset();
 });
-function freeMouse() { if (locked()) document.exitPointerLock(); }
+function freeMouse() {
+  lockWanted=false;lockAttempt++;windowLookMode(false);
+  if(nativeLock())document.exitPointerLock();
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&(windowLook||lockWanted)){e.preventDefault();freeMouse();}
+},true);
+window.addEventListener('blur',freeMouse);
+renderer.domElement.addEventListener('pointerleave',()=>{edgeTurn=0;windowPoint=null;});
 function updateLookUI() {
   const on = locked();
   $("crosshair").hidden = !on;
-  $("lookHint").hidden = on || !lookEligible() || !$("start").hidden || !!marks?.noteOpen || !V;
+  const hint=$("lookHint");
+  hint.textContent=windowLook?"Mouse look on · move to turn · Esc to release":"Click to look around · Esc to free the mouse";
+  hint.hidden=(on&&!windowLook)||!lookEligible()||!$("start").hidden||!!marks?.noteOpen||!V;
 }
 /* the crosshair's ray (the screen's centre) or the cursor's */
 const centreRay = () => { rc.setFromCamera(ndc.set(0, 0), camera); return rc.ray.clone(); };
@@ -1702,6 +1715,17 @@ renderer.domElement.addEventListener("pointerdown", e => {
 });
 if (MODE.marks) renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("pointermove", e => {
+  if(windowLook){
+    if(e.target!==renderer.domElement||e.pointerType!=='mouse'){edgeTurn=0;windowPoint=null;return;}
+    if(windowPoint){
+      yawPitch.yaw-=(e.clientX-windowPoint.x)*LOOK_SENS;
+      yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-(e.clientY-windowPoint.y)*LOOK_SENS,-1.3,1.3);
+    }
+    windowPoint={x:e.clientX,y:e.clientY};
+    const bounds=renderer.domElement.getBoundingClientRect(),band=36;
+    edgeTurn=THREE.MathUtils.clamp((e.clientX-bounds.right+band)/band,0,1)-THREE.MathUtils.clamp((bounds.left+band-e.clientX)/band,0,1);
+    return;
+  }
   if (locked()) {                                             // mouse-look: the mouse turns and looks
     if (inVR()) return;
     const mx = Math.max(-250, Math.min(250, e.movementX || 0)), my = Math.max(-250, Math.min(250, e.movementY || 0));
@@ -1969,6 +1993,7 @@ let glide = null;
 function glideTo(p) { glide = { from: feet.clone(), to: new THREE.Vector3(p.x, p.y, p.z), t: 0 }; }
 
 function desktopWalk(dt) {
+  if(windowLook)yawPitch.yaw-=edgeTurn*1.8*dt;
   camera.rotation.set(yawPitch.pitch, yawPitch.yaw, 0, "YXZ");          // yaw 0 looks along -z (sidecar yawDeg)
   let f = 0, s = 0;
   if (keys.has("KeyW") || keys.has("ArrowUp")) f += 1;
@@ -3229,13 +3254,12 @@ function toast(text) {
 function updateHelp() {
   if (CUST) {
     $("help").textContent = IS_TOUCH ? `Left thumb moves · right thumb looks · tap a door to open it, or the floor to jump there · Go to a room${MODE.marks ? " · Mark, then draw with a finger" : ""}`
-      : lockRefused ? `Before / After (B / N) · drag to look around · W A S D or click the ground to walk (G fast, Shift faster) · click a door to open it · F to fly (Q / E down / up) · Go to a room${MODE.marks ? " · M mark" : ""}`
       : `Click the view, then move the mouse to look (Esc frees it) · W A S D walk (G fast, Shift faster) · click: open a door or jump to the floor under the crosshair · F or Space fly (Q / E down / up) · B / N Before / After${MODE.marks ? " · M mark, hold the click to draw" : ""}`;
     $("baHelp").textContent = $("help").textContent;
     return;
   }
   const parts = [];
-  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : lockRefused ? "W A S D walk · drag to look · Shift faster" : "click the view, then move the mouse to look (Esc frees it) · W A S D walk · Shift faster");
+  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : "click the view, then move the mouse to look (Esc frees it) · W A S D walk · Shift faster");
   else parts.push(IS_TOUCH ? "drag to turn · pinch to zoom · two fingers to pan" : "drag to turn · right-drag to pan · scroll to zoom");
   parts.push(tool === "measure" ? "click two points to measure · snaps to corners (pink) and edges (blue) · M done"
     : tool === "addwall" ? "click the two ends of the new wall · Esc cancels"

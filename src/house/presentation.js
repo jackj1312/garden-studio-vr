@@ -83,12 +83,11 @@ export function createHousePresentation({onLamp=()=>{},onXRRoom=()=>{}}={}) {
   }
   const lamps=[...document.querySelectorAll('[data-lamp-scope]')];
   for(const button of lamps)button.addEventListener('click',()=>onLamp(button.dataset.lampScope),opts);
-  function setLamps({allOn=false,roomOn=false,hasRoom=false,roomName=''}={}) {
-    for(const button of lamps) {
-      const local=button.dataset.lampScope==='room',state=local?roomOn:allOn;
-      button.disabled=local&&!hasRoom;
-      button.setAttribute('aria-pressed',state==='mixed'?'mixed':String(!!state));
-      button.title=local ? hasRoom?'Switch lamps in '+(roomName||'this room'):'Walk into a room with switchable lamps' : 'Switch lamps throughout the house';
+  function setLamps({allOn=false}={}) {
+    for(const button of lamps){
+      button.setAttribute('aria-pressed',String(allOn));
+      button.textContent=allOn?'House lights on':'House lights off';
+      button.title=allOn?'Switch all house lights off':'Switch all house lights on';
     }
   }
   function dispose(){aborter.abort();dockObserver.disconnect();clearCandidate();hide();switchCard.hidden=true;}

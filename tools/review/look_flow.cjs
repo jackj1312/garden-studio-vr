@@ -138,7 +138,7 @@ function assertEffects(s,device,{on=false,windows=true}={}){
   assert(direct.length<=(device==='desktop'?2:1),'Practical light budget exceeded');
   if(on){
     assert(direct.some(x=>x.room===s.room),'No practical light reached the lamp room');
-    assert(emit.length>0,'No visible physical lamp emitter');
+    assert(s.lamps.every(l=>l.on),'The whole-house switch must light every present lamp');
     for(const e of emit){
       assert(s.lamps.some(l=>l.id===e.id&&l.on),'Unswitched lamp emissive: '+e.id);
       assert(e.ownerDistance!=null && e.ownerDistance<.12,'Emitter is detached from its real fitting: '+e.id);
@@ -224,7 +224,7 @@ async function profile(browser,device){
     const {url,...frame}=await page.evaluate(()=>{
       const h=__house;h.step(2);h.renderer.info.reset();h.renderer.render(h.scene,h.camera);
       const canvas=h.renderer.domElement,pos=h.camera.getWorldPosition(new h.THREE.Vector3());
-      const buttons=['roomlamps','alllamps'].map(id=>{
+      const buttons=['alllamps'].map(id=>{
         const p=h.sim.wristPoint(id).project(h.camera);
         return {id,x:(p.x+1)*canvas.width/2,y:(1-p.y)*canvas.height/2,depth:p.z};
       });
@@ -325,42 +325,22 @@ async function profile(browser,device){
     }
     await go(living);state.initial=await snap();
     assert.equal(state.initial.version,def.default);assert(state.initial.furniture>0);assertEffects(state.initial,device);state.pass=await assertPass(page,device);
-    const unrelatedBefore=state.initial.lamps.filter(l=>l.room!==living).map(l=>[l.id,l.on]);
-    if(xr)await aimWrist('roomlamps');else await click('#baRoomLamps');
+    if(xr)await aimWrist('alllamps');else await click('#baAllLamps');
     state.roomOn=await litRoom(living,true);assertEffects(state.roomOn,device,{on:true});
-    assert.deepEqual(state.roomOn.lamps.filter(l=>l.room!==living).map(l=>[l.id,l.on]),unrelatedBefore,'Room switch affected another room');
     if(!xr){
       state.status=await page.evaluate(()=>{
-        const toast=document.querySelector('#toast'),toolbar=document.querySelector('#baBar'),button=document.querySelector('#baRoomLamps');
+        const toast=document.querySelector('#toast'),toolbar=document.querySelector('#baBar'),button=document.querySelector('#baAllLamps');
         const a=toast.getBoundingClientRect(),b=toolbar.getBoundingClientRect(),c=button.getBoundingClientRect(),s=getComputedStyle(toast);
         return {text:toast.textContent,visible:!toast.hidden&&s.display!=='none'&&s.visibility==='visible'&&a.width>0&&a.height>0,
           pointerEvents:s.pointerEvents,toast:[a.top,a.bottom],toolbar:[b.top,b.bottom],
           buttonHittable:button.contains(document.elementFromPoint(c.x+c.width/2,c.y+c.height/2))};
       });
-      const t=state.status;assert(t.visible&&t.text==='Room lamps on'&&t.pointerEvents==='none'&&t.buttonHittable&&
+      const t=state.status;assert(t.visible&&t.text==='House lights on'&&t.pointerEvents==='none'&&t.buttonHittable&&
         (t.toast[1]<=t.toolbar[0]||t.toast[0]>=t.toolbar[1]),'Lamp status covers the active toolbar: '+JSON.stringify(t));
     }
     await screenshot();
-    if(xr)await aimWrist('roomlamps');else await click('#baRoomLamps');
-    state.roomOff=await litRoom(living,false);assertEffects(state.roomOff,device);
-    if(device==='desktop'||xr){
-      if(xr)await page.evaluate(()=>{__house.sim.wrist(false);__house.step(2);});else await release();
-      const target=await page.evaluate(x=>lookChecks.aimLamp(x),xr);assert(target,'No unobstructed lamp to point at in the selected real room');
-      if(xr)await page.evaluate(()=>{__house.sim.press('trigger','right',2);__house.step(4);});
-      else await page.keyboard.press('KeyE');
-      await page.waitForFunction(id=>lookChecks.snapshot().lamps.some(l=>l.id===id&&l.on),{timeout:8000},target.id);
-      state.target=target;const individual=await snap();
-      assert.deepEqual(individual.lamps.filter(l=>l.on).map(l=>l.id),[target.id],'Target input switched more than one lamp');
-      assertEffects(individual,device,{on:true});
-      if(xr)await page.evaluate(()=>{__house.sim.press('trigger','right',2);__house.step(4);});
-      else await page.keyboard.press('KeyE');
-      await litRoom(living,false);
-    }
-    if(xr)await aimWrist('alllamps');else if(phone)await click('#baAllLamps');else{await release();await page.keyboard.press('KeyL');}
-    await litRoom(living,true);
-    const whole=await snap();assert(whole.lamps.some(x=>x.room!==living&&x.on),'All lamps did not reach a different measured room');
     await go(bedroom);const upstairs=await litRoom(bedroom,true);assertEffects(upstairs,device,{on:true});
-    if(xr)await aimWrist('alllamps');else if(phone)await click('#baAllLamps');else{await release();await page.keyboard.press('KeyL');}
+    if(xr)await aimWrist('alllamps');else await click('#baAllLamps');
     await litRoom(bedroom,false);
     if(xr){await aimWrist('furnish');await aimWrist('furnish');}
     else{

@@ -28,26 +28,26 @@ async function main() {
       house.step(3);
       for (let i = 0; i < 20; i++) await frame();
       const result = [];
-      for (const [scope, id] of [['item', 'LIV-TLAMP'], ['all', null]]) {
+      for (const on of [true,false]) {
         let previous = await frame(), longest = 0;
         const count = house.renderer.info.programs.length;
-        house.look.switch(scope, id);
+        document.querySelector('#baAllLamps').click();
         for (let i = 0; i < 10; i++) {
           const now = await frame();
           longest = Math.max(longest, now - previous);
           previous = now;
         }
-        result.push({ scope, id, ms: Math.round(longest), counts: [count, house.renderer.info.programs.length],
-          lit: house.look.snapshot().practicals.map(light => light.id) });
+        result.push({ on, ms: Math.round(longest), counts: [count, house.renderer.info.programs.length],
+          lit: [...new Set(house.look.snapshot().emitters.map(light => light.id))] });
       }
       return result;
     });
-    const filename = preview ? 'lamp-wifi.json' : 'lamp-balanced.json';
+    const filename = preview ? 'house-lights-wifi.json' : 'house-lights-local.json';
     const dir = path.resolve(__dirname, '../../renders/garden-tool/performance');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, filename), JSON.stringify(switches, null, 2));
-    assert(switches[0].lit.includes('LIV-TLAMP') && switches[1].lit.length === 2);
-    for (const s of switches) assert(s.ms < 500, s.scope + ' lamp switch stalled for ' + s.ms + ' ms');
+    assert(switches[0].lit.includes('LIV-TLAMP') && switches[1].lit.length === 0);
+    for (const s of switches) assert(s.ms < 500, String(s.on) + ' lamp switch stalled for ' + s.ms + ' ms');
     console.log(switches);
   } finally {
     await browser.close();

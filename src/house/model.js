@@ -192,7 +192,7 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
     mesh.perObjectFrustumCulled = true;
     /* per-instance sorting cost 0.6 ms a render on a laptop for the approved scheme (x2 eyes, and a slower CPU on the
        Quest); opaque parts don't need it, only transparent ones (glass, x-ray) */
-    mesh.sortObjects = !!b.set.normal.transparent;
+    mesh.sortObjects = !!b.set.normal.transparent && b.items.length>1;
     if (b.set.late) mesh.renderOrder = 10;                  // alpha-tested (leaves, mesh fencing, rebar): after the solid scene
     b.set.targets.add(mesh);
     const gid = new Map();

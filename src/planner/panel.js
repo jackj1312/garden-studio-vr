@@ -133,17 +133,6 @@ export function renderRoom(app, el, room) {
       })));
   }
 
-  /* lighting */
-  const lights = items.filter(it => it.category === "lighting");
-  if (lights.length) {
-    el.append(h("div.sec", null, h("h3", null, "Lighting", h("span.grow"),
-      h("button.ghost", { text: "All on", onclick: () => app.setLamps(room, lights, true) }), h("button.ghost", { text: "All off", onclick: () => app.setLamps(room, lights, false) })),
-      h("div.list", null, lights.map(it => h("div.opt", null, h("span.num", { text: it.num }),
-        h("span", null, h("div.nm", { text: cap(it.type) }), h("div.sub", { text: entryOf(db, it)?.name || "" })),
-        h("span.row.tight", null, h("button.ghost", { text: "Change", onclick: () => app.select(it.id, true) }),
-          h("button", { "aria-pressed": String(!!it.lampOn), text: it.lampOn ? "On" : "Off", onclick: () => app.toggleLamp(it), style: it.lampOn ? { background: "var(--accent-soft)" } : {} })))))));
-  }
-
   el.append(notesSec(app, { room: room.id }, "Notes on this room"));
 
   /* items list */
@@ -183,7 +172,6 @@ export function renderItem(app, el, it) {
     it.shared ? h("button",{text:"Lower 1 cm",onclick:()=>app.putFurniture(fineMove(it.shared,"PageDown"))}) : null,
     h("button", { text: "Turn 90°", title: "R", onclick: () => app.rotateBy(it, -90) }),
     h("button", { text: "Duplicate", title: "D", onclick: () => app.duplicate(it) }),
-    it.category === "lighting" ? h("button", { "aria-pressed": String(!!it.lampOn), text: it.lampOn ? "Lamp on" : "Lamp off", onclick: () => app.toggleLamp(it) }) : null,
     h("button.danger", { text: "Delete", title: "Delete / Backspace", onclick: () => app.remove(it) })),
     h("p.tiny", { style: { margin: "8px 0 0" }, text: "Drag it on the plan · arrows nudge 10 mm (Shift 1 mm) · R turns 90° · Shift or Alt while dragging = no snapping" }),
     fixed && it.asset?.source === "elements" ? h("p.tiny", { text: "Drawn on the architect's plans: moving it here records a request to the architect, not a free change." }) : null));

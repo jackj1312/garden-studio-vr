@@ -316,7 +316,7 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
   function build(mesh, pl, buf) {
     const L = mesh._cull, bits = L.bits, cache = L.cache, valid = L.valid, info = mesh._instanceInfo, geo = mesh._geometryInfo;
     const act = state.active, vis = act ? state.bits : -1, bpe = L.bpe, starts = buf.starts, counts = buf.counts, ind = buf.ind;
-    let n = 0;
+    let n = 0,changed = false;
     for (let i = 0, l = info.length; i < l; i++) {
       const ii = info[i];
       if (!ii.visible || !ii.active || !(bits[i] & vis)) continue;
@@ -332,9 +332,12 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
       if (culled) continue;
       if (act && !seen(bits[i], cx, cy, cz, -r)) continue;
       const g = geo[ii.geometryIndex];
-      starts[n] = g.start * bpe; counts[n] = g.count; ind[n] = i; n++;
+      const start=g.start*bpe;
+      if(ind[n]!==i||starts[n]!==start||counts[n]!==g.count)changed=true;
+      starts[n]=start;counts[n]=g.count;ind[n]=i;n++;
     }
-    buf.n = n; buf.stamp++;
+    if(changed||n!==buf.n)buf.stamp++;
+    buf.n=n;
     return n;
   }
   const newBuf = L => ({ starts: new Int32Array(L.max), counts: new Int32Array(L.max), ind: new L.indCtor(L.max), n: 0, stamp: 0 });
@@ -342,6 +345,36 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
   /* once per render (scene.onBeforeRender, after the XR eyes are placed): the cells, then every batch's list for every eye;
      a batch with nothing to draw in any eye is moved off the camera's layers for this render (no program set-up, no call).
      The shadow pass draws the whole house (onBeforeShadow below), so while a shadow update is pending nothing is hidden. */
+  const looseCells=new WeakMap();
+  const byRoom=new Map(R.map((r,i)=>[r.id,[r,1<<i]]));
+  function looseCell(mesh){
+    const version=mesh.instanceMatrix.version,cached=looseCells.get(mesh);
+    if(cached?.version===version)return cached.bits;
+    const room=byRoom.get(mesh.userData.furnishItems?.[0]?.room);
+    let bits=0;
+    if(room && mesh.matrixWorld.equals(IDENT)){
+      const [r,bit]=room,{center:p,radius}=mesh.boundingSphere;
+      if(p.y-radius>=r.floor-.03&&p.y+radius<=r.floor+2.55&&inPoly(r.poly,p.x,p.z)){
+        // A dragged item may be anywhere, including across a concave room edge.
+        const contained=r.poly.every(([x,z],i)=>{
+          const b=r.poly[(i+1)%r.poly.length],dx=b[0]-x,dz=b[1]-z;
+          const t=Math.max(0,Math.min(1,((p.x-x)*dx+(p.z-z)*dz)/(dx*dx+dz*dz||1)));
+          return Math.hypot(p.x-x-dx*t,p.z-z-dz*t)>radius+.03;
+        });
+        if(contained)bits=bit;
+      }
+    }
+    looseCells.set(mesh,{version,bits});return bits;
+  }
+  function cullFurniture(group,shadowNow){
+    if(!group?.visible)return;
+    for(const mesh of group.children){
+      if(!mesh.visible||!mesh.boundingSphere||!mesh.isInstancedMesh)continue;
+      const bit=state.active&&!shadowNow&&group.userData.portalCull!==false?looseCell(mesh):0;
+      const {center:p,radius}=mesh.boundingSphere;
+      mesh.layers.set(bit&&!seen(bit,p.x,p.y,p.z,radius)?HIDDEN_LAYER:0);
+    }
+  }
   function update(camera, renderer) {
     const cams = camera.isArrayCamera && camera.cameras.length ? camera.cameras : [camera];
     let n = 0, same = state.lastN === cams.length * 32;
@@ -365,6 +398,7 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
       }
     }
     const shadowNow = renderer?.shadowMap.enabled && renderer.shadowMap.needsUpdate;
+    cullFurniture(scene.children.find(o=>o.userData.furnishRuntime),shadowNow);
     let vis = 0;
     for (const m of hooked) vis = (vis * 31 + (m.visible ? 1 : 0) + (m._cull.hidden ? 2 : 0)) | 0;
     if (!cellsStale && dirty === state.dirtySeen && vis === state.visSeen && !!shadowNow === state.shadowSeen && state.cams.length === cams.length && state.cams.every((c, i) => c === cams[i])) return state;
@@ -391,11 +425,11 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
     const setM = mesh.setMatrixAt, setV = mesh.setVisibleAt;
     mesh.setMatrixAt = function (i, m) { L.valid[i] = 0; dirty++; return setM.call(this, i, m); };
     mesh.setVisibleAt = function (i, v) { dirty++; return setV.call(this, i, v); };
-    mesh.onBeforeShadow = function (renderer, object, camera, shadowCamera, geometry, depthMaterial) { orig.call(this, renderer, null, shadowCamera, geometry, depthMaterial); };
+    mesh.onBeforeShadow = function (renderer, object, camera, shadowCamera, geometry, depthMaterial) { L.up=null;orig.call(this, renderer, null, shadowCamera, geometry, depthMaterial); };
     mesh.onBeforeRender = function (renderer, scene2, camera, geometry, material) {
       const e = state.cams.indexOf(camera);
       if (camera.isArrayCamera || this.sortObjects || state.native || material.wireframe || (e >= 0 && L.ver !== state.ver) || !this.matrixWorld.equals(IDENT)) {
-        orig.call(this, renderer, scene2, camera, geometry, material);
+        L.up=null;orig.call(this, renderer, scene2, camera, geometry, material);
         if (state.active && this.sortObjects && !state.native) {          // glass: three's list, then the cell test
           const ind = this._indirectTexture.image.data, st = this._multiDrawStarts, ct = this._multiDrawCounts, v = state.bits;
           let w = 0;
@@ -407,11 +441,12 @@ export function createCull({ model, scene, getBvh = () => null, canCull = () => 
       let buf;
       if (e >= 0) buf = L.bufs[e];
       else { buf = L.bufs[9] || (L.bufs[9] = newBuf(L)); build(this, frustumPlanes(camera), buf); }       // a camera update() did not see
-      const bpe = L.bpe;
-      this._multiDrawStarts.set(buf.starts.subarray(0, buf.n)); this._multiDrawCounts.set(buf.counts.subarray(0, buf.n));
-      this._indirectTexture.image.data.set(buf.ind.subarray(0, buf.n));
-      this._multiDrawCount = buf.n;
-      if (L.up !== buf || L.upStamp !== buf.stamp) { this._indirectTexture.needsUpdate = true; L.up = buf; L.upStamp = buf.stamp; }
+      if(L.up!==buf||L.upStamp!==buf.stamp){
+        this._multiDrawStarts.set(buf.starts.subarray(0,buf.n));this._multiDrawCounts.set(buf.counts.subarray(0,buf.n));
+        this._indirectTexture.image.data.set(buf.ind.subarray(0,buf.n));this._indirectTexture.needsUpdate=true;
+        L.up=buf;L.upStamp=buf.stamp;
+      }
+      this._multiDrawCount=buf.n;
       this._visibilityChanged = false;
     };
     hooked.push(mesh);

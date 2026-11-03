@@ -238,6 +238,9 @@
   #crosshair.floor::before, #crosshair.floor::after { background: #9fe08a; }
   #lookHint { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; pointer-events: none; padding: 9px 16px;
     border-radius: 999px; background: rgba(14,16,15,0.78); color: #f4f3ee; font: 600 14px/1.3 system-ui, sans-serif; white-space: nowrap; }
+  #editorLighting {display:none;position:fixed;top:12px;right:12px;z-index:35;}
+  body:is(.garden-editing,.furniture-editing):not(.in-vr) #editorLighting {display:flex;gap:6px;}
+  .window-mouse-look #lookHint {top:12%;}
   body.in-vr #crosshair, body.in-vr #lookHint { display: none !important; }
   /* phones and tablets, homeowner / review (round 7d): two thumb sticks; left moves, right looks. Each rests faintly in
      its bottom corner and jumps to where the thumb lands in its half of the lower screen; the buttons go to the top. */
@@ -318,7 +321,7 @@
   </div>
   <button id="rulesSummary" class="rules-only" data-status="pass">Regs</button>
   <div class="spacer"></div>
-  <div class="studio-review-lamps"><button type="button" id="reviewRoomLamps" data-lamp-scope="room" aria-pressed="false" disabled>Room lamps</button><button type="button" id="reviewAllLamps" data-lamp-scope="all" aria-pressed="false">All lamps</button></div>
+  <select data-time-of-day aria-label="Time of day"><option value="day">Daylight</option><option value="golden">Golden hour</option><option value="night">Night</option></select><button type="button" id="reviewAllLamps" data-lamp-scope="all" aria-pressed="false">House lights off</button>
   <button type="button" data-editor-help="house">How to use</button>
   <button type="button" data-garden-open>Garden design</button>
   <button type="button" data-furnish-open>Furnish a room</button>
@@ -333,13 +336,11 @@
     <select id="baGoto" aria-label="Go to a room or place"><option value="">Go to…</option></select>
     <button id="baFurnish" aria-pressed="false" title="Show or hide furniture, soft furnishings and plants">Furnished</button>
     <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
+    <select data-time-of-day aria-label="Time of day"><option value="day">Daylight</option><option value="golden">Golden hour</option><option value="night">Night</option></select><button type="button" id="baAllLamps" data-lamp-scope="all" aria-pressed="false">House lights off</button>
     <button type="button" id="baToolsToggle" aria-controls="baTools" aria-expanded="false">Tools <span aria-hidden="true">⌄</span></button>
   </div>
   <div id="baTools">
-    <div class="studio-tool-group" role="group" aria-label="Lighting">
-      <button type="button" id="baRoomLamps" data-lamp-scope="room" aria-pressed="false" disabled>Room lamps</button>
-      <button type="button" id="baAllLamps" data-lamp-scope="all" aria-pressed="false">All lamps</button>
-    </div>
+
     <div class="studio-tool-group" role="group" aria-label="Movement">
       <button id="baFly" aria-pressed="false" title="F · W A S D, Q / E down / up">Fly</button>
       <button id="baFast" aria-pressed="false" title="G · twice the walking speed (fly unchanged)">Fast</button>
@@ -405,6 +406,7 @@
 <div id="legend" class="card" hidden></div>
 <div id="toast" hidden></div>
 <div id="crosshair" hidden></div>
+<div id="editorLighting"><select data-time-of-day aria-label="Time of day"><option value="day">Daylight</option><option value="golden">Golden hour</option><option value="night">Night</option></select><button type="button" id="editorHouseLights" data-lamp-scope="all" aria-pressed="false">House lights off</button></div>
 <div id="lookHint" hidden>Click to look around · Esc to free the mouse</div>
 <div class="stick" id="stickL" hidden><i></i><b>Move</b></div>
 <div class="stick" id="stickR" hidden><i></i><b>Look</b></div>
@@ -461,6 +463,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=room-edits-lamps4"></script>
+<script type="module" src="src/house/viewer.js?v=house-lights7"></script>
 </body>
 </html>

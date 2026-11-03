@@ -59,13 +59,13 @@ test('actual scene limits standalone sources to the selected room, follows state
   const active=scene.children[0].children.filter(o=>o.visible&&o.isLight);
   assert.equal(active.length,1);assert.equal(active[0].userData.studioLight.type,'window');assert.equal(active[0].shadow.mapSize.x,512);
   v.model.masks.visible[0]=0;l.invalidate();l.update(options);assert.equal(l.snapshot().windows.length,0);
-  assert.equal(l.pick('SPEC-ceiling'),'ceiling');assert.equal(l.toggle('ceiling'),true);snapshot=l.snapshot();
+  assert.equal(l.toggleAll(),true);snapshot=l.snapshot();
   assert.equal(snapshot.practicals[0].id,'ceiling');assert.equal(snapshot.emitters[0].id,'ceiling');
   const emitter=scene.children[0].children.find(o=>o.userData.studioLight?.type==='emitter');assert.equal(emitter.geometry,v.model.parts[1].geometry);
-  assert.equal(l.status('living').roomOn,true);l.update({...options,eye:new T.Vector3(5,1,2)});assert.equal(l.snapshot().practicals.length,0);
+  assert.equal(l.status().allOn,true);l.update({...options,eye:new T.Vector3(5,1,2)});assert(l.snapshot().emitters.some(e=>e.id==='ceiling'));
   l.dispose();assert.equal(scene.children.length,0);
 });
-test('XR or phone has no extra draw/light when off. One enabled runtime fixture cannot change a second instance',()=>{
+test('XR or phone has no extra draw/light when off. all bulbs respond indoors and from outside',()=>{
   for(const desktop of [true,false]){
     const scene=new T.Scene(),v=view(),l=createRoomLighting({scene,desktop}),items=[source('A'),source('B')];
     const group=new T.Group();group.userData.furnishRuntime=true;scene.add(group);
@@ -75,10 +75,10 @@ test('XR or phone has no extra draw/light when off. One enabled runtime fixture 
     scene.updateMatrixWorld(true);l.setView(v,schedule);const opts={...options,inXR:desktop,items};l.update(opts);
     assert.equal(l.snapshot().windows.length,0);assert.equal(l.snapshot().practicals.length,0);
     const owned=scene.children.find(g=>g.name==='Studio room light');assert.equal(owned.children.length,0);
-    assert.equal(l.toggle('A'),true);let snap=l.snapshot();assert.deepEqual(snap.emitters.map(e=>e.id),['A']);
-    assert.deepEqual(snap.emitters[0].position,[1,1,2]);assert.equal(b.material.emissiveIntensity,0);
-    assert.equal(snap.practicals[0].shadow,false);assert.equal(l.status(room.id).roomOn,false);
-    assert.equal(l.toggleRoom(room.id,true),true);assert(l.snapshot().practicals.length<=1);assert.equal(l.status(room.id).allOn,true);
+    assert.equal(l.toggleAll(),true);let snap=l.snapshot();assert.deepEqual(snap.emitters.map(e=>e.id).sort(),['A','B','ceiling']);
+    assert.deepEqual(snap.emitters.find(e=>e.id==='A').position,[1,1,2]);assert.equal(b.material.emissiveIntensity,1);
+    assert.equal(snap.practicals[0].shadow,false);assert.equal(l.status().allOn,true);
+    l.update({...opts,eye:new T.Vector3(12,1,25)});assert.equal(b.material.emissiveIntensity,1);assert(l.snapshot().emitters.some(e=>e.id==='B'));assert(l.snapshot().practicals.length<=1);assert.equal(l.status(room.id).allOn,true);
     l.update({...opts,furnished:false});assert.deepEqual(l.snapshot().lamps.map(x=>x.id),['ceiling']);
     l.update({...opts,profile:'off'});assert.equal(l.snapshot().emitters.length,0);
     l.setView(null);assert.equal(b.material.emissiveIntensity,1.8);l.dispose();b.material.dispose();b.geometry.dispose();
@@ -97,17 +97,17 @@ test('issued room polygons assign the as-built front glazing and exclude the enc
   }
 });
 
-test('manual switches retain pending native shadow refresh and include the final settled door pose once',()=>{
+test('house lights reuse window shadows and door motion refreshes its final pose once',()=>{
   const scene=new T.Scene(),v=view(),lighting=createRoomLighting({scene,desktop:true});lighting.setView(v,schedule);
   assert.equal(lighting.update(options),true);
   assert.equal(lighting.update(options),false);
-  lighting.toggle('ceiling',true);
-  assert.equal(lighting.update(options),true);
+  lighting.toggleAll(true);
+  assert.equal(lighting.update(options),false);
   assert.equal(lighting.update(options),false);
   v.doors.moving=true;assert.equal(lighting.update(options),true);
   v.doors.moving=false;assert.equal(lighting.update(options),true);
   assert.equal(lighting.update(options),false);
-  lighting.toggle('ceiling',false);assert.equal(lighting.update(options),true);assert.equal(lighting.update(options),false);
+  lighting.toggleAll(false);assert.equal(lighting.update(options),false);assert.equal(lighting.update(options),false);
   lighting.dispose();
 });
 
@@ -146,7 +146,7 @@ function issuedSources(version,asBuilt) {
   return {def,sidecar:read(def.stages),model:{table,parts,byElement,masks:{visible},asBuilt},
     spec:read('spec/spec_v1.json'),items:read('furnish/'+version+'/seed.json').items,materials};
 }
-test('released model masks select the actual housing layer, complete fixture inventory and no outdoor light',()=>{
+test('released model masks select the actual housing layer, complete inventory and continuous daylight through the threshold',()=>{
   for(const [version,expected] of [['as_built_now',21],['approved_2b',31]])for(const asBuilt of [false,true]){
     const V=issuedSources(version,asBuilt),scene=new T.Scene(),l=createRoomLighting({scene,desktop:true});
     const bulb=V.materials.find(m=>m.name==='BRI.MAT.bulb'),original=bulb.emissiveIntensity;
@@ -161,10 +161,14 @@ test('released model masks select the actual housing layer, complete fixture inv
     assert.equal(front.fixture.startsWith('AB-'),asBuilt);
     assert.ok(front.position[2]<front.centre[2]);
     if(version==='approved_2b'){
-      l.update({...opts,eye:new T.Vector3(3.5,1.4,-7.1)});
+      l.update({...opts,eye:new T.Vector3(3.5,1.4,-7.1)});for(let i=0;i<60;i++)l.fadeWindows(1/60);
       assert(l.snapshot().windows.some(w=>w.fixture==='F-G-extRear-bi-fold-doors'),'Rear kitchen glazing missing');
     }
-    l.update({...opts,eye:new T.Vector3(3.7,1.369,9.8)});assert.equal(l.snapshot().windows.length,0);
+    l.update({...opts,eye:new T.Vector3(3.7,1.369,9.8)});for(let i=0;i<60;i++)l.fadeWindows(1/60);assert.equal(l.snapshot().windows.length,0);
+    l.update({...opts,eye:new T.Vector3(1,1.369,-.24)});for(let i=0;i<60;i++)l.fadeWindows(1/60);
+    const outside=l.snapshot().windows.map(w=>w.id);
+    l.update({...opts,eye:new T.Vector3(1,1.369,-.36)});
+    assert.deepEqual(l.snapshot().windows.map(w=>w.id),outside);
     l.dispose();assert.equal(bulb.emissiveIntensity,original);
     V.materials.forEach(m=>m.dispose());
   }

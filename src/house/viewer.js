@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {TIMES} from '../config.js';
 import {createDesktopRender} from "./desktop-render.js";
 import {gardenDesktopRender} from "../garden/desktop-render.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -86,7 +87,9 @@ const LOOK_PROFILE = params.get("look")==="off" ? "off" : "on";
 const AO = LOOK_PROFILE === "on" ? {radius:.30, distanceExponent:1.3, thickness:.60, scale:1, samples:12, blend:.75} :
   {radius:.40, distanceExponent:1.2, thickness:.50, scale:1, samples:16, blend:1};
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE || desktopBalanced ? 1.25 : 2));
+let pixelScale=1,frameSamples=0,lateFrames=0;
+function desktopRatio(){return Math.min(devicePixelRatio,1.25,pixelScale*Math.sqrt(900000/Math.max(1,innerWidth*innerHeight)));}
+renderer.setPixelRatio(desktopBalanced?desktopRatio():Math.min(devicePixelRatio,IS_PHONE?1.25:2));
 renderer.setSize(innerWidth, innerHeight);
 const gardenDesktop=gardenDesktopRender(renderer,renderer.getPixelRatio());
 renderer.localClippingEnabled = true;
@@ -152,10 +155,16 @@ sky.renderOrder = 20; sky.frustumCulled = false; sky.visible = false;
 scene.add(sky);
 
 /* fit the sun's shadow box tightly round the house (+ a margin for the garden shadows) */
+const times={
+  day:{label:'Daylight',dir:LOOK.sunDir,colour:LOOK.sunColour,sun:LOOK.sunIntensity,env:LOOK.envIntensity,hemi:LOOK.hemi,bounce:LOOK.bounce,inside:LOOK.exposureIn,outside:LOOK.exposureOut,lite:LOOK.exposureLite,windows:1,windowColour:0xffffff},
+  golden:{label:TIMES.golden.label,dir:sunVec(249,11),colour:TIMES.golden.colour,sun:4.4,env:.30,hemi:.42,bounce:.22,inside:1.55,outside:.82,lite:1.1,windows:.52,windowColour:0xffd5a3},
+  night:{label:TIMES.night.label,dir:sunVec(120,32),colour:TIMES.night.colour,sun:.18,env:.12,hemi:.11,bounce:.025,inside:1.05,outside:.95,lite:1.0,windows:.017,windowColour:0x90a8dc}
+};
+let timeOfDay='day',timeRequest=0;
 function fitSun(bounds) {
   const c = bounds.getCenter(new THREE.Vector3()), r = bounds.getBoundingSphere(new THREE.Sphere()).radius + 2;
   sun.target.position.copy(c);
-  sun.position.copy(c).addScaledVector(LOOK.sunDir, r * 2);
+  sun.position.copy(c).addScaledVector(times[timeOfDay].dir, r * 2);
   Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.5, far: r * 4 });
   sun.shadow.camera.updateProjectionMatrix();
   renderer.shadowMap.needsUpdate = true;
@@ -163,52 +172,57 @@ function fitSun(bounds) {
 
 /* the sky: the EXR lights the scene (its sun disc clamped out: the DirectionalLight IS the sun), the JPEG is
    what you see; both turned about the vertical so the sky's own sun sits where the filmed sun is */
-function loadSky() {
-  if (LITE) return loadSkyLight();
-  new EXRLoader().setDataType(THREE.FloatType).load(LOOK.hdri, tex => {
-    const { data, width, height } = tex.image;
-    let best = -1, bi = 0, sum = 0, n = 0;
-    for (let i = 0; i < data.length; i += 4) { const l = data[i] + data[i + 1] + data[i + 2]; if (l > best) { best = l; bi = i / 4; } sum += l; n++; }
-    const cap = (sum / n) * 12;
-    for (let i = 0; i < data.length; i += 4) { const l = data[i] + data[i + 1] + data[i + 2]; if (l > cap) { const k = cap / l; data[i] *= k; data[i + 1] *= k; data[i + 2] *= k; } }
-    tex.needsUpdate = true;
-    const u = ((bi % width) + 0.5) / width;
-    const skySunAz = (u - 0.5) * Math.PI * 2;                     // equirect longitude of the sky's sun
-    const wantAz = Math.atan2(LOOK.sunDir.z, LOOK.sunDir.x);
-    const yaw = skySunAz - wantAz;
-    tex.mapping = THREE.EquirectangularReflectionMapping;
-    scene.environment = pmrem.fromEquirectangular(tex).texture;
-    scene.environmentRotation.set(0, yaw, 0);
-    tex.dispose();
-    new THREE.TextureLoader().load(LOOK.sky, jpg => {
-      jpg.colorSpace = THREE.SRGBColorSpace;
-      jpg.wrapS = THREE.RepeatWrapping; jpg.repeat.x = -1; jpg.offset.x = 1;     // inside-out sphere
-      jpg.anisotropy = Math.min(MAX_ANISO, 8);
-      sky.material.map = jpg; sky.material.needsUpdate = true;
-      sky.rotation.y = yaw; sky.visible = true;
-      scene.background = null;
-    });
-  }, undefined, err => console.warn("house: sky failed, keeping the room light", err));
+const skies=new Map();
+function prepareSky(key){
+  if(skies.has(key))return skies.get(key);
+  const promise=(async()=>{
+    const day=key==='day',url=day?LOOK.sky:TIMES[key].sky.replace('_4k','_2k');
+    const jpg=await new THREE.TextureLoader().loadAsync(url);
+    jpg.colorSpace=THREE.SRGBColorSpace;
+    let tex,yaw=0;
+    if(day&&!LITE){
+      tex=await new EXRLoader().setDataType(THREE.FloatType).loadAsync(LOOK.hdri);
+      const {data,width}=tex.image;let sum=0,best=-1,pixel=0;
+      for(let i=0;i<data.length;i+=4){const l=data[i]+data[i+1]+data[i+2];sum+=l;if(l>best){best=l;pixel=i/4;}}
+      const cap=sum/(data.length/4)*12;
+      for(let i=0;i<data.length;i+=4){const l=data[i]+data[i+1]+data[i+2];if(l>cap)for(let j=0;j<3;j++)data[i+j]*=cap/l;}
+      yaw=((pixel%width+.5)/width-.5)*Math.PI*2-Math.atan2(LOOK.sunDir.z,LOOK.sunDir.x);
+    }else{
+      const cv=document.createElement('canvas');cv.width=256;cv.height=128;
+      const ctx=cv.getContext('2d');ctx.drawImage(jpg.image,0,0,256,128);
+      if(!day){
+        const pixels=ctx.getImageData(0,0,256,128).data;let brightest=-1,x=0;
+        for(let i=0;i<pixels.length/2;i+=4){const v=pixels[i]+pixels[i+1]+pixels[i+2];if(v>brightest){brightest=v;x=(i/4)%256;}}
+        yaw=((x+.5)/256-.5)*Math.PI*2-Math.atan2(times[key].dir.z,times[key].dir.x);
+      }
+      tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
+    }
+    tex.mapping=THREE.EquirectangularReflectionMapping;tex.needsUpdate=true;
+    const environment=pmrem.fromEquirectangular(tex);tex.dispose();
+    jpg.wrapS=THREE.RepeatWrapping;jpg.repeat.x=-1;jpg.offset.x=1;jpg.anisotropy=Math.min(MAX_ANISO,8);
+    renderer.initTexture(jpg);
+    return {jpg,environment,yaw};
+  })().catch(error=>{skies.delete(key);throw error;});
+  skies.set(key,promise);return promise;
 }
-/* the headset: no float EXR decode and no 2k prefilter at load. The sky JPEG is the background, and the lighting
-   comes from it shrunk to 256 x 128 first (a prefilter of that costs a few ms), done after the first frame. */
-function loadSkyLight() {
-  /* (the headset and phones take the same LOOK: hemi / env / sun above; the old 0.45 hemisphere lit a blue sky. Not yet measured on a headset: PLAN S10) */
-  new THREE.TextureLoader().load(LOOK.sky, jpg => {
-    jpg.colorSpace = THREE.SRGBColorSpace;
-    jpg.wrapS = THREE.RepeatWrapping; jpg.repeat.x = -1; jpg.offset.x = 1;
-    sky.material.map = jpg; sky.material.needsUpdate = true; sky.visible = true; scene.background = null;
-    requestAnimationFrame(() => setTimeout(() => {
-      const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128;
-      cv.getContext("2d").drawImage(jpg.image, 0, 0, 256, 128);
-      const small = new THREE.CanvasTexture(cv);
-      small.colorSpace = THREE.SRGBColorSpace; small.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = pmrem.fromEquirectangular(small).texture;
-      small.dispose();
-    }, 50));
-  });
+async function setTime(key){
+  if(!Object.hasOwn(times,key))return;
+  const ticket=++timeRequest,t=times[key];
+  try{
+    const maps=await prepareSky(key);if(ticket!==timeRequest)return;
+    timeOfDay=key;sky.material.map=maps.jpg;sky.material.color.setHex(TIMES[key]?.skyTint??0xffffff);
+    sky.material.needsUpdate=true;sky.rotation.y=maps.yaw;sky.visible=true;scene.background=null;
+    scene.environment=maps.environment.texture;scene.environmentRotation.set(0,maps.yaw,0);scene.environmentIntensity=t.env;
+    sun.color.setHex(t.colour);sun.intensity=t.sun;hemi.intensity=t.hemi;bounce.intensity=t.bounce;
+    hemi.color.setHex(key==='night'?0x99aed4:key==='golden'?0xffdfba:LOOK.hemiSky);
+    if(V){fitSun(V.model.bounds);roomLights.invalidate();adaptExposure(0,true);}
+    for(const select of document.querySelectorAll('[data-time-of-day]'))select.value=key;
+    if(visitReady){furnisher?.invalidateView();baPanel.userData.draw();toast(t.label);}
+  }catch(error){console.warn('House sky unavailable',key,error);if(visitReady)toast('Could not load this sky');}
 }
-loadSky();
+function cycleTime(){const keys=Object.keys(times);setTime(keys[(keys.indexOf(timeOfDay)+1)%keys.length]);}
+for(const sel of document.querySelectorAll('[data-time-of-day]'))sel.addEventListener('change',()=>setTime(sel.value));
+const firstSky=setTime('day');
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.03, 400);
 const player = new THREE.Group();            // the rig: feet on the floor, the camera rides in it
@@ -219,7 +233,7 @@ const fade = createFade(camera);
 const roomLights = createRoomLighting({scene,desktop:!LITE});
 const xrTitle = createXRRoomTitle(THREE,camera);
 const presentation = createHousePresentation({onLamp:scope=>switchLamps(scope),onXRRoom:(name,detail)=>xrTitle.show(name,detail)});
-let lightSpec=null, lightingAt=-Infinity, shownRoomKey='', indicatedRoom=null;
+let lightSpec=null, lightingAt=-Infinity, shownRoomKey='';
 const lightEye = new THREE.Vector3();
 function updateRoomLook(now=performance.now(),force=false,quiet=false) {
   if (!V) return;
@@ -233,10 +247,9 @@ function updateRoomLook(now=performance.now(),force=false,quiet=false) {
   lightingAt=now;
   camera.getWorldPosition(lightEye);
   const room=V.model.roomAt(lightEye.x,lightEye.y,lightEye.z);
-  const shadow=roomLights.update({eye:lightEye,stage:stageValue,profile:LOOK_PROFILE,inXR:immersive,
+  const shadow=roomLights.update({eye:lightEye,stage:stageValue,profile:LOOK_PROFILE,inXR:immersive,daylight:times[timeOfDay].windows,daylightColour:times[timeOfDay].windowColour,
     furnished:!unfurnished&&!gardenLean,items:furnisher?.layout?.items});
   if (shadow) renderer.shadowMap.needsUpdate=true;
-  indicatedRoom=room;
   const key=V.def.id+"|"+(room?.id||"");
   if (force||key!==shownRoomKey) {
     shownRoomKey=key;
@@ -244,41 +257,30 @@ function updateRoomLook(now=performance.now(),force=false,quiet=false) {
   }
   if (!quiet) presentation.observeRoom(room,{immersive,eligible:eligible&&(walk||immersive)});
 }
-function switchLamps(scope,id=null) {
+function switchLamps() {
   if(!V)return null;
+  const on=roomLights.toggleAll();
   updateRoomLook(performance.now(),true);
-  const on=id?roomLights.toggle(id):scope==="all"?roomLights.toggleAll():roomLights.toggleRoom(indicatedRoom?.id);
-  updateRoomLook(performance.now(),true);
-  if(on==null)toast("No switchable lamp here");
-  else toast((id?"Lamp":scope==="all"?"House lamps":"Room lamps")+(on?" on":" off"));
+  furnisher?.invalidateView();toast(on?'House lights on':'House lights off');
   baPanel.userData.draw();
   return on;
-}
-function aimedLamp(ray,houseHit) {
-  const furniture=furnisher?.runtime?.pick(ray,houseHit?.distance??Infinity);
-  return furniture ? roomLights.pick(furniture.item) : roomLights.pick(partOf(houseHit));
-}
-function pressLamp(ray,houseHit) {
-  const id=aimedLamp(ray,houseHit);
-  if(!id)return false;
-  switchLamps("item",id);return true;
 }
 /* eye adaptation (see LOOK.exposureIn / exposureOut): is there a roof, ceiling or floor over the camera within 6 m? Foliage does not count (a tree is shade, not a room). Checked 5 times a second. */
 const _upRay = new THREE.Raycaster(), _camPos = new THREE.Vector3(), SHADE = /leaves|branches|VertexPlant|hedge|conifer|foliage|ivy/i;
 _upRay.ray.direction.set(0, 1, 0); _upRay.far = 6; _upRay.layers.enableAll();      // (cull.js moves a batch with nothing in view off the camera's layer: the probe must still see its ceiling)
 let exposureNow = LOOK.exposureOut, coverAt = 0;
 function adaptExposure(dt, snap = false) {
-  if (LITE) { renderer.toneMappingExposure = LOOK.exposureLite; return; }
+  if (LITE) { renderer.toneMappingExposure = times[timeOfDay].lite; return; }
   if (!V) return;
   const t = performance.now();
   if (snap || t - coverAt > 200) {
     coverAt = t;
     _upRay.ray.origin.copy(camera.getWorldPosition(_camPos));
     const covered = (gardenDesktop.active||desktopBalanced)?gardenDesktop.roofCover(V,_upRay.ray.origin,stageValue,snap):_upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
-    adaptExposure.target = covered ? LOOK.exposureIn : LOOK.exposureOut;
+    adaptExposure.target = covered ? times[timeOfDay].inside : times[timeOfDay].outside;
   }
   const want = adaptExposure.target ?? LOOK.exposureOut;
-  exposureNow = snap ? want : exposureNow + (want - exposureNow) * Math.min(1, dt * 4);
+  exposureNow = snap ? want : exposureNow + (want - exposureNow) * (1-Math.exp(-dt));
   renderer.toneMappingExposure = exposureNow;
 }
 attachControllerModels(renderer, player);
@@ -1330,8 +1332,8 @@ function toolsBlocks() {
   const tools = [
     { id:"arrange",label:"Furnish a room",press:openFurniture },
     { id:"how", label:"How to use", press:showHouseHelp },
-    { id:"roomlamps",label:"Room lamps",press:()=>switchLamps("room") },
-    { id:"alllamps",label:"House lamps",press:()=>switchLamps("all") },
+    { id:"alllamps",label:"House lights",press:switchLamps },
+    { id:"time",label:"Time of day",press:cycleTime },
     { id:"garden", label:"Garden design", press:()=>garden?.enter() },
     { id: "info", label: "Info", on: () => tool === "info", press: () => setTool("info") },
     ...(MODE.measure ? [{ id: "meas", label: "Measure", on: () => tool === "measure", press: () => setTool("measure") },
@@ -1616,41 +1618,54 @@ const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUti
  *  capture keep drag-to-look.
  * ------------------------------------------------------------------ */
 const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
-const locked = () => document.pointerLockElement === renderer.domElement;
-let lockRefused = false, lockWanted = false;
+const nativeLock = () => document.pointerLockElement === renderer.domElement;
+let windowLook=false,edgeTurn=0,windowPoint=null,lockWanted=false,lockAttempt=0;
+const locked = () => nativeLock() || windowLook;
 const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse");
+function windowLookMode(on) {
+  windowLook=on;edgeTurn=0;windowPoint=null;
+  renderer.domElement.style.cursor=on?'none':'';
+  document.body.classList.toggle('window-mouse-look',on);
+  updateLookUI();
+}
 function captureMouse() {
   if(locked()||lockWanted)return;
-  lockWanted = true;
+  lockWanted=true;const attempt=++lockAttempt;
+  const refused=error=>{if(attempt===lockAttempt)lockFailed(error);};
+  setTimeout(()=>refused('capture did not complete'),650);
   try {
-    const p = renderer.domElement.requestPointerLock({ unadjustedMovement: false });
-    if (p?.catch) p.catch(err => lockFailed(err));
-  } catch (err) { lockFailed(err); }
+    const request=renderer.domElement.requestPointerLock();
+    request?.catch(refused);
+  } catch(error) { lockFailed(error); }
 }
-/* a refusal: browsers also refuse a re-capture within about a second of Esc, so a browser that has captured before
-   only gets a "click again"; one that refuses twice and never captured falls back to drag-to-look for the visit */
-let lockOk = false, lockFails = 0;
-function lockFailed(err) {
-  if (!lockWanted) return;
-  lockWanted = false;
-  if(pointer.down?.capture)pointer.down.capture=false;
-  console.info("house: pointer lock refused", err?.message || err);
-  if (lockOk || ++lockFails < 2) { toast("Click the view again to look around with the mouse (or drag to look)"); return; }
-  lockRefused = true;
-  toast("This browser would not capture the mouse: drag to look around instead");
-  updateLookUI(); updateHelp();
+function lockFailed(error) {
+  if(!lockWanted||nativeLock())return;
+  lockWanted=false;
+  if(!walk||inVR())return;
+  pointer.down=null;windowLookMode(true);
+  console.info('house: window mouse look active',error?.message||error);
+  toast('Mouse look on · move to turn · Esc to release');
 }
-document.addEventListener("pointerlockerror", () => lockFailed("pointerlockerror"));
-document.addEventListener("pointerlockchange", () => {
-  if (!locked()) { lockWanted = false; pointer.down = null; setHover(null); }
-  else { blurPass?.reset(); lockOk = true; lockRefused=false; lockWanted=false; lockFails = 0; }
-  updateLookUI();
+document.addEventListener('pointerlockerror',()=>lockFailed('pointerlockerror'));
+document.addEventListener('pointerlockchange',()=>{
+  lockWanted=false;windowLookMode(false);pointer.down=null;setHover(null);
+  if(nativeLock())blurPass?.reset();
 });
-function freeMouse() { if (locked()) document.exitPointerLock(); }
+function freeMouse() {
+  lockWanted=false;lockAttempt++;windowLookMode(false);
+  if(nativeLock())document.exitPointerLock();
+}
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&(windowLook||lockWanted)){e.preventDefault();freeMouse();}
+},true);
+window.addEventListener('blur',freeMouse);
+renderer.domElement.addEventListener('pointerleave',()=>{edgeTurn=0;windowPoint=null;});
 function updateLookUI() {
   const on = locked();
   $("crosshair").hidden = !on;
-  $("lookHint").hidden = on || !lookEligible() || !$("start").hidden || !!marks?.noteOpen || !V;
+  const hint=$("lookHint");
+  hint.textContent=windowLook?"Mouse look on · move to turn · Esc to release":"Click to look around · Esc to free the mouse";
+  hint.hidden=(on&&!windowLook)||!lookEligible()||!$("start").hidden||!!marks?.noteOpen||!V;
 }
 /* the crosshair's ray (the screen's centre) or the cursor's */
 const centreRay = () => { rc.setFromCamera(ndc.set(0, 0), camera); return rc.ray.clone(); };
@@ -1658,7 +1673,6 @@ const eventRay = e => locked() ? centreRay() : screenRay(e.clientX, e.clientY);
 /* a click under the crosshair: homeowner / review jump to a floor spot (walls, roofs, worktops refused), else act() */
 function lockedClick() {
   const ray=centreRay(),h=pickRay(ray);
-  if (pressLamp(ray,h))return;
   if (SIMPLE) {
     const p = partOf(h), d = p && V.doors?.doorOf(p);
     if (d) { toggleDoor(p); return; }
@@ -1795,6 +1809,17 @@ renderer.domElement.addEventListener("pointerdown", e => {
 });
 if (MODE.marks) renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("pointermove", e => {
+  if(windowLook){
+    if(e.target!==renderer.domElement||e.pointerType!=='mouse'){edgeTurn=0;windowPoint=null;return;}
+    if(windowPoint){
+      yawPitch.yaw-=(e.clientX-windowPoint.x)*LOOK_SENS;
+      yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-(e.clientY-windowPoint.y)*LOOK_SENS,-1.3,1.3);
+    }
+    windowPoint={x:e.clientX,y:e.clientY};
+    const bounds=renderer.domElement.getBoundingClientRect(),band=36;
+    edgeTurn=THREE.MathUtils.clamp((e.clientX-bounds.right+band)/band,0,1)-THREE.MathUtils.clamp((bounds.left+band-e.clientX)/band,0,1);
+    return;
+  }
   if (locked()) {                                             // mouse-look: the mouse turns and looks
     if (inVR()) return;
     const mx = Math.max(-250, Math.min(250, e.movementX || 0)), my = Math.max(-250, Math.min(250, e.movementY || 0));
@@ -1824,7 +1849,6 @@ addEventListener("pointerup", e => {
   if (locked() || d?.capture) return;
   if (!d || e.target !== renderer.domElement || pointer.moved > 6 || !V || d.marking || marks?.active) return;
   const ray=eventRay(e),h=pickRay(ray);
-  if ((SIMPLE||tool==="info")&&pressLamp(ray,h))return;
   act(h, h ? screenReach(h) : 0);
 });
 /* one click / trigger, whatever the tool */
@@ -1938,13 +1962,7 @@ function setAllDoors(open) {
 const keys = new Set();
 addEventListener("keydown", e => {
   if (/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName)) return;
-  if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !marks?.active && !garden?.enabled && !furnisher?.enabled &&
-      !document.querySelector("dialog[open]") && (e.code==="KeyL" || (e.code==="KeyE" && walk && !flying && !hovering))) {
-    e.preventDefault();
-    if(e.code==="KeyL")switchLamps("all");
-    else {const ray=centreRay();if(!pressLamp(ray,pickRay(ray)))switchLamps("room");}
-    return;
-  }
+
   keys.add(e.code);
   if (SIMPLE) {                                   // homeowners: walk, fly, Before / After, the frame HUD
     if (e.code === "KeyV") { if (flying) setFly(false); setWalk(!walk); }
@@ -2071,6 +2089,7 @@ let glide = null;
 function glideTo(p) { glide = { from: feet.clone(), to: new THREE.Vector3(p.x, p.y, p.z), t: 0 }; }
 
 function desktopWalk(dt) {
+  if(windowLook)yawPitch.yaw-=edgeTurn*1.8*dt;
   camera.rotation.set(yawPitch.pitch, yawPitch.yaw, 0, "YXZ");          // yaw 0 looks along -z (sidecar yawDeg)
   let f = 0, s = 0;
   if (keys.has("KeyW") || keys.has("ArrowUp")) f += 1;
@@ -2372,7 +2391,7 @@ const wristTab = createBoardTab();
 let heightOffer = false;
 /* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
 /* round 8: Furnished / Unfurnished next to No doors */
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], [PREVIEW?null:"garden", "how", PREVIEW?null:"arrange"], ["roomlamps","alllamps",null]];
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], [PREVIEW?null:"garden", "how", PREVIEW?null:"arrange"], ["alllamps","time",null]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -2385,14 +2404,14 @@ const baPanel = (() => {
   mesh.renderOrder = 905; mesh.visible = false;
   mesh.position.set(0, 0.05, 0.075); mesh.rotation.set(-Math.PI / 2.6, 0, 0);          // on the back of the left wrist
   const LABEL = { before: "Before", after: "After", height: "Height", doors: "No doors", goto: "Go to", fast: "Fast",
-                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use", arrange:"Arrange", roomlamps:"Room lamps", alllamps:"All lamps" };
-  const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
+                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use", arrange:"Arrange", alllamps:"House lights",time:"Time of day" };
+  const isOn = id => id==="alllamps"?roomLights.status().allOn:id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
     : id === "height" ? !!floorOffset : id === "fast" ? fastWalk : id === "goto" ? gotoMenu.isOpen : id === "mark" ? !!marks?.active : false;
-  const sub = id => id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
+  const sub = id => id==="time"?times[timeOfDay].label:id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
     : id === "fast" ? (fastWalk ? "on" : "") : id === "furnish" ? (unfurnished ? "hidden" : "shown") : id === "turn" ? turnMode : id === "comfort" ? COMFORT_LABEL[comfort] : "";
   let hov = null, key = "";
   const draw = () => {
-    const k = `${afterShown()}|${hov}|${floorOffset}|${doorsHidden}|${fastWalk}|${gotoMenu.isOpen}|${marks?.active}|${marks?.kind}|${personHeight}|${turnMode}|${comfort}|${unfurnished}`;
+    const k = `${afterShown()}|${hov}|${floorOffset}|${doorsHidden}|${fastWalk}|${gotoMenu.isOpen}|${marks?.active}|${marks?.kind}|${personHeight}|${turnMode}|${comfort}|${unfurnished}|${timeOfDay}|${roomLights.status().allOn}`;
     if (k === key) return; key = k;
     c.clearRect(0, 0, W, Hh);
     c.fillStyle = "rgba(14,16,15,0.92)"; c.beginPath(); c.roundRect(3, 3, W - 6, Hh - 6, 28); c.fill();
@@ -2422,7 +2441,8 @@ const baPanel = (() => {
       const id = typeof uv === "string" ? uv : at(uv);
       if (!id) return null;
       if (id === "height") heightCheck();
-      else if (id === "roomlamps" || id === "alllamps") switchLamps(id === "roomlamps"?"room":"all");
+      else if (id === "alllamps") switchLamps();
+      else if(id==="time")cycleTime();
       else if (id === "doors") setDoorsHidden(!doorsHidden);
       else if (id === "furnish") setUnfurnished(!unfurnished);
       else if (id === "goto") gotoMenu.toggle();
@@ -3286,7 +3306,6 @@ function vrFrame(dt, now) {
   }
   dragScrub = false;
   const groundRay=controllerRay(R),h=pickRay(groundRay);
-  if(tDown && (SIMPLE||tool==="info") && pressLamp(groundRay,h)){hapticPulse([R],.3,20);return;}
   laser.scale.z = h ? h.distance : 8;
   if (h) {
     laserDot.position.copy(h.point); laserDot.visible = true;
@@ -3393,13 +3412,12 @@ function toast(text) {
 function updateHelp() {
   if (CUST) {
     $("help").textContent = IS_TOUCH ? `Left thumb moves · right thumb looks · tap a door to open it, or the floor to jump there · Go to a room${MODE.marks ? " · Mark, then draw with a finger" : ""}`
-      : lockRefused ? `Before / After (B / N) · drag to look around · W A S D or click the ground to walk (G fast, Shift faster) · click a door to open it · F to fly (Q / E down / up) · Go to a room${MODE.marks ? " · M mark" : ""}`
       : `Click the view, then move the mouse to look (Esc frees it) · W A S D walk (G fast, Shift faster) · click: open a door or jump to the floor under the crosshair · F or Space fly (Q / E down / up) · B / N Before / After${MODE.marks ? " · M mark, hold the click to draw" : ""}`;
     $("baHelp").textContent = $("help").textContent;
     return;
   }
   const parts = [];
-  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : lockRefused ? "W A S D walk · drag to look · Shift faster" : "click the view, then move the mouse to look (Esc frees it) · W A S D walk · Shift faster");
+  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : "click the view, then move the mouse to look (Esc frees it) · W A S D walk · Shift faster");
   else parts.push(IS_TOUCH ? "drag to turn · pinch to zoom · two fingers to pan" : "drag to turn · right-drag to pan · scroll to zoom");
   parts.push(tool === "measure" ? "click two points to measure · snaps to corners (pink) and edges (blue) · M done"
     : tool === "addwall" ? "click the two ends of the new wall · Esc cancels"
@@ -3469,6 +3487,7 @@ function layoutPanels() {                    // the panels sit under the toolbar
 new ResizeObserver(layoutPanels).observe($("top"));
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  if(desktopBalanced&&!inVR()&&!gardenDesktop.active){renderer.setPixelRatio(desktopRatio());composer?.setPixelRatio(desktopRatio());}
   renderer.setSize(innerWidth, innerHeight);
   composer?.setSize(innerWidth, innerHeight);
 });
@@ -3517,7 +3536,7 @@ async function initGarden() {
         if (!inVR() && !walk) spawnAt("Front path"); orbit.enabled=false;
       } else { orbit.enabled=!walk&&!inVR();gardenStroke.cancel(garden.consumer); }
     },
-    walkPreview:editorWalkPreview,
+    walkPreview:editorWalkPreview,openFurniture,
     look(dx,dy) {yawPitch.yaw-=dx*.004; yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-dy*.004,-1.35,1.35);}
   });
   await garden.useVersion(V);
@@ -3533,7 +3552,7 @@ async function ensureFurniture(){
           if(stageValue!==stageN)setStage(stageN,true);if(unfurnished)setUnfurnished(false);orbit.enabled=false;
         }else{orbit.enabled=!walk&&!inVR();gardenStroke.cancel(furnisher.consumer);}},
       goRoom(room){const pl=places().find?.(r=>r.room===room.id) || placesCache?.list.find(r=>r.room===room.id);if(pl)goToPlace(pl);},
-      openGarden(){garden?.enter();garden?.action("kind","plant");},
+      openGarden(plant){garden?.enter();if(plant)garden?.action("kind","plant");},
       changedShadow(){if(renderer.shadowMap.enabled)renderer.shadowMap.needsUpdate=true;}
     });return furnisher;
   }).catch(e=>{furnishInit=null;throw e;});return furnishInit;
@@ -3542,7 +3561,11 @@ async function syncFurnitureVersion(entry){
   const f=await ensureFurniture();await f.useVersion(entry);f.setStage(stageValue);f.setFurnished(!unfurnished);await f.readyModels;
 }
 async function openFurniture(){
-  if(PREVIEW||!V)return;try{const f=await ensureFurniture();await f.useVersion(V);await f.enter();}catch(e){toast(e.message);}
+  if(PREVIEW||!V)return;
+  if(SITE==='house-wip'&&!V.def.furnish_runtime&&['127.0.0.1','localhost'].includes(location.hostname)){
+    const link=new URL('house.html',location.href);link.search=new URLSearchParams({site:'house',version:V.def.id,mode:'review',edit:'1'});location.assign(link);return;
+  }
+  try{const f=await ensureFurniture();await f.useVersion(V);await f.enter();}catch(e){toast(e.message);}
 }
 document.querySelectorAll("[data-furnish-open]").forEach(b=>b.addEventListener("click",openFurniture));
 async function boot() {
@@ -3607,6 +3630,8 @@ async function boot() {
   if (!LITE && params.get("preload")==="1" && !garden?.enabled && !furnisher?.enabled && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
+  await firstSky;
+  if(!LITE){for(const key of ['golden','night'])await prepareSky(key).catch(e=>console.warn('Sky deferred',key,e));}
   await prepareVisitLight(V);
   visitReady=true;$("startDesktop").disabled=false;finishLoading(V.def.id);
   dispatchEvent(new Event("house-ready"));
@@ -3715,7 +3740,18 @@ renderer.info.autoReset = false;               // the composer renders several p
 const SEND_PERF = IS_QUEST || params.has("perf");
 function loop(fakeNow) {
   const now = Math.max(last, fakeNow ?? performance.now());
-  const dt = Math.min(0.05, (now - last) / 1000);
+  if(document.hidden&&!inVR()&&V&&visitReady){last=now;return;}
+  const frameInterval=now-last;
+  // Reduce the desktop drawing buffer only after sustained missed refreshes while moving.
+  // Keep the chosen size through room transitions instead of reallocating on each doorway.
+  if(desktopBalanced&&visitReady&&!inVR()&&!gardenDesktop.active&&desktopRender.mode==='moving'&&pixelScale>.73){
+    frameSamples++;if(frameInterval>24)lateFrames++;
+    if(frameSamples===24){
+      if(lateFrames>=5){pixelScale=Math.max(.72,pixelScale*.86);renderer.setPixelRatio(desktopRatio());}
+      frameSamples=lateFrames=0;
+    }
+  }
+  const dt = Math.min(0.05, frameInterval / 1000);
   last = now;
   if (renderer.shadowMap.needsUpdate && renderer.shadowMap.enabled) shadowPasses++;
   gardenDesktop.use(!!garden?.enabled && !LITE && !inVR());
@@ -3739,6 +3775,7 @@ function loop(fakeNow) {
   else if (walk) desktopWalk(dt);
   else orbit.update();
   updateRoomLook(now);
+  if(roomLights.fadeWindows(dt))renderer.shadowMap.needsUpdate=true;
   if (target && (playing || tween || target.part.pose)) updateHighlight();
   measure.update(camera);
   if (marks) { marks.update(dt); if (marksListDirty) renderMarksList(); }
@@ -3772,9 +3809,9 @@ function loop(fakeNow) {
   if ((garden?.bird || furnisher?.bird) && !inVR()) { workPrev = performance.now() - now; return; }
   let display='contact';
   if(desktopBalanced && !inVR() && !gardenDesktop.active){
-    display=desktopRender.choose({now,camera,view:V,key:[stageValue,V.model.asBuilt,unfurnished,doorsHidden,xray,section.active,...Object.values(storeyState)].join('|'),
-      active:!!(V.doors?.moving||playing||tween||marks?.drawing||furnisher?.enabled),
-      cacheable:SIMPLE&&!marks?.active&&!card.mesh.visible&&!hoverPart&&!furnisher?.enabled&&!perf.hud.visible,
+    display=desktopRender.choose({now,camera,view:V,key:[stageValue,timeOfDay,roomLights.status().allOn,V.model.asBuilt,unfurnished,doorsHidden,xray,section.active,...Object.values(storeyState)].join('|'),
+      active:!!(V.doors?.moving||roomLights.transitioning||playing||tween||marks?.drawing||furnisher?.dragging),
+      cacheable:SIMPLE&&!marks?.active&&!card.mesh.visible&&!hoverPart&&!furnisher?.dragging&&!perf.hud.visible,
       shadow:renderer.shadowMap.needsUpdate,exposure:renderer.toneMappingExposure});
     if(display==='held'){workPrev=performance.now()-now;return;}
   }

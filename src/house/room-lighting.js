@@ -136,20 +136,20 @@ export function createRoomLighting({scene,desktop=true}) {
   const windows=[],lampSlots=[],emitterMeshes=new Map(),emitterMaterials=new Map();
   const fallbackGeometry=new T.SphereGeometry(FALLBACK_RADIUS,10,8),matrix=new T.Matrix4();
   const originalEmission=new Map();
-  function silenceBulb(material) {
-    if(!material?.emissive||!bulbMaterial(material.name)||!Number.isFinite(material.emissiveIntensity)||!material.emissiveIntensity)return;
-    if(!originalEmission.has(material))originalEmission.set(material,material.emissiveIntensity);
-    material.emissiveIntensity=0;
+  let houseOn=false,emitterKey='',emitterItems=null,emitterRuntime=null,practicalSources=[];
+  function bulbGlow(m,on,kelvin=2700){
+    if(!m?.emissive||!bulbMaterial(m.name))return false;
+    if(!originalEmission.has(m))originalEmission.set(m,[m.emissive.clone(),m.emissiveIntensity]);
+    if(on)m.emissive.copy(lightColour(kelvin));
+    m.emissiveIntensity=on?1:0;return true;
   }
-  function restoreEmission() {
-    for(const [material,strength] of originalEmission)material.emissiveIntensity=strength;
+  function restoreEmission(){
+    for(const [m,[colour,power]] of originalEmission){m.emissive.copy(colour);m.emissiveIntensity=power;}
     originalEmission.clear();
   }
-  const stored=new Map(); // per-version manual switch settings, including a fixed pendant in an unfurnished visit.
-  let view=null,source=null,states=null,observed=new Map(),groups=null,groupsKey='',last=null,dirty=true,previousMotion=false,pendingShadow=false;
+  let view=null,source=null,groups=null,groupsKey='',last=null,dirty=true,previousMotion=false,pendingShadow=false;
   let currentRoom=null,profile='on',lite=!desktop,selectedWindows=[],activePracticals=[],activeEmitters=[];
   let records=new Map(),priorItems=null,loose=[],lastEye=null,lastContext='',previousRuntime=null;
-  function switched(r) {return states?.has(r.id)?states.get(r.id):r.item?.lampOn===true;}
   function shadow(light,normalBias) {
     light.castShadow=true;light.shadow.mapSize.set(512,512);light.shadow.camera.near=.04;
     light.shadow.bias=-.001;light.shadow.normalBias=normalBias;
@@ -162,15 +162,35 @@ export function createRoomLighting({scene,desktop=true}) {
     }
     return windows[i];
   }
-  function practicalSlot(i,spot,limited) {
+  function practicalSlot(i,spot) {
     let l=lampSlots[i];
-    if(!l || Boolean(l.isSpotLight)!==spot || l.castShadow===limited) {
+    if(!l || Boolean(l.isSpotLight)!==spot) {
       if(l){l.removeFromParent();l.target?.removeFromParent();l.dispose();}
       l=spot?new T.SpotLight(0xffffff,0,5,50*Math.PI/180,.6,2):new T.PointLight(0xffffff,0,5,2);
-      if(!limited)shadow(l,.012);
       root.add(l);if(l.target)root.add(l.target);lampSlots[i]=l;
     }
     return l;
+  }
+  function aimWindow(l,a){
+    l.userData.opening=a;l.distance=a.distance;l.shadow.camera.far=a.distance;
+    l.position.fromArray(a.position);l.target.position.copy(l.position).add(new T.Vector3().fromArray(a.inward));
+    tags(l,'window',a.id,a.room);l.shadow.needsUpdate=true;
+  }
+  function fadeWindows(dt){
+    let moved=false;
+    for(const l of windows){
+      const a=l.userData.destination,old=l.userData.opening;
+      if(!l.visible||!old||!a)continue;
+      if(a.id!==old.id){
+        l.intensity=Math.max(0,l.intensity-Math.max(.01,old.intensity)*dt/.32);
+        if(l.intensity===0){aimWindow(l,a);l.userData.rising=true;moved=true;}
+      }else if(l.userData.rising){
+        l.intensity=Math.min(a.intensity,l.intensity+a.intensity*dt/.4);
+        if(l.intensity>=a.intensity)l.userData.rising=false;
+      }
+    }
+    if(moved)selectedWindows=windows.filter(l=>l.visible).map(l=>l.userData.opening);
+    return moved;
   }
   function removeEmitters(keep) {
     for(const [key,m] of emitterMeshes)if(!keep.has(key)){m.removeFromParent();emitterMeshes.delete(key);}
@@ -183,17 +203,15 @@ export function createRoomLighting({scene,desktop=true}) {
   }
   function setView(V,spec) {
     restoreEmission();clear();view=V;source=V?readSources(V,spec):null;
-    for(const r of source?.fixed||[])for(const p of r.bulbs)silenceBulb(p.set?.normal||p.mesh?.material);
-    const key=V?.def?.id;
-    if(key&&!stored.has(key))stored.set(key,new Map());
-    states=stored.get(key)||new Map();observed=new Map();groups=null;groupsKey='';last=null;dirty=true;
+    for(const r of source?.fixed||[])for(const p of r.bulbs)bulbGlow(p.set?.normal||p.mesh?.material,houseOn,r.power.kelvin);
+    emitterKey='';emitterItems=null;emitterRuntime=null;practicalSources=[];
+    groups=null;groupsKey='';last=null;dirty=true;
     records=new Map();currentRoom=null;priorItems=null;loose=[];lastEye=null;lastContext='';previousRuntime=null;previousMotion=false;pendingShadow=false;
   }
   function refreshRecords(items,stage,furnished) {
     if(items!==priorItems) {
       loose=items.filter(i=>isLampKind(i.kind)&&Array.isArray(i.position)&&Array.isArray(i.size)).map(it=>{
-        if(observed.has(it.id)&&observed.get(it.id)!==it.lampOn)states.delete(it.id);
-        observed.set(it.id,it.lampOn);return runtimeSource(it,source.specs.get(it.id));
+        return runtimeSource(it,source.specs.get(it.id));
       });
       priorItems=items;
     }
@@ -212,13 +230,13 @@ export function createRoomLighting({scene,desktop=true}) {
       const index=mesh.userData.furnishItems?.findIndex(i=>i.id===id);
       if(index==null||index<0||index>=mesh.count)continue;
       mesh.getMatrixAt(index,matrix);const transform=matrix.clone().premultiply(mesh.matrixWorld);
-      out.push({geometry:mesh.geometry,matrix:transform});
+      out.push({geometry:mesh.geometry,matrix:transform,material:mesh.material});
     }
     return out;
   }
   function calculateEmitters(r,runtime){
     const pieces=r.item?runtimeBulbs(r.id,runtime):r.bulbs.filter(p=>present(view.model,p))
-      .map(p=>({geometry:p.geometry,matrix:geometryMatrix(p)}));
+      .map(p=>({geometry:p.geometry,matrix:geometryMatrix(p),material:p.set?.normal||p.mesh?.material}));
     let points=r.points,bottom=r.bottom;
     if(r.item&&pieces.length){
       const box=new T.Box3();
@@ -247,49 +265,70 @@ export function createRoomLighting({scene,desktop=true}) {
     const sourceKey=[stage,view.model.asBuilt,VHoles(view)].join('|');
     if(sourceKey!==groupsKey){groups=activeGroups(source,view,stage);groupsKey=sourceKey;dirty=true;}
     const runtime=scene.children.find(n=>n.userData.furnishRuntime&&n.visible);
-    const runtimeKey=runtime?runtime.children.length:0,ctx=[stage,view.model.asBuilt,currentRoom,profile,lite,input.furnished!==false,runtimeKey].join('|');
+    const runtimeKey=runtime?runtime.children.length:0,ctx=[stage,view.model.asBuilt,currentRoom,profile,lite,input.daylight??1,input.furnished!==false,runtimeKey].join('|');
     const runtimeChanged=runtime!==previousRuntime;
-    if(runtimeChanged||items!==priorItems||lastContext!==ctx||dirty) {
-      for(const mesh of runtime?.children||[])if(mesh.userData.furnishItems?.some(it=>isLampKind(it.kind)))silenceBulb(mesh.material);
-      previousRuntime=runtime;
-    }
+    previousRuntime=runtime;
     const motion=!!view.doors?.moving,doorChanged=motion||previousMotion;
     const carry=pendingShadow;pendingShadow=false;
     if(!dirty&&!runtimeChanged&&lastContext===ctx&&items===priorItems&&!motion&&!previousMotion&&lastEye&&squared(lastEye,eye)<DIST_SQ)return carry&&!lite;
     lastEye=[...eye];lastContext=ctx;previousMotion=motion;
     refreshRecords(items,stage,input.furnished!==false);
-    const group=groups.get(currentRoom),enabled=profile==='on',oldWindows=selectedWindows.map(a=>a.id);
-    const usable=enabled&&!lite&&group?source.apertures.filter(a=>a.parts.some(p=>present(view.model,p))):[];
-    const nextWindows=rankApertures(usable,group,eye,oldWindows,lite?0:3);
-    const keyList=list=>list.join('|');
-    let shadows=carry||keyList(nextWindows.map(a=>a.id))!==keyList(oldWindows)||((dirty||doorChanged)&&nextWindows.length>0);
-    selectedWindows=nextWindows;
-    for(const [i,a] of selectedWindows.entries()){
-      const light=windowSlot(i);light.visible=true;light.intensity=a.intensity;light.distance=a.distance;
-      light.shadow.camera.far=a.distance;light.position.fromArray(a.position);light.target.position.fromArray(a.position).add(new T.Vector3().fromArray(a.inward));
-      tags(light,'window',a.id,a.room);if(shadows)light.shadow.needsUpdate=true;
+    const enabled=profile==='on',oldWindows=selectedWindows.map(a=>a.id);
+    const usable=enabled&&!lite?source.apertures.filter(a=>a.parts.some(p=>present(view.model,p))):[];
+    const allRooms={rooms:source.rooms.map(r=>r.id),distance:8};
+    // The full site always has the physical sun. Supplement nearby openings smoothly,
+    // including on their garden side, without shading distant grass with indoor spot maps.
+    const nearby=usable.filter(a=>squared(a.position,eye)<64);
+    const nextWindows=rankApertures(nearby,allRooms,eye,oldWindows,2).map(a=>{
+      const fade=T.MathUtils.smoothstep(Math.sqrt(squared(a.position,eye)),3.5,8);
+      return {...a,distance:groups.get(a.room)?.distance??8,intensity:a.intensity*(1-fade)*(input.daylight??1)};
+    });
+    let shadows=carry||((dirty||doorChanged)&&nextWindows.length>0);
+    const assigned=new Set(),targets=new Map();
+    // Keep each surviving aperture in its current GPU light slot.
+    for(const [i,l] of windows.entries()){
+      const keep=nextWindows.find(a=>a.id===l.userData.destination?.id);
+      if(keep){targets.set(i,keep);assigned.add(keep.id);}
     }
-    for(let i=selectedWindows.length;i<windows.length;i++)windows[i].visible=false;
-    const on=enabled&&group?[...records.values()].filter(r=>switched(r)&&group.rooms.includes(r.room)):[];
-    const candidates=[],emitters=[],keep=new Set();
-    for(const r of on){
-      const {pieces,points,bottom}=calculateEmitters(r,runtime);
-      if(pieces.length)pieces.forEach(({geometry,matrix},j)=>showEmitter(r.id+'/part'+j,r,geometry,matrix,keep));
-      else points.forEach((p,j)=>showEmitter(r.id+'/bulb'+j,r,fallbackGeometry,new T.Matrix4().makeTranslation(...p),keep));
-      for(const [i,p] of points.entries()){
-        emitters.push({id:r.id,room:r.room,position:[...p]});
-        const position=[p[0],bottom-.035,p[2]];
-        candidates.push({id:r.id,key:r.id+'/'+i,room:r.room,power:r.power,position,d2:squared(eye,position)});
+    for(const a of nextWindows)if(!assigned.has(a.id)){
+      let i=0;while(targets.has(i))i++;targets.set(i,a);
+    }
+    for(const [i,a] of targets){
+      const l=windowSlot(i);l.color.setHex(input.daylightColour??0xffffff);l.userData.destination=a;
+      if(!l.visible||!l.userData.opening||!usable.some(op=>op.id===l.userData.opening.id)){
+        aimWindow(l,a);l.intensity=a.intensity;shadows=true;
       }
+      l.visible=true;
+      if(l.userData.opening.id===a.id){l.userData.opening=a;if(!l.userData.rising)l.intensity=a.intensity;}
+      if(shadows)l.shadow.needsUpdate=true;
     }
-    activeEmitters=emitters;removeEmitters(keep);
-    const next=candidates.sort((a,b)=>a.d2-b.d2||a.key.localeCompare(b.key)).slice(0,lite?1:2);
-    const previous=activePracticals;
-    if(!lite&&(next.length&&(dirty||doorChanged)||keyList(previous.map(r=>r.key))!==keyList(next.map(r=>r.key))||
-      next.some((r,i)=>!previous[i]||squared(r.position,previous[i].position)>.000001)))shadows=true;
+    for(const [i,l] of windows.entries())if(!targets.has(i)){l.visible=false;l.userData.opening=l.userData.destination=null;}
+    selectedWindows=windows.filter(l=>l.visible).map(l=>l.userData.opening);
+    const inventory=[stage,view.model.asBuilt,enabled,houseOn,input.furnished!==false,runtimeKey].join('|');
+    if(inventory!==emitterKey||items!==emitterItems||runtime!==emitterRuntime){
+      emitterKey=inventory;emitterItems=items;emitterRuntime=runtime;
+      const keep=new Set();activeEmitters=[];practicalSources=[];
+      for(const r of records.values()){
+        const {pieces,points,bottom}=calculateEmitters(r,runtime);
+        const on=enabled&&houseOn;
+        for(const [j,piece] of pieces.entries()){
+          const lit=bulbGlow(piece.material,on,r.power.kelvin);
+          if(on&&!lit)showEmitter(r.id+'/part'+j,r,piece.geometry,piece.matrix,keep);
+        }
+        if(!on)continue;
+        for(const [i,p] of points.entries()){
+          if(!pieces.length)showEmitter(r.id+'/bulb'+i,r,fallbackGeometry,new T.Matrix4().makeTranslation(...p),keep);
+          activeEmitters.push({id:r.id,room:r.room,position:[...p]});
+          practicalSources.push({id:r.id,key:r.id+'/'+i,room:r.room,power:r.power,position:[p[0],bottom-.035,p[2]]});
+        }
+      }
+      removeEmitters(keep);
+    }
+    const near=practicalSources.map(r=>({...r,d2:squared(eye,r.position)})).sort((a,b)=>a.d2-b.d2||a.key.localeCompare(b.key));
+    const next=lite?near.slice(0,1):[near.find(r=>!r.power.spot),near.find(r=>r.power.spot)].filter(Boolean);
     activePracticals=next;
     for(const [i,r] of next.entries()){
-      const l=practicalSlot(i,r.power.spot,lite);l.visible=true;l.color.copy(lightColour(r.power.kelvin));
+      const l=practicalSlot(i,r.power.spot);l.visible=true;l.color.copy(lightColour(r.power.kelvin));
       l.position.fromArray(r.position);l.intensity=r.power.intensity;l.distance=r.power.range;
       if(l.target)l.target.position.copy(l.position).y-=1;
       if(l.castShadow){l.shadow.camera.far=l.distance;if(shadows||dirty||motion)l.shadow.needsUpdate=true;}
@@ -300,30 +339,16 @@ export function createRoomLighting({scene,desktop=true}) {
     return Boolean(!lite&&shadows);
   }
   function invalidate(){dirty=true;}
-  function pick(value){
-    const key=typeof value==='string'?value:value?.item?.id||value?.id||keyOf(value)||keyOf(value?.part)||value?.element;
-    if(typeof key!=='string')return null;
-    if(records.has(key))return key;
-    const id=key.replace(/^SPEC-/,'');return records.has(id)?id:null;
-  }
-  function status(roomId){
-    const all=[...records.values()],local=all.filter(r=>r.room===roomId);
-    return {hasRoom:local.length>0,roomOn:local.length>0&&local.every(switched),allOn:all.length>0&&all.every(switched)};
-  }
-  function change(list,on){
-    if(!list.length)return null;
-    const value=on??!list.every(switched);
-    list.forEach(r=>states.set(r.id,Boolean(value)));dirty=true;
+  function status(){return {allOn:houseOn};}
+  function toggleAll(on=!houseOn){
+    houseOn=Boolean(on);lastContext='';
     if(last)pendingShadow=update(last)||pendingShadow;
-    return Boolean(value);
+    return houseOn;
   }
-  function toggle(id,on){const r=records.get(pick(id));return r?change([r],on):null;}
-  function toggleRoom(id,on){return change([...records.values()].filter(r=>r.room===id),on);}
-  function toggleAll(on,roomId){return roomId?toggleRoom(roomId,on):change([...records.values()],on);}
   function snapshot(){
     return {profile,room:currentRoom,lite,budget:{windows:lite?0:3,practicals:lite?1:2},
       windows:selectedWindows.map(({id,fixture,room,centre,inward,position,area,intensity,distance})=>({id,fixture,room,centre,inward,position,area,intensity,distance})),
-      lamps:[...records.values()].map(r=>({id:r.id,room:r.room,kind:r.kind,on:switched(r),visible:true,position:r.points[0],points:r.points})),
+      lamps:[...records.values()].map(r=>({id:r.id,room:r.room,kind:r.kind,on:houseOn,visible:true,position:r.points[0],points:r.points})),
       practicals:activePracticals.map((r,i)=>({id:r.id,room:r.room,position:r.position,intensity:r.power.intensity,shadow:!!lampSlots[i]?.castShadow})),
       emitters:activeEmitters.map(e=>({...e})),version:view?.def?.id??null};
   }
@@ -332,8 +357,8 @@ export function createRoomLighting({scene,desktop=true}) {
     if(entry.preparedDaylight)return entry.preparedDaylight;
     // Compile the real fixed and instanced materials against the same light and
     // environment defines, without temporarily lighting or reparenting the live scene.
-    const apertures=source.apertures,groups=activeGroups(source,view,entry.sidecar.stages.length);
-    const limit=Math.min(3,Math.max(0,...[...groups.values()].map(g=>apertures.filter(a=>g.rooms.includes(a.room)).length)));
+    const apertures=source.apertures;
+    const limit=Math.min(2,apertures.length);
     const objects=new T.Group();
     objects.children=[entry.model.root,...scene.children.filter(o=>o.userData.furnishRuntime)];
     const target=new T.Scene();target.environment=scene.environment;target.environmentIntensity=scene.environmentIntensity;target.fog=scene.fog;
@@ -341,24 +366,19 @@ export function createRoomLighting({scene,desktop=true}) {
     entry.preparedDaylight=(async()=>{
       try {
         // Identical light counts share a program, regardless of room, colour or position.
-        const configs=new Map();
-        function include(spots,points){configs.set(spots+'/'+points,[spots,points]);}
-        for(let n=1;n<=limit;n++)include(n,0);
         const lamps=[...source.fixed,...items.filter(it=>isLampKind(it.kind)).map(it=>runtimeSource(it,source.specs.get(it.id)))];
-        for(const group of new Set(groups.values())){
-          const daylight=rankApertures(apertures.filter(a=>a.parts.some(p=>present(view.model,p))),group,[0,0,0],[],3).length;
-          const local=lamps.filter(l=>group.rooms.includes(l.room));
-          const count=spot=>Math.min(2,local.filter(l=>l.power.spot===spot).reduce((n,l)=>n+l.points.length,0));
-          for(let spot=0;spot<=count(true);spot++)
-            for(let point=0;point<=Math.min(2-spot,count(false));point++)
-              if(spot+point)include(daylight+spot,point);
+        const hasPoint=lamps.some(l=>!l.power.spot),hasSpot=lamps.some(l=>l.power.spot);
+        const configs=[];
+        for(let n=0;n<=limit;n++){
+          if(n)configs.push([n,false]);
+          if(hasPoint||hasSpot)configs.push([n,true]);
         }
-        for(const [spots,points] of configs.values()){
+        for(const [windows,on] of configs){
           if(entry!==view)break;
           const extras=[];
-          for(let i=0;i<spots+points;i++){
-            const light=i<spots?new T.SpotLight():new T.PointLight();
-            shadow(light,.02);target.add(light);extras.push(light);
+          for(let i=0;i<windows+(on?Number(hasSpot)+Number(hasPoint):0);i++){
+            const light=i<windows||on&&hasSpot&&i===windows?new T.SpotLight():new T.PointLight();
+            if(i<windows)shadow(light,.02);target.add(light);extras.push(light);
           }
           try{
             await renderer.compileAsync(objects,camera,target);
@@ -378,8 +398,8 @@ export function createRoomLighting({scene,desktop=true}) {
     })().catch(error=>{delete entry.preparedDaylight;throw error;});
     return entry.preparedDaylight;
   }
-  function dispose(){setView(null);root.removeFromParent();fallbackGeometry.dispose();for(const m of emitterMaterials.values())m.dispose();emitterMaterials.clear();stored.clear();}
-  return {setView,update,invalidate,pick,status,toggle,toggleRoom,toggleAll,snapshot,prepareDaylight,dispose};
+  function dispose(){setView(null);root.removeFromParent();fallbackGeometry.dispose();for(const m of emitterMaterials.values())m.dispose();emitterMaterials.clear();}
+  return {setView,update,fadeWindows,get transitioning(){return windows.some(l=>l.visible&&(l.userData.rising||l.userData.opening?.id!==l.userData.destination?.id));},invalidate,status,toggleAll,snapshot,prepareDaylight,dispose};
 }
 const EMPTY=Object.freeze([]);
 const VHoles=v=>v.cull?.holes?.done?1:0;

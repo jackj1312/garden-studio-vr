@@ -21,7 +21,7 @@ const pose = it => ({ position_m: it.position_m.slice(), yaw_deg: it.yaw_deg || 
 export class App {
   constructor() {
     this.vkey = "after"; this.storey = "ground"; this.roomId = null; this.selected = null;
-    this.ui = { wallStyle: "Contemporary", three: false };
+    this.ui = { wallStyle: "Contemporary", three: false, lights:false };
     this.warnings = new Map(); this.roomWarn = new Map();
     this.sessions = new Map(); this.editOrder=[]; this.redoOrder=[];
   }
@@ -205,7 +205,7 @@ export class App {
     $("threeEmpty").hidden = !!this.room;
     $("threeEmpty").textContent = "Open a room to see it in 3D.";
     this.view3d.renderer.domElement.style.visibility = this.room ? "visible" : "hidden";
-    if (this.room) this.view3d.show(this.state, this.roomId, this.selected);
+    if (this.room) this.view3d.show(this.state, this.roomId, this.selected,this.ui.lights);
   }
 
   /* ---------------------------------------------------------------- recording changes */
@@ -471,16 +471,7 @@ export class App {
     return this.commit({ op: "item.finish", target: { item: it.id }, summary: `${cap(part === "all" ? "colour" : part)} of ${label(it)}: ${value.name}`,
       before: { part, value: old }, after: { part, value } });
   }
-  toggleLamp(it) {
-    return this.commit({ op: "item.lamp", target: { item: it.id }, summary: `${label(it)} switched ${it.lampOn ? "off" : "on"}`, before: { on: !!it.lampOn }, after: { on: !it.lampOn } });
-  }
-  setLamps(room, lights, on) {
-    const shared=lights.filter(l=>l.shared);
-    if(shared.length) this.changeFurniture(s=>s.putMany(shared.map(l=>({...l.shared,lampOn:on})),'Room lamps'));
-    lights=lights.filter(l=>!l.shared); if(!lights.length)return;
-    return this.commit({ op: "room.lamps", target: { room: room.id }, summary: `All ${lights.length} lights in the ${room.name} ${on ? "on" : "off"}`,
-      before: { states: lights.map(l => [l.id, !!l.lampOn]) }, after: { ids: lights.map(l => l.id), on } });
-  }
+
   setRoom(room, field, value) {
     if (field==='floor') return this.changeFurniture(s=>s.setFloor(room.id,value?.id || null));
     if (field==='walls') return this.changeFurniture(s=>s.setWalls([...new Set(wallFaces(this.state,room.id).map(f=>f.id))],value?.hex || null));
@@ -553,6 +544,8 @@ export class App {
     $("backBtn").onclick = () => this.back();
     $("zoomIn").onclick = () => this.plan.zoomBy(0.75);
     $("zoomOut").onclick = () => this.plan.zoomBy(1.33);
+    $("plannerLights").onclick=()=>{this.ui.lights=!this.ui.lights;$("plannerLights").setAttribute("aria-pressed",String(this.ui.lights));
+      $("plannerLights").textContent=this.ui.lights?'House lights on':'House lights off';this.update3D();};
     $("zoomFit").onclick = () => { this.plan.fit(); this.plan.render(); };
     $("snapBtn").onclick = () => { this.plan.snapOn = !this.plan.snapOn; $("snapBtn").setAttribute("aria-pressed", String(this.plan.snapOn)); $("snapBtn").textContent = this.plan.snapOn ? "Snap on" : "Snap off"; };
     $("addBtn").onclick = () => this.room && openCatalogue(this, this.room);

@@ -1,6 +1,6 @@
 """Construct each room's visible wall interval and returns from the measured wall and room plan."""
 import copy,math
-from hb_geom import point_in_poly,merge_meshes,hexa,dot,sub,interval_minus,line_intersect
+from hb_geom import point_in_poly,merge_meshes,hexa,dot,sub,interval_minus,line_intersect,prism
 from hb_walls import _cells_for_layer
 from hb_joinery import box_uc
 
@@ -217,6 +217,29 @@ def transverse_parts(carrier,rooms,others,N):
                     out.append(part);claimed.append((a,b))
     return out
 
+def horizontal_return(w, left, right, jamb_left, jamb_right, start, face, rebate_end, z0, z1):
+    """Meet the opening's jambs even where adjoining wall paint stops at a corner.
+
+    The existing band retains its frame rebate. Only the new end beside an
+    owned jamb stays on the room side of the opposite return's rebate.
+    """
+    section = sorted((start,face))
+    if jamb_left == left and jamb_right == right:
+        return box_uc(w,left,right,z0,z1,*section)
+    joint = max(section[0], min(section[1], rebate_end))
+    if abs(joint-start) < 1e-7:
+        return box_uc(w,jamb_left,jamb_right,z0,z1,*section)
+    if abs(joint-face) < 1e-7:
+        return box_uc(w,left,right,z0,z1,*section)
+    outline = [(left,start),(right,start)]
+    if jamb_right > right:
+        outline.extend(((right,joint),(jamb_right,joint)))
+    outline.extend(((jamb_right,face),(jamb_left,face)))
+    if jamb_left < left:
+        outline.extend(((jamb_left,joint),(left,joint)))
+    return prism([w.point(u,c) for u,c in outline],z0,z1)
+
+
 def build(vb,rooms,items):
     from hb_build import atom,M
     out=[]
@@ -343,12 +366,18 @@ def build(vb,rooms,items):
                         face_c=datum+side*SKIM
                         if (face_c-start)*side<=.003:continue
                         section=sorted((start,face_c));bits=[]
-                        if lo-.04<=a<=hi+.04:bits.append(('left',box_uc(w,a,a+.003,bottom,top,*section)))
-                        if lo-.04<=b<=hi+.04:bits.append(('right',box_uc(w,b-.003,b,bottom,top,*section)))
+                        owns_left=lo-.04<=a<=hi+.04
+                        owns_right=lo-.04<=b<=hi+.04
+                        if owns_left:bits.append(('left',box_uc(w,a,a+.003,bottom,top,*section)))
+                        if owns_right:bits.append(('right',box_uc(w,b-.003,b,bottom,top,*section)))
                         ua=max(lo,a);ub=min(hi,b)
                         if ub-ua>.007:
-                            bits.append(('head',box_uc(w,ua,ub,top-.003,top,*section)))
-                            if op['kind']=='window':bits.append(('sill',box_uc(w,ua,ub,bottom,bottom+.003,*section)))
+                            jamb_left=min(ua,a+.003) if owns_left else ua
+                            jamb_right=max(ub,b-.003) if owns_right else ub
+                            rebate_end=start+side*.012 if fitting and not packer and op['kind']!='opening' else start
+                            span=(w,ua,ub,jamb_left,jamb_right,start,face_c,rebate_end)
+                            bits.append(('head',horizontal_return(*span,top-.003,top)))
+                            if op['kind']=='window':bits.append(('sill',horizontal_return(*span,bottom,bottom+.003)))
                         for role,mesh in bits:emit('-return-'+role+'-'+op['id'],mesh,top_finish)
                         if bits:returned.add(op['id'])
     # Split construction ownership before emitting a mesh. Only parts with

@@ -34,3 +34,5 @@ The current published build already fails gates. Keep its baseline separate from
 - 2026-11-03 · Keep the ordinary 8443 walkthrough compatible with shared layouts. Route editable sessions to 8450 and read the saved site file when the existing daemon only offers the static route.
 
 2026-11-03 · Jack reported the new furnished house was slow on his PC. Test the ordinary desktop route at Retina resolution, use direct rendering while turning or walking and restore desktop contact shadows for the stationary room. Publish a distinct read-only local preview while the client release completes its gates.
+
+2026-11-03 · Jack wants unrestricted placement, wall snapping, independent height, fine arrow controls, clickable highlighted wall faces and photographic floor coverings. Spatial checks are advisory in the editors and on save.

@@ -552,8 +552,8 @@ function dropVersion(entry) {
 }
 async function prepareVisitLight(entry) {
   if(!entry||LITE||inVR()||LOOK_PROFILE!=="on")return;
-  if(!entry.preparedDaylight)setLoad(.99,"Preparing the window light…");
-  await roomLights.prepareDaylight(renderer,camera,entry);
+  if(!entry.preparedDaylight)setLoad(.99,"Preparing window and lamp lighting…");
+  await roomLights.prepareDaylight(renderer,camera,entry,furnisher?.layout?.items||[],composer?.readBuffer);
 }
 async function useVersion(id,{deferReady=false}={}) {
   const ticket=++versionTicket;requestedVersion=id;loadingNow=true;
@@ -1618,8 +1618,9 @@ const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUti
 const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
 const locked = () => document.pointerLockElement === renderer.domElement;
 let lockRefused = false, lockWanted = false;
-const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse") && !lockRefused;
+const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse");
 function captureMouse() {
+  if(locked()||lockWanted)return;
   lockWanted = true;
   try {
     const p = renderer.domElement.requestPointerLock({ unadjustedMovement: false });
@@ -1630,8 +1631,9 @@ function captureMouse() {
    only gets a "click again"; one that refuses twice and never captured falls back to drag-to-look for the visit */
 let lockOk = false, lockFails = 0;
 function lockFailed(err) {
-  if (lockRefused) return;
+  if (!lockWanted) return;
   lockWanted = false;
+  if(pointer.down?.capture)pointer.down.capture=false;
   console.info("house: pointer lock refused", err?.message || err);
   if (lockOk || ++lockFails < 2) { toast("Click the view again to look around with the mouse (or drag to look)"); return; }
   lockRefused = true;
@@ -1641,7 +1643,7 @@ function lockFailed(err) {
 document.addEventListener("pointerlockerror", () => lockFailed("pointerlockerror"));
 document.addEventListener("pointerlockchange", () => {
   if (!locked()) { lockWanted = false; pointer.down = null; setHover(null); }
-  else { blurPass?.reset(); lockOk = true; lockFails = 0; }
+  else { blurPass?.reset(); lockOk = true; lockRefused=false; lockWanted=false; lockFails = 0; }
   updateLookUI();
 });
 function freeMouse() { if (locked()) document.exitPointerLock(); }
@@ -3501,6 +3503,11 @@ function gardenQuality(on) {
     }
   }
 }
+function editorWalkPreview(on) {
+  if(!on){freeMouse();return;}
+  if(!walk)setWalk(true);
+  if(lookEligible()&&!locked())captureMouse();
+}
 async function initGarden() {
   const {createGardenEditor} = await import("../garden/editor.js?v=walk1");
   pickRay.isOutdoor = index => { const p=V.model.parts[index]; return p?.group==="ground" || p?.storey==="site"; };
@@ -3510,11 +3517,7 @@ async function initGarden() {
         if (!inVR() && !walk) spawnAt("Front path"); orbit.enabled=false;
       } else { orbit.enabled=!walk&&!inVR();gardenStroke.cancel(garden.consumer); }
     },
-    walkPreview(on) {
-      if(!on){freeMouse();return;}
-      if(!walk)setWalk(true);
-      if(lookEligible()&&!locked())captureMouse();
-    },
+    walkPreview:editorWalkPreview,
     look(dx,dy) {yawPitch.yaw-=dx*.004; yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-dy*.004,-1.35,1.35);}
   });
   await garden.useVersion(V);
@@ -3524,6 +3527,7 @@ async function ensureFurniture(){
   if(furnisher)return furnisher;if(furnishInit)return furnishInit;
   furnishInit=import("../furnish/editor.js").then(({createFurnishingEditor})=>{
     furnisher=createFurnishingEditor({scene,camera,renderer,site:SITE,inVR,lite:LITE||SIM.on,
+      walkPreview:editorWalkPreview,
       houseHit(ray){const h=pickRay(ray);return h?{...h,part:partOf(h)}:null;},
       prepare(on){freeMouse();if(on){if(garden?.enabled)garden.leave();marks?.setActive(false);gotoMenu.close();
           if(stageValue!==stageN)setStage(stageN,true);if(unfurnished)setUnfurnished(false);orbit.enabled=false;

@@ -327,8 +327,8 @@ export function createRoomLighting({scene,desktop=true}) {
       practicals:activePracticals.map((r,i)=>({id:r.id,room:r.room,position:r.position,intensity:r.power.intensity,shadow:!!lampSlots[i]?.castShadow})),
       emitters:activeEmitters.map(e=>({...e})),version:view?.def?.id??null};
   }
-  async function prepareDaylight(renderer,camera,entry) {
-    if(!desktop||renderer.xr.isPresenting||entry!==view||!source?.apertures.length)return;
+  async function prepareDaylight(renderer,camera,entry,items=[],postTarget=null) {
+    if(!desktop||renderer.xr.isPresenting||entry!==view||!source)return;
     if(entry.preparedDaylight)return entry.preparedDaylight;
     // Compile the real fixed and instanced materials against the same light and
     // environment defines, without temporarily lighting or reparenting the live scene.
@@ -340,10 +340,36 @@ export function createRoomLighting({scene,desktop=true}) {
     for(const light of scene.children.filter(o=>o.isLight&&o.visible))target.add(light.clone(false));
     entry.preparedDaylight=(async()=>{
       try {
-        for(let n=1;n<=limit && entry===view;n++){
-          const opening=new T.SpotLight(0xffffff,1,12,75*Math.PI/180,.8,2);shadow(opening,.020);
-          target.add(opening,opening.target);
-          await renderer.compileAsync(objects,camera,target);
+        // Identical light counts share a program, regardless of room, colour or position.
+        const configs=new Map();
+        function include(spots,points){configs.set(spots+'/'+points,[spots,points]);}
+        for(let n=1;n<=limit;n++)include(n,0);
+        const lamps=[...source.fixed,...items.filter(it=>isLampKind(it.kind)).map(it=>runtimeSource(it,source.specs.get(it.id)))];
+        for(const group of new Set(groups.values())){
+          const daylight=rankApertures(apertures.filter(a=>a.parts.some(p=>present(view.model,p))),group,[0,0,0],[],3).length;
+          const local=lamps.filter(l=>group.rooms.includes(l.room));
+          const count=spot=>Math.min(2,local.filter(l=>l.power.spot===spot).reduce((n,l)=>n+l.points.length,0));
+          for(let spot=0;spot<=count(true);spot++)
+            for(let point=0;point<=Math.min(2-spot,count(false));point++)
+              if(spot+point)include(daylight+spot,point);
+        }
+        for(const [spots,points] of configs.values()){
+          if(entry!==view)break;
+          const extras=[];
+          for(let i=0;i<spots+points;i++){
+            const light=i<spots?new T.SpotLight():new T.PointLight();
+            shadow(light,.02);target.add(light);extras.push(light);
+          }
+          try{
+            await renderer.compileAsync(objects,camera,target);
+            if(postTarget){
+              const previous=renderer.getRenderTarget();let compiling;
+              try{renderer.setRenderTarget(postTarget);compiling=renderer.compileAsync(objects,camera,target);}
+              finally{renderer.setRenderTarget(previous);}
+              await compiling;
+            }
+          }
+          finally{for(const l of extras){target.remove(l);l.dispose();}}
         }
       }finally{
         objects.children=[];for(const o of target.children)if(o.isLight)o.dispose?.();

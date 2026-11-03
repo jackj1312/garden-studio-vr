@@ -1,4 +1,5 @@
 import {helpPage} from '../editor-help.js';
+import {studioAsset} from '../studio-layout-service.js';
 const W=672,H=770;
 const paints=['#f7f4ed','#e2d5c4','#d3cbbd','#ceb89f','#c3cdbb','#94a69b','#9aaeba','#7b8f98','#555f59','#684c47','#73805d','#c6b5bc'];
 export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
@@ -12,7 +13,7 @@ export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
  function go(key){page=key;offset=0;cache='';}
  function rect(text,x,y,w,h,callback,img=null,colour=null){
   ctx.fillStyle=colour||'#3a493e';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#738078';ctx.strokeRect(x,y,w,h);
-  if(img){const key=img;let im=art.get(key);if(!im){im=new Image();im.onload=()=>{cache='';};im.src='/tools/library/kit/'+key;art.set(key,im);}if(im.complete&&im.naturalWidth)ctx.drawImage(im,x+5,y+4,h-8,h-8);}
+  if(img){const key=img;let im=art.get(key);if(!im){im=new Image();im.onload=()=>{cache='';};im.src=studioAsset('/tools/library/kit/'+key);art.set(key,im);}if(im.complete&&im.naturalWidth)ctx.drawImage(im,x+5,y+4,h-8,h-8);}
   ctx.fillStyle='#f3f1e4';ctx.font='600 24px system-ui';ctx.textAlign='left';ctx.fillText(text,x+(img?h+8:12),y+h*.62,w-(img?h+15:22));boxes.push({text,x,y,w,h,callback});
  }
  function lines(str,x,y,limit,size=25){

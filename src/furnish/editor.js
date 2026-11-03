@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
+import {openLayoutEditor,layoutFetcher,studioAsset,previewPrefix} from '../studio-layout-service.js';
 import {FurnitureLayout} from './layout.mjs';
 import {loadRoomContext,checkGroup,snapPlacement,moveGroup,validateFurnishDelta} from './placement.mjs';
 import {createFurnitureModels} from './models.js';
@@ -8,7 +8,8 @@ import {createRoomPlan,containsXZ,itemCorners} from './room-plan.js';
 import {createFinishOverrides} from './finishes.js';
 import {createFurnitureWrist} from './wrist.js';
 
-const fetchJSON=async url=>{const r=await fetch(url);if(!r.ok)throw Error('Cannot read '+url);return r.json();};
+const fetchAsset=(url,opts)=>fetch(studioAsset(url),opts);
+const fetchJSON=async url=>{const r=await fetchAsset(url);if(!r.ok)throw Error('Cannot read '+url);return r.json();};
 const degrees=Math.PI/180;
 const stockRoom=r=>{const name=(r?.label||r?.name||'').toLowerCase();
  if(/bedroom/.test(name))return 'bedroom';if(/bath|suite|cloak/.test(name))return 'bathroom';if(/kitchen/.test(name))return 'kitchen';
@@ -60,8 +61,8 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
    if(!runtime&&!force&&!active){sync();return;}
    ready=(async()=>{
      try{
-       const specSite=v.def.spec_site||(site==='house-wip'?'house':site);
-       const [context,stock,choices,variants]=await Promise.all([loadRoomContext({site,version:v.def.id,specSite}),catalogueData??(catalogueData=fetchJSON('/tools/library/kit/catalogue.json')),fetchJSON('/assets/sites/'+specSite+'/spec/catalogue_v1.json'),runtime?fetchJSON('/assets/sites/'+site+'/'+runtime.variants):Promise.resolve({variants:{}})]);
+       const specSite=previewPrefix()?site:v.def.spec_site||(site==='house-wip'?'house':site);
+       const [context,stock,choices,variants]=await Promise.all([loadRoomContext({site,version:v.def.id,specSite,fetcher:fetchAsset}),catalogueData??(catalogueData=fetchJSON('/tools/library/kit/catalogue.json')),fetchJSON('/assets/sites/'+specSite+'/spec/catalogue_v1.json'),runtime?fetchJSON('/assets/sites/'+site+'/'+runtime.variants):Promise.resolve({variants:{}})]);
        if(ticket!==versionTicket)return;ctx=context;kit=stock.items;floors=choices.floors||[];
        if(!stores.has(v.def.id))stores.set(v.def.id,new FurnitureLayout({site,version:v.def.id,fetcher:layoutFetcher(site,v.def.id),onChange:()=>{if(layout===stores.get(v.def.id))sync();}}));
        layout=stores.get(v.def.id);await layout.load();if(ticket!==versionTicket)return;

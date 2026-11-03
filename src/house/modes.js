@@ -68,8 +68,7 @@ export const MODES = {
 };
 export const TAB_LABEL = { about: "About", spec: "Spec", regs: "Regs", build: "Build", plans: "Plans", notes: "Notes", tools: "Tools" };
 
-export function modeFromURL() {
-  const m = new URLSearchParams(location.search).get("mode");
+export function modeFromURL(m=new URLSearchParams(location.search).get('mode')) {
   const key = MODES[m] ? m : "builder";
   return { key, as: key, ...MODES[key] };
 }

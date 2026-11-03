@@ -1,3 +1,4 @@
+import {studioAsset} from '../studio-layout-service.js';
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;return n;};
 const option=(key,label)=>new Option(label,key);
 const clean=s=>String(s||'').replace(/[_-]+/g,' ');
@@ -33,7 +34,7 @@ export function createFurniturePanel(action){
   options(field('style'),[['','All styles'],...s.styles.map(x=>[x,clean(x)])],s.filters.style);
   if(document.activeElement!==field('query'))field('query').value=s.filters.query;
   const signature=JSON.stringify([s.filtered.map(c=>c.id),s.pending]);if(key!==signature){key=signature;
-   const buttons=s.filtered.map(c=>{const b=node('button'),img=node('img'),label=node('span',c.name||clean(c.kind));b.type='button';b.dataset.stockId=c.id;img.loading='lazy';img.alt='';img.src='/tools/library/kit/'+c.thumbnail;b.setAttribute('aria-pressed',String(c.id===s.pending));b.title=(c.name||c.kind)+' · '+clean(c.style);b.append(img,label);return b;});
+   const buttons=s.filtered.map(c=>{const b=node('button'),img=node('img'),label=node('span',c.name||clean(c.kind));b.type='button';b.dataset.stockId=c.id;img.loading='lazy';img.alt='';img.src=studioAsset('/tools/library/kit/'+c.thumbnail);b.setAttribute('aria-pressed',String(c.id===s.pending));b.title=(c.name||c.kind)+' · '+clean(c.style);b.append(img,label);return b;});
    find('[data-stock]').replaceChildren(...buttons);
   }
   find('[data-count]').textContent=s.filtered.length+' matching catalogue entries';

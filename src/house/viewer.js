@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import {createDesktopRender} from "./desktop-render.js";
+import {gardenDesktopRender} from "../garden/desktop-render.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -24,6 +26,7 @@ import { createDoors, isLeaf } from "./doors.js?v=h15";
 import { createPerf } from "./perf.js?v=h15";
 import { createRoomLighting } from "./room-lighting.js";
 import { createHousePresentation, createXRRoomTitle } from "./presentation.js";
+import { showHousePreview } from './preview.js';
 import { createCull } from "./cull.js?v=h33";
 import { wallFrame, layerSpans, CATALOGUE, setTiles } from "./geom.js?v=h11";
 import { moveWall, addWall, addOpening, swapFixture } from "./editops.js?v=h11";
@@ -54,9 +57,10 @@ const $ = id => document.getElementById(id);
 const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const params = new URLSearchParams(location.search);
-const SITE = (params.get("site") || "house").replace(/[^a-z0-9_-]/gi, "");
+const PREVIEW=showHousePreview();
+const SITE = PREVIEW ? 'house-preview' : (params.get("site") || "house").replace(/[^a-z0-9_-]/gi, "");
 const BASE = `assets/sites/${SITE}/`;
-const MODE = modeFromURL();
+const MODE = PREVIEW ? modeFromURL('customer') : modeFromURL();
 /* review (Jack's studio review) is the homeowner mode plus the marking tool: it looks and behaves as "customer"
    everywhere (MODE.as), and only the marking code asks for MODE.marks */
 document.documentElement.dataset.mode = MODE.as;
@@ -76,12 +80,15 @@ const IS_QUEST = /OculusBrowser|Quest/i.test(navigator.userAgent);
    was loading the full GLB, the 4k sky, 2048 shadows, GTAO at pixel ratio 2 and preloading the second version) */
 const IS_PHONE = !IS_QUEST && (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 900));
 const LITE = IS_QUEST || IS_PHONE;
+const desktopBalanced=!LITE && params.get("desktop")!=="full";
+const desktopRender=createDesktopRender();
 const LOOK_PROFILE = params.get("look")==="off" ? "off" : "on";
 const AO = LOOK_PROFILE === "on" ? {radius:.30, distanceExponent:1.3, thickness:.60, scale:1, samples:12, blend:.75} :
   {radius:.40, distanceExponent:1.2, thickness:.50, scale:1, samples:16, blend:1};
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE ? 1.25 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE || desktopBalanced ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
+const gardenDesktop=gardenDesktopRender(renderer,renderer.getPixelRatio());
 renderer.localClippingEnabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;         // Khronos PBR Neutral: keeps the brick and tile colours sampled from Jack's frames
@@ -267,7 +274,7 @@ function adaptExposure(dt, snap = false) {
   if (snap || t - coverAt > 200) {
     coverAt = t;
     _upRay.ray.origin.copy(camera.getWorldPosition(_camPos));
-    const covered = _upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
+    const covered = (gardenDesktop.active||desktopBalanced)?gardenDesktop.roofCover(V,_upRay.ray.origin,stageValue,snap):_upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
     adaptExposure.target = covered ? LOOK.exposureIn : LOOK.exposureOut;
   }
   const want = adaptExposure.target ?? LOOK.exposureOut;
@@ -279,7 +286,7 @@ attachControllerModels(renderer, player);
 const SIM = { on: false };
 const inVR = () => renderer.xr.isPresenting || SIM.on;
 /* the frame log and HUD (perf.js); it POSTs to /house/perf from the headset (or with ?perf=1) */
-const perf = createPerf({ renderer, site: SITE, scene, inXR: inVR, info: () => ({
+const perf = createPerf({ renderer, site: SITE, scene, post:!PREVIEW, inXR: inVR, info: () => ({
   mode: MODE.key, version: V?.def.id, stage: Math.round(stageValue * 100) / 100, xr: renderer.xr.isPresenting, sim: SIM.on,
   board: inVR() ? boardState() : "screen", boardTab, tool, flying, hovering, loading: loadingNow,
   head_y: +camera.getWorldPosition(new THREE.Vector3()).y.toFixed(3), rig_y: +player.position.y.toFixed(3),
@@ -343,6 +350,10 @@ if (!LITE) {
     { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
   gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+  if(desktopBalanced){
+    const sizeAO=gtao.setSize.bind(gtao);
+    gtao.setSize=(w,h)=>sizeAO(Math.max(1,Math.round(w*.5)),Math.max(1,Math.round(h*.5)));
+  }
   gtao.output = GTAOPass.OUTPUT.Default;
   gtao.updateGtaoMaterial(AO);
   gtao.blendIntensity=AO.blend;
@@ -398,7 +409,7 @@ const walker = createWalker(() => V.bvh, () => V.model.masks.solid, () => V.mode
   indoors: (x,y,z) => !!V?.model.roomAt(x,y+.10,z),
   barrier: (ray,far) => garden?.objects.length ? garden.garden.blockRay(ray,far) : null,
 });
-const requests = createRequests({ site: SITE, getVersion: () => V?.def.id, mode: MODE.key });
+const requests = createRequests({ site: SITE, getVersion: () => V?.def.id, mode: MODE.key,readOnly:PREVIEW });
 const recorder = createRecorder();
 const inspections = new Map();                // inspection point id -> {checks: {key: {status, note, at}}}
 const yawPitch = { yaw: 0, pitch: 0 };
@@ -2354,7 +2365,7 @@ const wristTab = createBoardTab();
 let heightOffer = false;
 /* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
 /* round 8: Furnished / Unfurnished next to No doors */
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", "arrange"], ["roomlamps","alllamps",null]];
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], [PREVIEW?null:"garden", "how", PREVIEW?null:"arrange"], ["roomlamps","alllamps",null]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -2635,29 +2646,82 @@ function feetFromEye(eye, floorY) {
   const l = walker.landing(pt.clone().setY(f + 0.05), f);
   return Math.abs(l.y - f) < 0.2 && l.distanceTo(pt) < 1.0 ? l : null;
 }
-function roomStandPoint(el) {
+function* roomStandPoints(el, near) {
   const poly = el.params.polygon, fy = el.params.floor;
   let cx = 0, cz = 0; for (const [x, z] of poly) { cx += x / poly.length; cz += z / poly.length; }
   const xs = poly.map(q => q[0]), zs = poly.map(q => q[1]);
   const cands = [];
-  for (let x = Math.min(...xs) + 0.3; x <= Math.max(...xs) - 0.3; x += 0.25)
-    for (let z = Math.min(...zs) + 0.3; z <= Math.max(...zs) - 0.3; z += 0.25)
-      if (inPoly(poly, x, z)) cands.push([Math.hypot(x - cx, z - cz), x, z]);
-  if (inPoly(poly, cx, cz)) cands.push([0, cx, cz]);
+  const distance=(x,z)=>Math.hypot(x-(near?.x??cx),z-(near?.z??cz));
+  for (let x = Math.min(...xs) + 0.25; x <= Math.max(...xs) - 0.25; x += 0.20)
+    for (let z = Math.min(...zs) + 0.25; z <= Math.max(...zs) - 0.25; z += 0.20)
+      if (inPoly(poly, x, z)) cands.push([distance(x,z), x, z]);
+  if (inPoly(poly, cx, cz)) cands.push([distance(cx,cz), cx, cz]);
   cands.sort((a, b) => a[0] - b[0]);
   for (const [, x, z] of cands.slice(0, 160)) {
     const f = walker.floorAt(x, fy + 0.3, z, 0.6);
     if (f === null || Math.abs(f - fy) > 0.3) continue;
     const pt = new THREE.Vector3(x, f, z);
-    if (standable(pt, false)) return pt;
+    if (standable(pt, false)) yield pt;
   }
-  return null;
+}
+
+// A long ray through an open doorway can show the next room. A collision-free
+// eye can also be right beside a pendant. Keep a signed view when it gives a
+// clear foreground in this room. Otherwise try the nearest safe landing.
+function roomArrival(el,cam,items) {
+  const poly=el.params.polygon, room=el.id, fy=el.params.floor;
+  const furniture=items.filter(it=>it.room===room && it.size && it.position &&
+    progress(stageValue,it.stageIn??1,it.seq??0)>.001 && !(it.stageOut && progress(stageValue,it.stageOut,it.seqOut??1)>=.999));
+  const obstacles=furniture.map(it=>{
+    const [w,d,h]=it.size, pos=new THREE.Vector3().fromArray(it.position);
+    const local=new THREE.Matrix4().makeRotationY(THREE.MathUtils.degToRad(it.rotation||0)).setPosition(pos).invert();
+    return {local,box:new THREE.Box3(new THREE.Vector3(-w/2,0,-d/2),new THREE.Vector3(w/2,h,d/2))};
+  });
+  const ray=new THREE.Ray(),localRay=new THREE.Ray(),trial=new THREE.Vector3();
+  function score(pt,yaw) {
+    let clear=0,depth=0,centre=false;
+    ray.origin.set(pt.x,pt.y+EYE,pt.z);
+    for (const turn of [-.50,-.25,0,.25,.50]) for (const lift of [-.20,0,.20]) {
+      ray.direction.set(-Math.sin(yaw+turn),lift,-Math.cos(yaw+turn)).normalize();
+      ray.at(.55,trial);
+      if(!inPoly(poly,trial.x,trial.z))continue;
+      let d=V.bvh.raycast(ray,1.8,V.model.masks.visible)?.distance??1.8;
+      for (const {box,local} of obstacles) {
+        localRay.copy(ray).applyMatrix4(local);
+        if (box.containsPoint(localRay.origin)) {d=0;break;}
+        if (localRay.intersectBox(box,trial))d=Math.min(d,trial.distanceTo(localRay.origin));
+      }
+      if (d>.55) {clear++;if(!turn&&!lift)centre=true;depth+=d;}
+    }
+    return {clear,centre,value:clear+(centre ? .35 : 0)+depth/100};
+  }
+  const eye=cam&&feetFromEye(cam.eye_m,fy);
+  function* points(){
+    if(eye&&inPoly(poly,eye.x,eye.z)&&standable(eye,false))yield eye;
+    yield* roomStandPoints(el,eye);
+  }
+  let best=null;
+  for(const pt of points()) {
+    // A planned item may move after the original camera was surveyed.
+    if(obstacles.some(({box,local})=>box.containsPoint(trial.set(pt.x,pt.y+.85,pt.z).applyMatrix4(local))))continue;
+    const preferred=cam?.target_m?yawTo(pt,{x:cam.target_m[0],z:cam.target_m[2]}):bestView(pt);
+    let at=null;
+    for(let i=0;i<16;i++) {
+      const delta=i%2?((i+1)/2):-(i/2),yaw=preferred+delta*Math.PI/8, s=score(pt,yaw);
+      const pose={feet:pt,yaw,from:cam?'camera '+cam.id:'room'};
+      if(s.centre&&s.clear>=11)return pose;
+      if(!at||s.value>at.value)at={value:s.value,pose};
+    }
+    if(!best||at.value>best.value)best=at;
+  }
+  return best?.pose||null;
 }
 let placesCache = null;
 function places() {
   if (!V) return [];
-  const ck = `${V.def.id}|${viewOf()}|${specCameras.length}|${stageIndex(stageValue)}`;
-  if (placesCache?.key === ck) return placesCache.list;
+  const ck = `${V.def.id}|${viewOf()}|${specCameras.length}|${stageIndex(stageValue)}|${unfurnished}`;
+  const items=unfurnished?null:furnisher?.layout?.items;
+  if (placesCache?.key === ck && placesCache.items===items) return placesCache.list;
   const t0 = performance.now(), view = viewOf(), list = [];
   const cams = specCameras.filter(c => Array.isArray(c.eye_m) && (!c.versions || c.versions.includes(view)));
   const rooms = [...V.editor.current().values()].filter(e => e.type === "room" && !e.removed && e.params?.polygon?.length >= 3);
@@ -2668,11 +2732,9 @@ function places() {
     if (seen.has(name)) name = `${name} (${el.params.name})`;
     seen.add(name);
     const cam = cams.find(c => { const e = c.eye_m; return Math.abs(e[1] - 1.5 - el.params.floor) < 0.6 && inPoly(el.params.polygon, e[0], e[2]); });
-    let pt = cam && feetFromEye(cam.eye_m, el.params.floor), yaw = null, from = "camera " + cam?.id;
-    if (pt) yaw = cam.target_m ? yawTo(pt, { x: cam.target_m[0], z: cam.target_m[2] }) : null;
-    else { pt = roomStandPoint(el); from = "room"; if (pt) yaw = bestView(pt); }
-    if (!pt) { console.info(`house: Go to: no clear standing point in ${el.id}`); continue; }
-    list.push({ name, group: el.params.storey === "first" ? "First floor" : "Ground floor", feet: pt, yaw, from, room: el.id });
+    const arrival=roomArrival(el,cam,items||[]);
+    if (!arrival) { console.info(`house: Go to: no clear standing point in ${el.id}`); continue; }
+    list.push({ name, group: el.params.storey === "first" ? "First floor" : "Ground floor", ...arrival, room: el.id });
   }
   /* outside: the road, the front path, the drive (the front court), the porch, the back garden */
   const site = V.sidecar.storeys?.site ?? 0;
@@ -2707,7 +2769,7 @@ function places() {
   }
   const order = { Outside: 0, "Ground floor": 1, "First floor": 2 };
   list.sort((a, b) => order[a.group] - order[b.group]);
-  placesCache = { key: ck, list };
+  placesCache = { key: ck, items, list };
   perf.note({ event: "go to places", version: V.def.id, view, n: list.length, ms: Math.round(performance.now() - t0) });
   fillGotoSelect();
   return list;
@@ -3449,7 +3511,7 @@ async function initGarden() {
     look(dx,dy) {yawPitch.yaw-=dx*.004; yawPitch.pitch=THREE.MathUtils.clamp(yawPitch.pitch-dy*.004,-1.35,1.35);}
   });
   await garden.useVersion(V);
-  if(params.get("garden")==="1") {garden.enter(); $("start").hidden=true;}
+  if(!PREVIEW&&params.get("garden")==="1") {garden.enter(); $("start").hidden=true;}
 }
 async function ensureFurniture(){
   if(furnisher)return furnisher;if(furnishInit)return furnishInit;
@@ -3469,7 +3531,7 @@ async function syncFurnitureVersion(entry){
   const f=await ensureFurniture();await f.useVersion(entry);f.setStage(stageValue);f.setFurnished(!unfurnished);await f.readyModels;
 }
 async function openFurniture(){
-  if(!V)return;try{const f=await ensureFurniture();await f.useVersion(V);await f.enter();}catch(e){toast(e.message);}
+  if(PREVIEW||!V)return;try{const f=await ensureFurniture();await f.useVersion(V);await f.enter();}catch(e){toast(e.message);}
 }
 document.querySelectorAll("[data-furnish-open]").forEach(b=>b.addEventListener("click",openFurniture));
 async function boot() {
@@ -3483,10 +3545,11 @@ async function boot() {
   }
   let mats;
   let spec;
-  [regs, sheets, mats, spec] = await Promise.all([loadRegs(BASE), fetchJSON(BASE + "sheets.json").catch(() => null), fetchJSON(BASE + "materials.json").catch(() => null),
+  [regs, sheets, mats, spec] = await Promise.all([loadRegs(BASE), PREVIEW?null:fetchJSON(BASE + "sheets.json").catch(() => null), fetchJSON(BASE + "materials.json").catch(() => null),
     /* Go to's named cameras: the site's own spec; a preview copy of a site (<site>-wip / -preview / -fixture) has none, so
        it reads the spec of the site it previews */
-    fetchJSON(BASE + (manifest.spec || "spec/spec_v1.json")).catch(() => {
+    fetchJSON(BASE + (PREVIEW ? "spec/spec_v1.json" : manifest.spec || "spec/spec_v1.json")).catch(() => {
+      if(PREVIEW)return null;
       const m = SITE.match(/^(.+)-(wip|preview|fixture)$/);
       return m ? fetchJSON(`assets/sites/${m[1]}/spec/spec_v1.json`).catch(() => null) : null;
     })]);
@@ -3519,7 +3582,7 @@ async function boot() {
   setXray(false);
   await initGarden();
   if(V.def.furnish_runtime)await syncFurnitureVersion(V);
-  if(params.get("edit")==="1"){await openFurniture();$("start").hidden=true;}
+  if(!PREVIEW&&params.get("edit")==="1"){await openFurniture();$("start").hidden=true;}
   const lg = $("legend");
   for (const c of Object.values(XRAY)) {
     const s = document.createElement("span");
@@ -3530,7 +3593,7 @@ async function boot() {
   updateHelp();
   console.info(`house: ${V.model.parts.length} parts · house ${V.model.drawCalls()} batches + setting ${V.model.settingCalls()} · ${V.bvh.triangles} ray triangles · mode ${MODE.key}`);
   /* make the Before / After switch instant on a laptop; the Quest loads a version only when asked (memory) */
-  if (!LITE && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
+  if (!LITE && params.get("preload")==="1" && !garden?.enabled && !furnisher?.enabled && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
   visitReady=true;$("startDesktop").disabled=false;finishLoading(V.def.id);
@@ -3643,6 +3706,7 @@ function loop(fakeNow) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (renderer.shadowMap.needsUpdate && renderer.shadowMap.enabled) shadowPasses++;
+  gardenDesktop.use(!!garden?.enabled && !LITE && !inVR());
   perf.frame(now, workPrev, SEND_PERF || renderer.xr.isPresenting);
   renderer.info.reset();
   if (!V) { renderer.render(scene, camera); workPrev = performance.now() - now; return; }
@@ -3680,7 +3744,7 @@ function loop(fakeNow) {
     if (step) { const ms = performance.now() - t0; if (ms > 4) perf.tag(`board ${step} ${Math.round(ms)} ms`); }
   }
   fade.update(dt);
-  adaptExposure(dt);
+  if(!garden?.bird||inVR())adaptExposure(dt);
   const vt = !inVR() && SIMPLE && comfort === "vignette" && deskMoving ? 0.45
     : inVR() && comfort === "vignette" && speedNow > 0.05 ? (MODE.vr.locomotion === "teleport" && !flying ? 0.75 : 0.5) + (fastWalk && walkBoost > 0.3 && !flying ? 0.1 : 0) : 0;
   vignette.material.opacity += (vt - vignette.material.opacity) * Math.min(1, dt * 8);
@@ -3694,7 +3758,15 @@ function loop(fakeNow) {
   blurFade = Math.max(0, Math.min(1, blurFade + (moving ? 1 : -1) * dt / BLUR.fade));
   deskMoving = !inVR() && deskMove.moving;
   if ((garden?.bird || furnisher?.bird) && !inVR()) { workPrev = performance.now() - now; return; }
-  if (renderer.xr.isPresenting || SIM.on || !composer) {
+  let display='contact';
+  if(desktopBalanced && !inVR() && !gardenDesktop.active){
+    display=desktopRender.choose({now,camera,view:V,key:[stageValue,V.model.asBuilt,unfurnished,doorsHidden,xray,section.active,...Object.values(storeyState)].join('|'),
+      active:!!(V.doors?.moving||playing||tween||marks?.drawing||furnisher?.enabled),
+      cacheable:SIMPLE&&!marks?.active&&!card.mesh.visible&&!hoverPart&&!furnisher?.enabled&&!perf.hud.visible,
+      shadow:renderer.shadowMap.needsUpdate,exposure:renderer.toneMappingExposure});
+    if(display==='held'){workPrev=performance.now()-now;return;}
+  }
+  if (renderer.xr.isPresenting || SIM.on || !composer || gardenDesktop.active || display==='moving') {
     const t0 = performance.now();
     const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
     if (!blurred) renderer.render(scene, camera);
@@ -3713,6 +3785,7 @@ renderer.setAnimationLoop(() => loop());
 /* a hook for tests from the console; not a user-facing API */
 window.__house = {
   THREE, scene, camera, renderer, player, orbit, measure, section, walker, feet, yawPitch, vrBoard, requests, regs: () => regs,
+  desktop:{get mode(){return gardenDesktop.active?"garden":desktopRender.mode;},get ratio(){return renderer.getPixelRatio();}},
   look:{snapshot:()=>({...roomLights.snapshot(),profile:LOOK_PROFILE,gtao:{...AO,enabled:!!gtao&&!inVR()},toneMapping:renderer.toneMapping}),switch: switchLamps},presentation,
   get V() { return V; }, get stage() { return stageValue; }, get tool() { return tool; }, get target() { return target; },
   get walk() { return walk; }, get xray() { return xray; }, get boardTab() { return boardTab; }, set boardTab(t) { boardTab = t; refreshBoard(); },

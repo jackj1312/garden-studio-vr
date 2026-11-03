@@ -265,7 +265,11 @@
 <link rel="stylesheet" href="src/furnish/furnish.css">
 <link rel="stylesheet" href="src/house/presentation.css?v=look1">
 <script type="module" src="src/editor-help.js"></script>
-<script>if(location.protocol==='https:' && location.port==='8443' && (new URLSearchParams(location.search).get('edit')==='1'||new URLSearchParams(location.search).get('garden')==='1')){const u=new URL(location.href);u.port='8450';location.replace(u);}</script>
+<style>
+  html[data-studio-preview] :is([data-garden-open],[data-furnish-open],#baMark,#marksPanel){display:none!important}
+  .studio-preview-link{display:inline-flex;align-items:center;min-height:40px;padding:0 .65em;color:var(--studio-green,#284a39);font-weight:600}
+</style>
+<script>if(location.protocol==='https:' && location.port==='8443' && !/^\/preview\/[0-9a-f]{20}\//.test(location.pathname) && (new URLSearchParams(location.search).get('edit')==='1'||new URLSearchParams(location.search).get('garden')==='1')){const u=new URL(location.href);u.port='8450';location.replace(u);}</script>
 </head>
 <body>
 
@@ -457,6 +461,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=garden-walk1"></script>
+<script type="module" src="src/house/viewer.js?v=desktop-balanced2"></script>
 </body>
 </html>

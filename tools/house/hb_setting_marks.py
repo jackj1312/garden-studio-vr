@@ -218,7 +218,11 @@ def shed_doors():
 def pavement_entrance(grey):
     """Replace surface faces on the measured pavement, never layer coplanar additions onto it."""
     ob = bpy.data.objects["G2_pavement"]
-    xx, zz, yy = bounds(ob)
+    # Only vertices belonging to surviving faces own pavement after the
+    # survey cut. The cached object bound can still cover the imported street.
+    indices = {i for face in ob.data.polygons for i in face.vertices}
+    points = [plan_point(ob.matrix_world @ ob.data.vertices[i].co) for i in indices]
+    xx, zz, yy = [(min(v), max(v)) for v in zip(*points)]
     start, end = zz
     edge_l = bounds(bpy.data.objects["G2_edge_path_edging_left"])[0][0]
     edge_r = bounds(bpy.data.objects["G2_edge_path_edging_right_and_lawn_kerb"])[0][0] + .10

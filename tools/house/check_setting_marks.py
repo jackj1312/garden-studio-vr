@@ -91,6 +91,9 @@ class Setting:
 def audit(path):
     g=Setting(path)
     report={}
+    xx, _, zz = g.bounds("G2_pavement")
+    report["pavement_bounds_m"] = [*xx, *zz]
+    assert xx[0] >= -9.371 and xx[1] <= 20.631 and zz[0] >= -.001 and zz[1] <= 31.191, report
     lo,hi=g.transverse_path_interval(4.964)
     report["path_m"]=[round(lo,4),round(hi,4),round(hi-lo,4)]
     assert abs(hi-lo-.900)<.00005 and abs(lo-3.209489)<.0001 and abs(hi-4.109489)<.0001, report

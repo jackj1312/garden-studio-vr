@@ -217,3 +217,4 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Compare matched real scene detail while moving and after settling, including after the moving budget steps down. (row 485)
 - At three stations verify matched finish height, no raised skirting and no overlapping top triangles. (row 255)
 - At three stations verify matched finish height, no raised skirting and no overlapping top triangles. (row 256)
+- Check exported pavement bounds against the setting generation rectangle and run the stacked-ground check. (row 486)

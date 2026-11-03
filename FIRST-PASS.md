@@ -68,8 +68,10 @@ before Jack sees the build.
 - **F267 (row 463, ruled)** The new joist packing had a proven coincident side contact with the rafter, but its support checker rejected the original rafter’s inward-wound face. Rule: Resolve outward orientation from the actual solid half-space and verify side-contact area with both normal and reversed-winding fixtures.
 - **F268 (row 464, ruled)** A new 15 mm flitch seat overlapped the existing signed ceiling lining by 14.5 mm. Rule: Trim only the five exact bearing footprints in the structural board and retain the finished underside and the positive load path.
 - **F288 (row 484, ruled)** Four joist-to-rafter fixings were reported as collisions at their 4 mm designed penetration into their own rafters. Rule: Identify the two actual timbers each fixing connects. Only those contacts are intentional; keep all unrelated parts subject to the normal clash check.
+- **F290 (row 486, ruled)** G2_pavement spans 60 metres after the entrance rebuild, overlapping the house ground outside its 30 metre ownership rectangle. Rule: Reconstruct the street entrance from the surviving clipped pavement face vertices and test that it remains inside the declared ground region.
 
 ## Lessons from the latest rounds (newest first)
+- house-wip · codex-marks · row 486: G2_pavement spans 60 metres after the entrance rebuild, overlapping the house ground outside its 30 metre ownership rectangle. → **Reconstruct the street entrance from the surviving clipped pavement face vertices and test that it remains inside the declared ground region.** (check: Check exported pavement bounds against the setting generation rectangle and run the stacked-ground check.) (tool: tools/house/check_setting_marks.py)
 - house-wip · codex-look · row 485: The house becomes fuzzy when the camera stops. → **Keep desktop display resolution independent of the moving-pixel budget. Render stationary colour and output at display resolution, reduce only the occlusion pass, and skip the blur pass when stopped.** (check: Compare matched real scene detail while moving and after settling, including after the moving budget steps down.)
 - house-wip · codex-marks · row 484: Four joist-to-rafter fixings were reported as collisions at their 4 mm designed penetration into their own rafters. → **Identify the two actual timbers each fixing connects. Only those contacts are intentional; keep all unrelated parts subject to the normal clash check.** (check: Verify fixing targets against each joist and rafter, reject a neighbouring rafter, and rerun the staged clash report.)
 - house-wip · codex-marks · row 483: The floor overlap probe read a material label as a vertex. → **Unpack material and triangle and pass numeric half-plane coefficients to clip_half.** (check: Measure coplanar triangle intersections in the issued and candidate floors.)
@@ -129,7 +131,6 @@ before Jack sees the build.
 - house-wip · codex-look · row 429: The queued standard device smoke command omitted its required evidence round argument. → **Use the named evidence round and explicit candidate site for every normal device smoke.** (tool: tools/review/furnish_devices.cjs)
 - house-wip · codex-look · row 428: The Quest simulation screenshot showed the HTML welcome instead of the controller view, and the simulated welcome state suppressed room titles. → **Start the simulator with the same entry state as WebXR, then capture the actual headset framebuffer and verify its visible scene and wrist.** (tool: tools/review/look_flow.cjs)
 - house-wip · codex-look · row 427: The original compact toolbar rule could hide the house name below 760 pixels after the branded welcome closed. → **Check the visible property identity after leaving the welcome screen at phone widths, including its computed display.** (tool: tools/review/look_flow.cjs)
-- house-wip · codex-look · row 426: Ready could show at 100 percent as soon as the fixed shell compiled, before the visible runtime furnishings or Explore control were ready. → **Reserve the final progress step for the selected version and its visible furnishings; declare Ready when opening the visit is possible and ignore superseded versions.** (tool: tools/review/look_flow.cjs)
 
 ## Every rule we have learned, by gate (CORRECTIONS-LOG.md)
 ### G0
@@ -641,6 +642,7 @@ before Jack sees the build.
 ### other
 - (255) Generate skirting only on solid wall runs and verify the two floor surfaces meet level across their open threshold.  _[Jack's mark [Visual bug]: Visual bug [approved_2b; after; 15; on SPEC-SKIRT-R-g-living-1, SPEC-FLR-R-g-kitchen-living-dining-open-plan; surface spec_FIN-SKIRT.001]]_
 - (256) Generate skirting only on solid wall runs and verify the two floor surfaces meet level across their open threshold.  _[Jack's mark [Visual bug]: Visual bug [approved_2b; after; 15; on SPEC-SKIRT-R-g-living-0, SPEC-FLR-R-g-kitchen-living-dining-open-plan, SPEC-FLR-R-g-living; surface spec_FIN-SKIRT.001]]_
+- (486) Reconstruct the street entrance from the surviving clipped pavement face vertices and test that it remains inside the declared ground region.  _[G2_pavement spans 60 metres after the entrance rebuild, overlapping the house ground outside its 30 metre ownership rectangle.]_
 
 ## Then the detail checklist
 DETAIL-CHECKLIST.md, line by line, at G3 and G6 (and G5b/G5c for a house). Every line came from a past mistake.

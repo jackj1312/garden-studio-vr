@@ -39,10 +39,12 @@ async function main() {
         }
         await page.goto(local+'/house.html?mode=customer&site='+site+(xr?'&xrsim=1':''),{waitUntil:'domcontentloaded'});
         await page.waitForFunction(()=>!!window.__house?.V?.model,{timeout:200000});
+        if(xr)await page.waitForFunction(()=>window.__house?.inVR()&&__house.hands.left&&__house.hands.right,{timeout:150000});
         if (!xr) {
+          await page.waitForSelector('#startDesktop:not([disabled])',{timeout:200000});await page.click('#startDesktop');
           for (const [button,version] of [['#baBefore',manifest.as_built_now],['#baAfter',manifest.default]]) {
             await page.click(button);
-            await page.waitForFunction(id=>window.__house.V?.def.id===id,{timeout:150000},version);
+            await page.waitForFunction((id,button)=>window.__house.V?.def.id===id && document.querySelector(button).getAttribute('aria-pressed')==='true',{timeout:150000},version,button);
           }
           await page.click('#baFurnish');
           await page.waitForFunction(()=>window.__house.unfurnished);

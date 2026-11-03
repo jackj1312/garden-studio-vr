@@ -14,3 +14,12 @@ The generator reads the signed Before and After schedules, prepares measured kit
 Both signed versions passed the room-finish checklist and the seven-part shell check. Full-room rays found zero raw interior faces in the drawn and measured layers. The signed spec check returned zero failures. The private browser walk passed all four versions, including Bedroom 1. A previous support audit cleared all 105 Before and 123 After items with at most 2 mm gap. The latest stricter fit exposed a Bedroom 1 wardrobe that needs a 10 mm lateral and 25 mm forward move; the corner resolver is implemented and awaits re-export. The original five brick materials retain the same PBR parameters and texture bytes.
 
 The measured opening head and rear-right conservatory post are fitted. The last Before scan had one remaining head/jamb joint at the kitchen doorway. Stage 2 is checkpointed pending that joint, the wardrobe re-export, device checks and final release tests. The expanded garden editor proceeds on its own local branch. The client house-wip model is still the previous publication.
+
+
+## 3 November 2026 · Stage 2 · verified on codex/interior
+
+The final measured kitchen soffit meets the jamb, and the Bedroom 1 wardrobe now sits at (3.085, 2.6775, −0.625) m in viewer coordinates with zero shell intersection. The furnished Before and After candidates include the scheduled fittings, lighting hardware, room-owned surfaces, fitted openings, the existing conservatory, and the surveyed garden with its grass and fallen fruit. The conservatory's signed finish retains its brick dwarf wall and house rear face.
+
+All four integrity scans reported zero blocking faults. Both shell and finish checks passed. The signed spec checker returned zero failures across 337 scheduled entries, with 336 present at the checked stages. The placement validator checked 105 Before and 123 After loose placements with zero issues. All 14 exported viewer files loaded, including the repaired meshopt twins. The candidate walk passed all four versions in 12.4 s. The planner, house controls, room culling and doors passed on desktop, phone and simulated headset. Matched kitchen-diner, lounge and front-garden frames are in `renders/house-build/furnishing/interior/`.
+
+The earlier seven approved-version construction-stage support warnings are still recorded. The client house model remains the previous publication while the runtime layout, round-2 marks and release gates are completed.

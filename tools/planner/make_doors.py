@@ -10,7 +10,7 @@ live from the elements file and the spec; a door missing here gets a derived swi
 
 Re-run after the house model is rebuilt (cheap: a few MB of JSON, no geometry).
 """
-import argparse, json, os, struct
+import argparse, json, os, re, struct
 from datetime import datetime, timezone
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -27,14 +27,53 @@ def glb_json(path):
         return json.loads(f.read(n))
 
 
+def physical_leaves(document):
+    """One swing per physical leaf. Its moving glass, lever and motif share the same transform."""
+    by_door = {}
+    for node in document.get("nodes", []):
+        e = node.get("extras") or {}
+        name = node.get("name", "")
+        legacy = re.search(r"_leaf(\d*)(?:\.\d{3})?$", name, re.I)
+        role = e.get("part")
+        if role != "leaf" and not (role is None and legacy):
+            continue
+        hinge = e.get("hinge")
+        if not isinstance(hinge, list) or len(hinge) != 3 or e.get("swing_deg") is None:
+            continue
+        door = e.get("door_group") or e.get("element")
+        if not door:
+            continue
+        index = e.get("leaf_index", int(legacy.group(1) or 0) if legacy else 0)
+        leaves = by_door.setdefault(door, {})
+        record = dict(node=name, hinge=[round(hinge[0],4), round(hinge[2],4)], y=round(hinge[1],4),
+                      swing_deg=float(e["swing_deg"]), slide=[round(e["slide"][0],4),round(e["slide"][2],4)]
+                      if isinstance(e.get("slide"), list) else None, leaf_index=index,
+                      conf=e.get("swing_conf"), source="glb")
+        previous = leaves.get(index)
+        if previous:
+            if any(previous[k]!=record[k] for k in ("hinge","y","swing_deg","slide")):
+                raise ValueError(f"{door}, leaf {index} has inconsistent movement in {name}")
+            continue
+        leaves[index] = record
+    return {door:[leaves[k] for k in sorted(leaves)] for door,leaves in by_door.items()}
+
+
+def latest_full_spec(directory):
+    candidates = [(int(match[1]),name) for name in os.listdir(directory)
+                  if (match := re.fullmatch(r"spec_v(\d+)\.json", name)) and os.path.isfile(os.path.join(directory,name))]
+    if not candidates:
+        raise FileNotFoundError(f"No complete numbered spec in {directory}")
+    return max(candidates)[1]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", required=True)
-    ap.add_argument("--spec", default=None, help="spec file name in assets/sites/<site>/spec/ (default: newest spec_v*.json)")
+    ap.add_argument("--spec", default=None, help="spec file name in assets/sites/<site>/spec/ (default: highest numbered complete spec_vN.json)")
     a = ap.parse_args()
     site_dir = os.path.join(ROOT, "assets", "sites", a.site)
     spec_dir = os.path.join(site_dir, "spec")
-    spec_name = a.spec or sorted(f for f in os.listdir(spec_dir) if f.startswith("spec_v") and f.endswith(".json"))[-1]
+    spec_name = a.spec or latest_full_spec(spec_dir)
     spec = json.load(open(os.path.join(spec_dir, spec_name), encoding="utf-8"))
     versions = json.load(open(os.path.join(site_dir, "versions.json"), encoding="utf-8"))
     by_id = {v["id"]: v for v in versions["versions"]}
@@ -44,30 +83,11 @@ def main():
         vid = sv["elements"]
         glb = os.path.join(site_dir, by_id[vid]["glb"])
         j = glb_json(glb)
-        leaves = {}
-        for n in j.get("nodes", []):
-            e = n.get("extras") or {}
-            if e.get("part") == "leaf_glass" or str(n.get("name", "")).endswith("_glass"):
-                continue
-            if not isinstance(e.get("hinge"), list) or e.get("swing_deg") is None:
-                continue
-            el = e.get("element") or e.get("door_group")
-            leaves.setdefault(el, []).append({
-                "node": n.get("name"),
-                "hinge": [round(e["hinge"][0], 4), round(e["hinge"][2], 4)],
-                "y": round(e["hinge"][1], 4),
-                "swing_deg": float(e["swing_deg"]),
-                "slide": [round(e["slide"][0], 4), round(e["slide"][2], 4)] if isinstance(e.get("slide"), list) else None,
-                "leaf_index": e.get("leaf_index", 0),
-                "conf": e.get("swing_conf"),
-                "source": "glb",
-            })
+        leaves = physical_leaves(j)
         for fid, ov in (spec.get("door_handing_overrides", {}).get(key) or {}).items():
             for l in leaves.get(fid, []):
                 l["swing_deg"] = float(ov["swing_deg"])
                 l["source"] = "spec override: " + ov.get("why", "")[:160]
-        for L in leaves.values():
-            L.sort(key=lambda l: l["leaf_index"] or 0)
         out["versions"][key] = {"elements": vid, "glb": by_id[vid]["glb"], "leaves": leaves}
         print(f"{key} ({vid}): {len(leaves)} doors, {sum(len(v) for v in leaves.values())} leaves")
     dest = os.path.join(ROOT, "assets", "planner", a.site, "doors.json")

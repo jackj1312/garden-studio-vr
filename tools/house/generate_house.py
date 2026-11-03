@@ -18,7 +18,8 @@ from mathutils.bvhtree import BVHTree
 import numpy as np
 
 import hb_geom as G
-from hb_build import StateBuilder, atom, M, sig_of, slug, TYPICAL, val
+from hb_build import StateBuilder, atom, M, sig_of, slug, TYPICAL, val, opening_element_id, resolve_spec
+from hb_trace import apply_hall_return, align_hall_schedule
 import hb_stage as S
 import hb_roof as R
 from hb_walls import resolve_joins
@@ -41,30 +42,13 @@ args = ap.parse_args(argv)
 DATA = json.load(open(args.data)); SPEC = json.load(open(args.spec))
 
 
-def resolve(o, defs, depth=0):
-    """'@name' / '@name.key.0' references into spec['defs']; a reference to a list inside a list is spliced in"""
-    if depth > 20: raise ValueError("reference loop")
-    if isinstance(o, str) and o.startswith("@"):
-        path = o[1:].split(".")
-        v = defs[path[0]]
-        for k in path[1:]: v = v[int(k)] if isinstance(v, list) else v[k]
-        return resolve(v, defs, depth + 1)
-    if isinstance(o, list):
-        out = []
-        for x in o:
-            r = resolve(x, defs, depth + 1)
-            if isinstance(x, str) and x.startswith("@") and isinstance(r, list): out.extend(r)
-            else: out.append(r)
-        return out
-    if isinstance(o, dict):
-        return {k: resolve(v, defs, depth + 1) for k, v in o.items()}
-    return o
-
-
-SPEC["versions"] = resolve(SPEC["versions"], SPEC.get("defs", {}))
+SPEC["versions"] = resolve_spec(SPEC["versions"], SPEC.get("defs", {}))
 interfaces_path=os.path.join(os.path.dirname(args.spec_v1),'finish_interfaces.json')
 if os.path.isfile(interfaces_path):
     SPEC['finish_interfaces']=json.load(open(interfaces_path))
+HALL_RETURN = apply_hall_return(DATA, SPEC.get('finish_interfaces', {}))
+with open(os.path.join(HERE,'spec','trace_amendments.json')) as amendments:
+    SPEC['roof_bearings'] = json.load(amendments).get(DATA['meta'].get('property'),{}).get('roof_bearings',{})
 OUT = os.path.abspath(args.out); os.makedirs(OUT, exist_ok=True)
 T0 = time.time()
 def log(*a): print(f"[house {time.time() - T0:6.1f}s]", *a, flush=True)
@@ -310,7 +294,7 @@ class VersionBuild:
         S.stage_atoms(lint, SPEC, self.lv, vspec["kind"])
         atoms += lint
         self.beam_lifts(atoms)
-        self.lintel_seq(atoms)
+        S.seat_lintel_stages(atoms,SPEC)
         self.unique_ids(atoms)
         atoms += HD.drains(SPEC, self.lv, vspec["kind"], vspec["id"])
         if vspec["kind"] == "proposal":
@@ -688,12 +672,12 @@ class VersionBuild:
                     if abs(W.d[0]) > 0.999 or abs(W.d[1]) > 0.999:          # square to the axes: one threshold over both
                         dup["poly"] = [(u[0], u[1]), (u[2], u[1]), (u[2], u[3]), (u[0], u[3])]
                     continue
-                ext = W.ckey in ("cav337_new", "cav_existing", "solid_existing", "party")
+                ext = W.ckey in ("cav337_new", "cav_existing", "solid_existing", "party") or o.get("retained_exterior_frame")
                 meta = M("slab_layer", W.storey, (f"threshold through the doorway '{o['id']}': " +
                          ("external sill/threshold, flush with the floor inside (type not drawn)" if ext else "hardwood threshold, flush with the floors") + f" {TYPICAL}"),
                          "", "assumed", "Floor through the doorway", True)
                 meta.update(stage_in=si, stage_out=so, seq=round(sq, 4), seq_out=sqo, category="existing" if si == 1 else "new")
-                th = atom(f"TH-{slug(W.id)}-{slug(o['id'])}", "prism", "existing", meta, sig=None, poly=P, z0=o["z0"] - 0.0185, z1=o["z0"],   # 1.5 mm over the wall lowered 20 mm under it (was 3 mm: row 179)
+                th = atom(opening_element_id("TH", W.id, o), "prism", "existing", meta, sig=None, poly=P, z0=o["z0"] - 0.0185, z1=o["z0"],   # 1.5 mm over the wall lowered 20 mm under it (was 3 mm: row 179)
                           mat="buff_concrete" if ext else ("spec_FIN-FLR-OAK" if (SPEC_V1_MAP.get(self.v["id"]) and not args.no_items) else "existing_floor"), cat=meta["category"])
                 if not ext and SPEC_V1_MAP.get(self.v["id"]) and not args.no_items: SPEC_MATS.add("FIN-FLR-OAK")      # round-1 sweep: the internal threshold is a hardwood strip in the spec oak, not the raw 'existing_floor' tone
                 th["_th_bb"] = bb; th["_th_z"] = round(o["z0"], 4)
@@ -736,24 +720,6 @@ class VersionBuild:
             W = a["wall"]
             fixed = set(W.__dict__.get("_fixed", set())) | {round(self.lv.dpc, 4)}
             W.lifts = sorted(l for l in W.lifts if l in fixed or all(abs(l - f) >= 0.1 for f in fixed))
-
-    def lintel_seq(self, atoms):  # noqa
-        """a lintel goes in after the lift that ends at its head, before the lift that starts on top of it"""
-        for a in atoms:
-            if "host" not in a or a["meta"].get("category") != "new": continue
-            W = a["host"]
-            host = next((h for h in atoms if h.get("wall") is W), None)
-            if host is None or host["meta"].get("category") not in ("new", "existing"): continue
-            if host["meta"].get("category") == "existing":
-                a["meta"]["seq"] = 0.55; continue
-            lines = [W.z0] + [l for l in W.lifts if W.z0 < l < W.z1] + [W.z1]
-            nl = len(lines) - 1
-            k = max(i for i in range(nl) if lines[i] <= a["head"] + 1e-4)       # lift that starts at (or below) the head
-            st, sq = S.lift_stage_seq(host, a["head"], SPEC)
-            a["meta"]["stage_in"] = st
-            a["meta"]["seq"] = round(max(0.0, sq - 0.001), 4)                       # on the courses under the head, before those that start on it
-            if host.get("lift_stage_after") and a["head"] >= host["lift_stage_after"][0] - 1e-4:
-                a["meta"]["stage_in"] = host["lift_stage_after"][1]; a["meta"]["seq"] = host["lift_stage_after"][2]
 
     def unique_ids(self, atoms):
         seen = {}
@@ -1479,7 +1445,14 @@ def run_checks(vb, objs, tol=0.004):
         s_ = []
         for j in cand:
             if info[j]["g"] == "prop" and tree(i).overlap(tree(j)): s_.append(j); continue      # needle through it
-            if touches(tree(j), pts): s_.append(j)
+            if touches(tree(j), pts):
+                s_.append(j)
+                continue
+            y=info[j]
+            if (x['p'].get('atom',{}).get('side_bearing')==y['el'] and
+                    (y['si'],y['seq'])<=(x['si'],x['seq']) and
+                    S.vertical_bearing_area(x['V'],x['T'],y['V'],y['T'])>.0002):
+                s_.append(j)
         sup.append(s_)
     def present(j, s, after_seq=None):
         x = info[j]
@@ -1987,7 +1960,7 @@ def elements_json(vb, objs, bears):
             hid = W.id
             e["type"] = "fixture"
             e["params"] = dict(catalogue={"bifold": "door.bifold.3", "window": "window.casement.2"}.get(o["kind"], "door.front.solid"),
-                               opening=f"O-{slug(W.id)}-{slug(o['id'])}", lights=a.get("nlights"), plane=round(a["c_plane"], 4))
+                               opening=opening_element_id("O", W.id, o), lights=a.get("nlights"), plane=round(a["c_plane"], 4))
         if a.get("embedded_in"): e["embedded_in"] = a["embedded_in"]
         if a.get("no_regs"): e["regs"] = []; e["regs_exclude"] = True
         if a.get("loft"): e["loft"] = True
@@ -2047,7 +2020,7 @@ def wall_contract(a):
         layers.append(d)
     ops, oids = [], []
     for o in W.openings:
-        oid = f"O-{slug(W.id)}-{slug(o['id'])}"
+        oid = opening_element_id("O", W.id, o)
         oids.append(oid)
         plain = {"window": "Window opening", "door": "Door opening", "bifold": "Opening for the folding glass doors", "opening": "Opening in the wall"}.get(o["kind"], "Opening")
         lab = o["id"] + (f" — {o['panes']}" if o.get("panes") else "") + f" (sill {o['z0']:.3f}, head {o['z1']:.3f} above FFL; BDS chains read from the dpc line)"
@@ -2288,11 +2261,11 @@ def main():
         # releases its memory before the model conversion starts on the M1.
         with tempfile.NamedTemporaryFile('w',dir=OUT,prefix='.runtime-source-',suffix='.json',delete=False) as stream:
             json.dump(manifest,stream);source_manifest=stream.name
-        spec_path=os.path.abspath(args.spec_v1)
+        spec_root=os.path.dirname(os.path.abspath(args.spec_v1))
         log('handoff to saved-layout build',runtime_ids)
         sys.stdout.flush();sys.stderr.flush()
         os.execv(node,[node,os.path.join(HERE,'bake_layout.mjs'),OUT,'--split','--source-manifest',source_manifest,
-                       '--spec-root',os.path.dirname(spec_path),'--spec-file',spec_path,*runtime_ids])
+                       '--spec-root',spec_root,'--spec-file',SPEC_V1_BAKE_PATH,*runtime_ids])
     else:
         with tempfile.NamedTemporaryFile('w',dir=OUT,prefix='.versions-',delete=False) as stream:
             json.dump(manifest,stream,indent=1);new_manifest=stream.name
@@ -2358,7 +2331,16 @@ def glb_texture_guard(path):
 
 
 FAULTS = []
+SPEC_V1_BAKE_PATH = os.path.abspath(args.spec_v1)
 SPEC_V1 = json.load(open(args.spec_v1)) if os.path.exists(args.spec_v1) else None
+if align_hall_schedule(DATA, SPEC_V1, HALL_RETURN):
+    # Publish the reconciled room schedule only under this private candidate.
+    # A supplied external signed source is always read-only.
+    spec_dir = os.path.join(OUT, 'spec'); os.makedirs(spec_dir, exist_ok=True)
+    with tempfile.NamedTemporaryFile('w',dir=spec_dir,prefix='.hall-spec-',delete=False) as stream:
+        json.dump(SPEC_V1,stream,indent=1,ensure_ascii=False);stream.write('\n');adjusted=stream.name
+    SPEC_V1_BAKE_PATH = os.path.join(spec_dir,'spec_v1.json')
+    os.replace(adjusted,SPEC_V1_BAKE_PATH)
 SPEC_V1_MAP = {"as_built_now": "before", SPEC.get("default", "approved_2b"): "after"} if SPEC_V1 else {}
 SPEC_MATS = set()
 SKIRTING_HELD = False    # Jack 1 Nov: skirting, architraves, window boards to the joinery bar: moulded profiles (hb_joinery), proved on the joinery test sheet

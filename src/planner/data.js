@@ -7,30 +7,37 @@ const SITE_ROOT = site => `assets/sites/${site}/`;
 const bust = () => `?t=${Date.now()}`;
 async function getJSON(url, fresh = false) {
   const r = await fetch(url + (fresh ? bust() : ""), { cache: fresh ? "no-store" : "default" });
-  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error(`${url}: ${r.status}`),{status:r.status});
   return r.json();
 }
 
 export async function loadAll(site) {
   const root = SITE_ROOT(site);
   const specSite = site === 'house-wip' ? 'house' : site;
-  const specRoot = SITE_ROOT(specSite);
-  const specs = ["spec_v1.json"];
-  const [spec, catalogue, doors, kit] = await Promise.all([
-    getJSON(specRoot + "spec/" + specs[specs.length - 1], true),
-    getJSON(specRoot + "spec/catalogue_v1.json", true),
-    getJSON(`assets/planner/${specSite}/doors.json`, true).catch(() => ({ versions: {} })),
+  const specName="spec_v1.json";
+  const [manifest,doors,kit]=await Promise.all([
+    getJSON(root+"versions.json",true),
+    getJSON(`assets/planner/${specSite}/doors.json`,true).catch(()=>({versions:{}})),
     getJSON('tools/library/kit/catalogue.json'),
   ]);
+  const release=/^[0-9a-f]{20}$/.test(manifest.furnish_release||'')?manifest.furnish_release:null;
+  let specRoot=release?root+'releases/'+release+'/':root,spec;
+  try {spec=await getJSON(specRoot+'spec/'+specName,true);}
+  catch(error) {
+    if(release || site===specSite || ![403,404].includes(error.status))throw error;
+    specRoot=SITE_ROOT(specSite);spec=await getJSON(specRoot+'spec/'+specName,true);
+  }
+  const catalogue=await getJSON(specRoot+'spec/catalogue_v1.json',true);
   const versions = {}, elements = {};
   await Promise.all(Object.entries(spec.versions).map(async ([key, sv]) => {
-    const el = await getJSON(root + `${sv.elements}_elements.json`, true);
+    const file=manifest.versions.find(v=>v.id===sv.elements)?.elements || `${sv.elements}_elements.json`;
+    const el=await getJSON(root+file,true);
     elements[key]=el;
     versions[key] = buildHouse(key, sv, el, doors.versions?.[key], spec);
   }));
   const finishes = Object.fromEntries(spec.finishes.map(f => [f.id, f]));
   const entries = new Map(catalogue.entries.map(e => [e.id, e]));
-  return { site, specSite, specName: specs[specs.length - 1], spec, catalogue, entries, kit, finishes, versions, elements, doors };
+  return { site, specSite, specName, spec, catalogue, entries, kit, finishes, versions, elements, doors };
 }
 
 /* ---------------------------------------------------------------- the house (walls, openings, rooms) per version */

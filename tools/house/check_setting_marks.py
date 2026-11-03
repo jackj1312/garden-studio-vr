@@ -3,6 +3,7 @@
     python3 tools/house/check_setting_marks.py assets/sites/house/setting_front.glb
 """
 import argparse
+import io
 import json
 import struct
 
@@ -143,6 +144,25 @@ def audit(path):
                 plant_materials.add(m["name"])
     report["botanical_materials"]=sorted(plant_materials)
     assert len(plant_materials)>=3, report
+    # Read the actual compressed sRGB images. Non-colour normal data must never
+    # receive the diffuse transfer, or its tangent directions would be altered.
+    from PIL import Image, ImageStat
+    expected={"blade":(.27,.29,.17),"silver":(.32,.36,.27),"leaf":(.18,.25,.11),"petal":(.35,.20,.47)}
+    means={}
+    for m in g.doc["materials"]:
+        key=m["name"].removeprefix("Surveyed leaves ")
+        if key not in expected:continue
+        texture=g.doc["textures"][m["pbrMetallicRoughness"]["baseColorTexture"]["index"]]
+        source=texture.get("source",texture.get("extensions",{}).get("EXT_texture_webp",{}).get("source"))
+        view=g.doc["bufferViews"][g.doc["images"][source]["bufferView"]]
+        offset=view.get("byteOffset",0)
+        image=Image.open(io.BytesIO(g.bin[offset:offset+view["byteLength"]])).convert("RGB")
+        avg=ImageStat.Stat(image).mean
+        target=[255*(1.055*n**(1/2.4)-.055) for n in expected[key]]
+        means[key]=[round(n) for n in avg]
+        assert all(abs(a-b)<13 for a,b in zip(avg,target)),(key,means[key],target)
+    report["leaf_srgb_means"]=means
+    assert len(means)==len(expected)
     for soil in ("G2_house_bed","G2_hedge_soil"):
         for p,_ in g.primitives(soil):
             m=g.doc["materials"][p["material"]]

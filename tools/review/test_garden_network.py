@@ -120,6 +120,40 @@ class GardenNetworkTests(unittest.TestCase):
         self.deny("/src/garden/editor.js", "POST")
         self.deny("/src/garden/editor.js", origin="https://attacker.invalid")
 
+    def test_active_immutable_release_only_serves_its_signed_planner_files(self):
+        active = "0123456789abcdef0123"
+        previous = "a123456789abcdef0123"
+        release = self.site + "releases/" + active + "/"
+        previous_release = self.site + "releases/" + previous + "/"
+        elements = "approved_2b_elements.json"
+        manifest = {"furnish_release":active, "versions":[{"id":"approved_2b",
+                    "elements":"releases/" + active + "/" + elements}]}
+        self.write(self.site + "versions.json", json.dumps(manifest).encode())
+        files = {"spec/spec_v1.json":b"signed room geometry", "spec/catalogue_v1.json":b"signed finishes",
+                 elements:b"released elements"}
+        for name,body in files.items():
+            self.write(release+name, body)
+            self.write(previous_release+name, b"retired release")
+            for method in ("GET","HEAD"):
+                result = self.request(method, "/"+release+name)
+                self.assertEqual((result.status,int(result.response_headers["Content-Length"])), (200,len(body)))
+                self.assertEqual(result.wfile.getvalue(),body if method=="GET" else b"")
+                self.deny("/"+previous_release+name, method)
+            self.deny("/"+release+name, "POST")
+        for name in ["spec/spec_v1_addendum2_details.json","spec/finish_interfaces.json","spec/changes/changes.json",
+                     "spec/marks_audio/note.webm","spec/photos/reference.jpg","spec/drawings/plan.pdf",
+                     "spec/spec_v1.previous.json","as_built_now_elements.json","spec/SIGNOFF.md"]:
+            self.write(release+name,b"private source")
+            for method in ("GET","HEAD","POST"):
+                self.deny("/"+release+name,method)
+        self.deny("/"+release+"spec/%2e%2e/review/findings.json")
+        self.deny("/"+release+"spec/")
+        signed = self.root/release/"spec/spec_v1.json"
+        signed.unlink()
+        signed.symlink_to(self.private)
+        self.deny("/"+release+"spec/spec_v1.json")
+        self.deny("/"+release+"spec/spec_v1.json","HEAD")
+
     def test_deny_private_paths_direct_layout_history_and_encoded_traversal(self):
         for path in ["/drawings/plan.pdf", "/.git/config", "/assets/sites/house-wip/review/findings.json",
                      "/assets/sites/house-wip/marks_audio/voice.webm", "/assets/sites/house-wip/refs.json",

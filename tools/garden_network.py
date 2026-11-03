@@ -22,7 +22,7 @@ SKIES = {"assets/hdri/sky_midday_2k.jpg", "assets/hdri/sky_midday_4k.jpg",
          "assets/hdri/kloofendal_43d_clear_puresky_2k.exr"}
 FLOOR_TEXTURES = {"tools/library/kit/maps/"+n for n in ("oak_wood_planks_diff_2k.jpg", "Marble019_1K-JPG_Color.jpg", "knitted_fleece_diff_1k.jpg")}
 SAFE_SPEC = {"assets/sites/house/spec/spec_v1.json", "assets/sites/house/spec/catalogue_v1.json",
-             "assets/planner/house/doors.json", SITE_DIR + "/spec/spec_v1.json"}
+             "assets/planner/house/doors.json", SITE_DIR + "/spec/spec_v1.json", SITE_DIR + "/spec/catalogue_v1.json"}
 METADATA = {SITE_DIR + "/" + n for n in ("versions.json", "regs.json", "regs_map.json", "materials.json")}
 
 
@@ -62,6 +62,9 @@ def garden_handler(base, project, address):
             data = json.loads(raw)
         if path == SITE_DIR + "/versions.json":
             versions, files, elements = set(), set(), set()
+            release_id = data.get("furnish_release", "")
+            if isinstance(release_id,str) and re.fullmatch(r"[0-9a-f]{20}",release_id):
+                files.update(f"{SITE_DIR}/releases/{release_id}/spec/{name}" for name in ("spec_v1.json","catalogue_v1.json"))
             for item in data["versions"]:
                 version = item["id"]
                 if not isinstance(version, str) or not NAME.fullmatch(version):

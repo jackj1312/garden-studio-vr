@@ -1251,6 +1251,100 @@ def _plant(b):
             _leaf(b,"leaf",attach,end,w*.18,"leaf_light" if (i+j)%3==0 else "leaf")
 
 
+def _signed_print(b, iw, ih, plane):
+    """Draw an expressly scheduled studio print on its mount; stock catalogue art is separate."""
+    motif=b.options["motif"].lower()
+    variant=b.options["print_variant"]
+    def polygon(name,points,ink,layer=0):
+        # Counter-clockwise on X/Z faces the front of the print (-Y).
+        area=sum(a[0]*c[1]-a[1]*c[0] for a,c in zip(points,points[1:]+points[:1]))
+        if area<0:points=list(reversed(points))
+        vertices=[(x*iw,plane-.00020*layer,z*ih+b.h/2) for x,z in points]
+        b.mesh(name,vertices,[tuple(range(len(vertices)))],ink,False,collide=False)
+    def stroke(name,pts,ink,width=.008,layer=2):
+        left=[];right=[]
+        for i,(x,z) in enumerate(pts):
+            a=pts[max(0,i-1)];c=pts[min(len(pts)-1,i+1)]
+            dx,dz=c[0]-a[0],c[1]-a[1];norm=max(math.hypot(dx,dz),1e-9)
+            left.append((x-width*dz/(2*norm),z+width*dx/(2*norm)))
+            right.append((x+width*dz/(2*norm),z-width*dx/(2*norm)))
+        polygon(name,left+right[::-1],ink,layer)
+    def disk(name,x,z,rx,rz,ink,layer=0):
+        polygon(name,[(x+rx*math.cos(TAU*i/38),z+rz*math.sin(TAU*i/38)) for i in range(38)],ink,layer)
+    def land(name,profile,ink,layer=0):
+        polygon(name,[(-.49,-.47),(.49,-.47)]+list(reversed(profile)),ink,layer)
+    if "botanical" in motif:
+        outline="line" in motif
+        bend=(1 if variant%2 else -1)*(.145+.115*variant/65535)
+        for branch in range(2 if outline else 3):
+            x0= -.22+branch*(.20 if outline else .17)
+            z0=-.41+branch*.025
+            height=.75-branch*.10
+            sign=1 if branch%2 else -1
+            steps=[(x0+bend*(i/6)**2+sign*.036*(i/6),z0+height*i/6) for i in range(7)]
+            stroke("botanical-stalk",steps,"art_sage",.009)
+            for j in range(1,6):
+                x,z=steps[j]
+                side=1 if (j+branch)%2 else -1
+                length=.12+.022*((j+variant)%3)
+                # A pointed leaf attaches to its stem, tapering back to the petiole.
+                leaf=[(x,z),(x+side*length*.47,z+.012),(x+side*length,z+.087),
+                      (x+side*length*.40,z+.077)]
+                if outline:
+                    stroke("botanical-outline",leaf+[leaf[0]],"art_sage",.006)
+                else:
+                    polygon("botanical-leaf",leaf,"art_sage",1)
+        return
+    if "coastal" in motif:
+        land("distant-coast",[(-.49,.11),(-.24,.19),(-.04,.15),(.12,.13),(.31,.23),(.49,.22)],"ink_mist")
+        land("headland",[(-.49,.10),(-.35,.14),(-.20,.08),(-.08,.03),(.05,.02),(.16,-.04),(.49,-.05)],"ink_shale",1)
+        land("strand",[(-.49,-.19),(-.26,-.12),(-.02,-.19),(.15,-.23),(.32,-.24),(.49,-.19)],"paper",2)
+        stroke("tide-line",[(-.42,-.18),(-.21,-.20),(.01,-.24),(.30,-.25)],"ink_charcoal",.006,3)
+        return
+    if "figures" in motif:
+        for x,height,lean in ((-.17,.28,.08),(.16,.24,-.06)):
+            ellipse=[(x+.060*math.cos(TAU*i/28),height+.074*math.sin(TAU*i/28)) for i in range(29)]
+            stroke("figure-head",ellipse,"ink_charcoal",.008)
+            stroke("figure-silhouette",[(x-.04,height-.07),(x-.11,.09),(x-.08,-.06),(x-.12,-.36),
+                  (x+lean,-.30),(x+.10,-.06),(x+.08,.12),(x+.035,height-.06)],"ink_charcoal",.012)
+            stroke("figure-gesture",[(x-.09,.08),(x-.18,-.08),(x-.02,-.03),(x+.05,.07)],"ink_shale",.008)
+        return
+    if "map" in motif:
+        for j in range(4):
+            offset=-.36+.20*j
+            stroke("map-street",[(offset,-.44),(offset+.06,-.23),(offset-.02,.04),(offset+.11,.25),(offset+.12,.42)],"ink_shale",.009)
+        for j in range(3):
+            z=-.26+j*.23
+            stroke("map-lane",[(-.45,z),(-.15,z+.06),(.08,z+.02),(.43,z+.115)],"ink_charcoal",.009)
+        return
+    if "landscape" in motif:
+        land("far-hills",[(-.49,.07),(-.26,.20),(-.08,.13),(.10,.23),(.32,.18),(.49,.10)],"art_sand")
+        land("near-hills",[(-.49,-.11),(-.27,-.05),(-.10,-.08),(.08,-.14),(.29,-.03),(.49,.01)],"ink_mist",1)
+        if "warm neutrals" in motif:
+            stroke("field-margin",[(-.42,-.26),(-.18,-.20),(.03,-.25),(.22,-.19),(.39,-.19)],"ink_shale",.012)
+        else:
+            polygon("river-in-hills",[(.24,-.06),(.27,-.06),(.06,-.16),(.19,-.25),(.03,-.47),
+                    (-.10,-.47),(.12,-.25),(.015,-.16)],"paper",2)
+        return
+    if "terracotta" in motif:
+        polygon("terracotta-cut", [(-.45,-.46),(.00,-.46),(.05,.13),(-.25,.36),(-.45,.22)],"art_clay")
+        disk("cream-disc",.20,.14,.23,.21,"paper",1)
+        polygon("sand-plinth",[(.10,-.43),(.44,-.43),(.44,-.13),(.14,-.18)],"art_sand",1)
+        return
+    if "clay" in motif:
+        disk("soft-clay",-.17,.05,.29,.29,"art_clay")
+        if "soft" in motif:
+            disk("soft-cream",.16,-.16,.25,.17,"paper",1)
+        else:
+            polygon("clay-cut",[(.06,-.44),(.42,-.44),(.42,.28),(.18,.11)],"art_sand",1)
+        return
+    if "abstract" in motif and b.options.get("palette")=="sage":
+        polygon("sage-landform",[(-.45,-.38),(.20,-.38),(.33,-.20),(.10,.02),(-.20,-.02),(-.45,.08)],"art_sage")
+        disk("sage-seed",.04,.22,.10,.13,"art_sage")
+        return
+    raise ValueError("Unrecognised scheduled print motif: "+motif)
+
+
 def _art(b,mirror=False):
     w,d,h=b.w,b.d,b.h
     rail=.018
@@ -1285,6 +1379,9 @@ def _art(b,mirror=False):
             z=-.32+j*.13;side=1 if j%2 else -1
             shape("sage-leaf",[(0,z),(side*.19,z+.025),(side*.37,z+.15),(side*.13,z+.12)],"art_sage")
         b.tube("botanical-stem",[(0,y-.001,h*.21),(0,y-.001,h*.83)],.0015,"art_sage",sides=7)
+        return
+    if b.options.get("signed_print"):
+        _signed_print(b,iw,ih,y)
         return
     shape("sand-field",[(-.50,-.50),(.50,-.50),(.50,-.12),(.31,.01),(-.15,-.09),(-.50,.03)],"art_sand")
     circle=[(math.cos(TAU*i/48)*.20+.16,math.sin(TAU*i/48)*.20+.19) for i in range(48)]

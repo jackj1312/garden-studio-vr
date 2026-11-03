@@ -8,13 +8,14 @@ def prepare(site,spec_path):
     import hashlib
     site,spec_path=Path(site),Path(spec_path)
     addendum=spec_path.with_name('spec_v1_addendum2_details.json')
-    inputs=[Path(__file__),Path(kit.__file__),spec_path,*[kit.KIT/f for f in ('studio.py','furnishings.py','furnishing_surfaces.py','fittings.py','materials.json','dimensions.json')]]
+    inputs=[Path(__file__),Path(kit.__file__),Path(kit.__file__).with_name("hb_countertops.py"),spec_path,*[kit.KIT/f for f in ('studio.py','furnishings.py','furnishing_surfaces.py','fittings.py','materials.json','dimensions.json')]]
     if addendum.exists():inputs.append(addendum)
     revision=hashlib.sha256(b''.join(path.read_bytes() for path in inputs)).hexdigest()
     stamp=site/'kit/revision'
     if stamp.exists() and stamp.read_text()==revision and all(kit.library_path(site,v).exists() for v in ('before','after')):return
     spec=json.loads(spec_path.read_text())
     kit.FINISH_COLOURS={f['id']:f['colour_srgb'] for f in spec['finishes']}
+    kit.FINISH_ROUGHNESS=kit.constant_roughness(spec['finishes'])
     for vkey,v in spec['versions'].items():
         bpy.ops.wm.read_factory_settings(use_empty=True)
         collection=bpy.context.scene.collection

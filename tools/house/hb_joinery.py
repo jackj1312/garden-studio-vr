@@ -143,13 +143,14 @@ def porch_leaf(w,lo,hi,z0,z1,c):
     return leaf,glass,leading
 
 
-def door_ironmongery(W, ua, ub, za, hinge_u, c0, c1, zh_leaf):
+def door_ironmongery(W, ua, ub, za, hinge_u, c0, c1, zh_leaf, hinge_c=None):
     """(hinges, handles): 3 butt hinges on the hinge edge; lever on rose both faces near the free edge at 1.0 m"""
     free_u = ub if abs(hinge_u - ua) < abs(hinge_u - ub) else ua
     sgn_u = 1 if free_u > hinge_u else -1
     hinges = []
+    pin_c = (c0 + c1) / 2 if hinge_c is None else hinge_c
     for zc in (zh_leaf - 0.150 - 0.038, za + 0.230 + 0.038, (zh_leaf + za) / 2):
-        hinges.append(cyl_uc(W, hinge_u, (c0 + c1) / 2 + 0.0, zc - 0.038, zc + 0.038, 0.0065, 10))   # knuckle on the hinge axis
+        hinges.append(cyl_uc(W, hinge_u, pin_c, zc - 0.038, zc + 0.038, 0.0065, 10))   # knuckle on the hinge axis
     handles = []
     hu = free_u - sgn_u * 0.060; zc = za + 1.0 - (za - za)          # lever centre 1.0 m above the floor line under the leaf
     for face, s in ((c1, 1), (c0, -1)):

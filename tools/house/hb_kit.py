@@ -6,9 +6,32 @@ sys.path.insert(0,str(KIT))
 import bpy
 from mathutils import Matrix, Vector
 import studio
+from hb_countertops import base_units, board_support, rail_drape, splash_segments
 from studio import F
 
 FINISH_COLOURS={}
+FINISH_ROUGHNESS={}
+
+def constant_roughness(finishes):
+    """Single-value, parametric specifications only. Texture-driven/ranged finishes keep their maps."""
+    result={}
+    for finish in finishes:
+        if finish.get('asset',{}).get('source')!='parametric':continue
+        note=finish.get('notes','')
+        value=re.search(r'\broughness\s+([01](?:\.\d+)?)(?=\s*(?:[,;]|$))',note,re.I)
+        if value:result[finish['id']]=float(value.group(1))
+    return result
+
+def print_inks(m):
+    # Original matte inks for the signed neutral coastal and charcoal drawings.
+    for role,colour in [('ink_charcoal','#474744'),('ink_shale','#8B8982'),('ink_mist','#BAB7AE')]:
+        name='Studio.print.'+role
+        ink=bpy.data.materials.get(name)
+        if ink is None:
+            ink=m['matboard'].copy();ink.name=name
+            rgba=F._rgba(colour);ink.diffuse_color=rgba
+            ink.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=rgba
+        m[role]=ink
 
 ALIASES={
  'bench_box':'bench','hook_rail':'coat_hook','flush_disc':'flush_light','pendant_drum':'pendant','radiator_panel':'radiator',
@@ -54,7 +77,11 @@ def recipe(it):
         opts.update(cupboard_h=asset.get('cupboard_h_mm',900)/1000,
                     shelf_t=asset.get('shelf_t_mm',30)/1000,levels=asset.get('shelves_y_m',[]))
     if kind=='sofa':opts.update(throw=False,scatter=False)
-    if kind=='art':opts.update(motif=asset.get('motif',''),palette=asset.get('palette',''))
+    if kind=='art':
+        opts.update(motif=asset.get('motif',''),palette=asset.get('palette',''))
+        if asset.get('motif'):
+            opts['signed_print']=True
+            opts['print_variant']=int(hashlib.sha256(it['id'].encode()).hexdigest()[:4],16)
     if kind=='vase':opts['stems']='eucalyptus' if 'eucalyptus' in label else 'dried' if 'dried' in label else ''
     if kind=='sofa' and it.get('materials',{}).get('frame')=='RATTAN':opts['cane']=True
     if kind=='kettle':opts['ellipse']=it['size_mm'][1]/it['size_mm'][0]
@@ -62,7 +89,7 @@ def recipe(it):
     return source,kind,opts
 
 def fingerprint(it):
-    fields={k:it.get(k) for k in ('asset','type','size_mm','materials','position_m','yaw_deg','source_sofa','fruit_host')}
+    fields={k:it.get(k) for k in ('asset','type','size_mm','materials','position_m','yaw_deg','source_sofa','fruit_host','splash_segments')}
     return 'GS-'+hashlib.sha256(json.dumps(fields,sort_keys=True).encode()).hexdigest()[:20]
 
 ROLES={'legs':'oak','frame':'oak','rail':'oak','hooks':'black','shade':'linen','fabric':'linen','pole':'bronze',
@@ -93,6 +120,9 @@ def schedule_palette(it,kind):
                 mat.diffuse_color=colour;shader.inputs['Base Color'].default_value=colour
                 if shader.inputs['Base Color'].is_linked and fid!='KIT-ISLAND':
                     mat['studio_tint']=list(colour[:3])
+        if key=='ceramic' and fid in FINISH_ROUGHNESS:
+            rough=mat.node_tree.nodes.get('Principled BSDF').inputs['Roughness']
+            if not rough.is_linked:rough.default_value=FINISH_ROUGHNESS[fid]
         m[key]=mat
         if key=='oak':m['frame']=mat
         if key=='upholstery' and kind=='dining_chair':m['linen']=mat
@@ -114,6 +144,11 @@ def merge_objects(objects,collection,name):
 def build_item(it,collection):
     source,kind,opts=recipe(it);dims=[x/1000 for x in it['size_mm']]
     m=schedule_palette(it,kind);name=fingerprint(it)
+    if source.startswith('wooden_bowl'):
+        # Use the same turned profile as the independently seated fruit. Only
+        # the shell material changes, including its actual oak grain and normal map.
+        m['ceramic']=m['oak']
+    if opts.get('signed_print'):print_inks(m)
     made=[]
     def add(k,ds,pos=(0,0,0),exact=False,**settings):
         fn=studio.make_at_size if exact else studio.make
@@ -136,6 +171,31 @@ def build_item(it,collection):
             top=v[0][2]+z
             b.rod('stem',(x,y,top-.001),(x+.003,y,top+.012),.0018,'oak',sides=7)
         made=b.objects
+    elif it.get('splash_segments'):
+        b=F._Builder(kind,it['id'],dims,collection,m,False,{})
+        x0,y0,z0=it['position_m'];angle=math.radians(it['yaw_deg'])
+        inv=Matrix.Rotation(-angle-math.pi,3,'Z')
+        for run in it['splash_segments']:
+            at=inv@Vector((run['x']-x0,-(run['z']-z0),0))
+            b.box('quartz-return',(run['width'],d,run['height']),
+                  (at.x,at.y,run['base']-y0+run['height']/2),'stone',.0015,
+                  rotation=(0,0,math.radians(run['yaw'])-angle-math.pi))
+        made=b.objects
+    elif source=='board' and it['asset'].get('leaning'):
+        b=F._Builder(kind,it['id'],dims,collection,m,False,{})
+        grip=min(.027,w*.1);corner=.012;shoulder=h-.065
+        outline=[(-w/2+corner,0),(w/2-corner,0),(w/2,corner),(w/2,shoulder-corner),(w/2-corner,shoulder),
+                 (grip+.016,shoulder),(grip,shoulder+.014)]
+        outline.extend((grip*math.cos(a),h-grip+grip*math.sin(a)) for a in [math.pi*j/12 for j in range(13)])
+        outline.extend([(-grip,shoulder+.014),(-grip-.016,shoulder),(-w/2+corner,shoulder),(-w/2,shoulder-corner),(-w/2,corner)])
+        n=len(outline);verts=[(x,y,z) for y in (-d/2,d/2) for x,z in outline]
+        faces=[tuple(range(n)),tuple(reversed(range(n,2*n)))]+[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+        b.mesh('one-piece-oak-paddle',verts,faces,'oak',grain='z')
+        made=b.objects
+        made[0].rotation_euler.x=-math.radians(6)
+        bpy.context.view_layer.update()
+        lowest=min((o.matrix_world@v.co).z for o in made if o.type=='MESH' for v in o.data.vertices)
+        made[0].location.z-=lowest
     elif it['asset'].get('source')=='addendum':
         made=studio.make(kind,'scandinavian',it['id'],collection,dims,m)
 
@@ -158,6 +218,36 @@ def build_item(it,collection):
             made=[ref[0]]+[o for o in ref[1:] if o.get('textile_support')]
             for o in ref[1:]:
                 if o not in made:bpy.data.objects.remove(o,do_unlink=True)
+        elif source=='tea_towel':
+            radius=.007;front,back=rail_drape(h,radius)
+            # Distances along the cut cloth furnish a metric weave through both hems and the rounded crown.
+            rows=[]
+            for j in range(7):
+                t=j/7;rows.append((-radius,front*t,front*t,1-t))
+            for j in range(13):
+                a=math.pi*j/12
+                rows.append((-radius*math.cos(a),front+radius*math.sin(a),front+radius*a,0))
+            for j in range(1,8):
+                t=j/7;rows.append((radius,front-back*t,front+math.pi*radius+back*t,t))
+            m['stripe']=m['white_fabric'].copy();m['stripe'].name='Studio towel · woven sage stripe'
+            for key,tint in [('white_fabric','#eee5d4'),('stripe','#82917c')]:
+                if key=='white_fabric':
+                    m[key]=m[key].copy();m[key].name='Studio towel · natural cotton'
+                colour=F._rgba(tint);mat=m[key];mat['studio_tint']=list(colour[:3])
+                mat.diffuse_color=colour;mat.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=colour
+            verts=[];faces=[];uv=[];columns=65;tile=float(m['white_fabric'].get('texture_size_m',1))
+            for j,(depth,z,length,free) in enumerate(rows):
+                for i in range(columns):
+                    u=i/(columns-1);wave=math.sin(u*math.pi*6+.4)
+                    verts.append(((u-.5)*w,depth+wave*(.0012+.010*free),z+.003*free*math.cos(u*math.pi*6)))
+                    uv.append((u*w/tile,length/tile))
+                    if i and j:
+                        n=j*columns+i;faces.append((n-columns-1,n-columns,n,n-1))
+            textile=b.mesh('woven-rail-towel',verts,faces,'white_fabric',True,uv=uv)
+            textile.data.materials.append(m['stripe'])
+            for face in textile.data.polygons:
+                distance=min(abs(verts[k][0]) for k in face.vertices)/w
+                face.material_index=int(.35<distance<.38 or .408<distance<.434)
         else:
             # A towel folds over its host bar. The long dimension runs down.
             rad=.007 if source=='tea_towel' else .012;verts=[];faces=[]
@@ -276,6 +366,14 @@ def load_meshes(site,vkey):
 def schedule(spec,vkey,addendum):
     items=[dict(i) for i in spec['versions'][vkey]['items']]
     for it in items:
+        asset=it['asset']
+        if asset.get('leaning') and asset.get('kind')=='board':
+            units=base_units(items,it['room'])
+            if units:
+                support,pos=board_support(it,units,items);it['host']=support['id'];it['yaw_deg']=support['yaw_deg'];it['position_m']=pos
+        if asset.get('kind')=='upstand' and asset.get('hob_splash'):
+            it['splash_segments']=splash_segments(it,base_units(items,it['room']))
+            if not it['splash_segments']:raise ValueError('No worktop backs for '+it['id'])
         if it['asset'].get('kind') in ('towels','tea_towel'):
             towel=it['asset']['kind']=='towels'
             carriers=[i for i in items if i['room']==it['room'] and (i['asset'].get('kind')=='towel_rail' if towel else 'oven' in i['type'].lower() and i['asset'].get('kind')=='kitchen_unit')]
@@ -348,7 +446,8 @@ def place_schedule(spec,vkey,N,coll,house_objs,site,spec_path,log):
             radius=.007 if it['asset']['kind']=='tea_towel' else .012
             height=it['size_mm'][2]/1000
             bar=Vector(host.data['textile_bar_local'])
-            local=bar-Vector((0,0,height-radius))
+            drop=rail_drape(height,radius)[0] if it['asset']['kind']=='tea_towel' else height-radius
+            local=bar-Vector((0,0,drop))
             child.matrix_world=host.matrix_world@Matrix.Translation(local)
             # Published host mounting datum, expressed in glTF metre axes.
             child['host_offset_m']=[local.x,local.z,-local.y]

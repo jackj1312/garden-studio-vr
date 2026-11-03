@@ -35,6 +35,8 @@ ap.add_argument("--trace", default=os.path.expanduser("~/Desktop/garden-scans/fr
 ap.add_argument("--garden", default="assets/sites/front-garden-model/model_q.glb")
 ap.add_argument("--out", default="")
 args = ap.parse_args(argv)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hb_trace import apply_hall_return, hall_width, hall_export_materials, hall_material_identity
 T0 = time.time()
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 def R_(p): return p if os.path.isabs(p) else os.path.join(ROOT, p)
@@ -110,7 +112,12 @@ def num_ceiling(r):
 not_shell = lambda p: bool(FURN.match(p["name"])) or p["leaf"] or p["ctx"] and p["group"] != "ground"
 F = {k: [] for k in "abcdefg"}; INFO = {k: {} for k in "abcdefg"}
 TRACE = json.load(open(args.trace)) if os.path.exists(args.trace) else None
+interfaces_file = os.path.join(os.path.dirname(R_(args.spec)), "finish_interfaces.json")
+interfaces = json.load(open(interfaces_file)) if os.path.isfile(interfaces_file) else {}
+hall_rule = apply_hall_return(TRACE, interfaces) if TRACE else interfaces.get("hall_return")
 TV = TRACE["versions"]["before" if VKEY == "before" else "today"] if TRACE else None
+if hall_rule and args.version not in hall_rule["issued_versions"]:
+    hall_rule = None
 
 # ------------------------------------------------------------------------------------------------ a. outlines and drawn features
 SKIP_A = lambda p: not_shell(p)
@@ -487,6 +494,65 @@ if os.path.exists(gp):
 else:
     INFO["g"]["note"] = f"garden model {gp} not found: not compared"
 log("g setting:", len(F["g"]), "faults")
+
+# Measured station gate. Both doors open through the taped section: test the
+# solid finished faces above their heads as well as the walkable threshold below.
+if hall_rule:
+    rule = hall_rule
+    traced = next((r for r in TV["storeys"]["ground"]["rooms"] if r["name"] == rule["room_name"]), None) if TV else None
+    signed = next((r for r in ROOMS if r["id"] == rule["room_id"]), None)
+    issued = next((e for e in ELS if e["id"] == rule["room_id"]), None)
+    if not traced or not signed or not issued or [[x, -y] for x, y in traced["poly"]] != signed["polygon"] or issued["params"]["polygon"] != signed["polygon"]:
+        F["a"].append(dict(room=rule["room_id"],kind="measured hall trace, signed polygon and emitted floor disagree"))
+    else:
+        stations = []
+        for depth, z, target in [(d, 2.22, rule["native_clear_m"]) for d in (.35, .70, 1.04)] + [(3.16, 1.55, rule["stair_clear_m"])]:
+            clear = hall_width(traced["poly"], depth)
+            xs = [a[0] for a,b in zip(traced["poly"], traced["poly"][1:]+traced["poly"][:1]) if a[0] == b[0] and min(a[1],b[1]) <= depth < max(a[1],b[1])]
+            origin = Vector((sum(xs)/len(xs), depth, z))
+            hits = [ray(origin, (sign,0,0), 2.0, not_shell) for sign in (-1,1)]
+            width = sum(hit["dist"] for hit in hits) if all(hits) else None
+            stations.append(dict(depth_m=depth, height_m=z, trace_m=clear, finished_m=width, drawing_m=target))
+            if abs(clear-target)>.0021 or width is None or abs(width-target)>.015:
+                F["a"].append(dict(room=rule["room_id"],kind="wrong finished hall width at measured station",**stations[-1]))
+        INFO["a"]["measured_hall"] = stations
+    suffix = rule["exterior_wall"]+"-"+rule["door"].replace(" ","-")
+    opening_id, fixture_id, threshold_id = ["O-"+suffix,"F-"+suffix,"TH-"+suffix]
+    opening = next((e for e in ELS if e["id"]==opening_id),None)
+    fixture = next((e for e in ELS if e["id"]==fixture_id),None)
+    attached = [p for p in parts if p["el"]==fixture_id]
+    leaf = next((p for p in attached if p["src"].get("part")=="leaf"),None)
+    lever = next((p for p in attached if p["src"].get("part")=="handle"),None)
+    hinges = next((p for p in attached if p["src"].get("part")=="hinges"),None)
+    opened = opening and opening["params"]
+    jambs = None
+    if opened and opened["host"] in wall_by:
+        carrier = wall_by[opened["host"]]["params"]
+        jambs = [-carrier["start"][1]+opened["offset"]+delta for delta in (0,opened["width"])]
+    if not (opened and fixture and opened["host"].split("~")[0]==rule["partition"] and fixture["params"]["opening"]==opening_id
+            and jambs and abs(jambs[0]-.298)<=.0021 and abs(jambs[1]-1.099)<=.0021 and abs(opened["width"]-.801)<.001
+            and leaf and lever and hinges and lever["leaf"] and leaf["src"].get("swing_deg")==90
+            and list(lever["src"].get("hinge",[]))==list(leaf["src"].get("hinge",[]))
+            and lever["src"].get("door_group")==fixture_id):
+        F["c"].append(dict(door=fixture_id,kind="transferred sitting-room fit, hinge or lever missing",jambs=jambs))
+    scheduled = next(d for d in SV['doors_windows'] if d['id']==fixture_id)
+    for role,expected in hall_export_materials(scheduled).items():
+        part = next((p for p in attached if p["src"].get("part")==role), None)
+        actual={hall_material_identity(m.name,m.get("spec_finish")) for m in part["ob"].data.materials if m} if part else set()
+        if actual!={expected}:
+            F["c"].append(dict(door=fixture_id,kind="signed hall frame, leaf or hardware finish differs",
+                               part=role,expected=expected,actual=sorted(actual)))
+    if hinges:
+        zs=sorted({round((hinges["ob"].matrix_world @ v.co).z,4) for v in hinges["ob"].data.vertices})
+        bands=1+sum(b-a>.12 for a,b in zip(zs,zs[1:])) if zs else 0
+        if bands!=3:F["c"].append(dict(door=fixture_id,kind="expected three physical hinge knuckles",found=bands))
+    if opened and jambs:
+        carrier=wall_by[opened["host"]]["params"];fx=carrier["start"][0]
+        for x in (fx-.045, fx, fx+.045):
+            h=ray(Vector((x,sum(jambs)/2,.25)),(0,0,-1),.32,lambda p:not_shell(p) or p["group"]=="door")
+            if h is None or h["part"]["el"]!=threshold_id or abs(h["at"].z)>.005:
+                F["c"].append(dict(door=fixture_id,kind="signed flush threshold does not carry the doorway",x=x))
+    INFO["c"]["measured_hall_door"] = dict(opening=opening_id,fixture=fixture_id,threshold=threshold_id,jambs=jambs)
 
 # open questions inside the drawings themselves (tools/house/shell_allow.json): listed, never silent
 ALLOWED = {}

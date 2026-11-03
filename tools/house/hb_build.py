@@ -324,6 +324,7 @@ class StateBuilder:
         self.apply_eaves_tops(st)
         self.walls_up_to_flat_roofs(st)
         self.embed_holes(A)
+        self.fit_ceiling_bearings(A)
         rooms_out = self.room_atoms(st, gsrc, fsrc)
         return dict(id=vspec["id"], atoms=A, rooms=rooms_out, walls=self.walls, systems=self.systems if hasattr(self, "systems") else [])
 
@@ -954,6 +955,83 @@ class StateBuilder:
                             clip_to_roof=f.get("clip_to_roof")))
         return out
 
+    def fit_ceiling_bearings(self, atoms):
+        detail = self.S.get('roof_bearings',{}).get('joists')
+        if not detail:
+            return
+        by_id = {a['id']:a for a in atoms}
+        beam = by_id.get(detail['beam'])
+        if not beam:
+            return
+        rafters = [a for a in atoms if a.get('phase')=='rafter' and a.get('plane') and a['plane'].id==detail['rafter_plane']]
+        for i in detail['indices']:
+            joist = by_id.get(f"{detail['field']}-{i:02d}")
+            if not joist:
+                continue
+            x0,y,top = joist['A']
+            near = joist['B'][0]
+            half = max(u for u,v in joist['section'])
+            bottom = top + min(v for u,v in joist['section'])
+            r = min(rafters,key=lambda r:abs(r['A'][1]-y))
+            a,b=r['A'],r['B']
+            slope=(b[2]-a[2])/(b[0]-a[0])
+            rx=lambda z:a[0]+(z-a[2])/slope
+            rz=lambda x:a[2]+(x-a[0])*slope
+            rw=max(u for u,v in r['section']); rd=-min(v for u,v in r['section'])*math.hypot(slope,1)
+            rear = a[1]+rw
+            # Seat on the beam's first timber flange. Leave the joist top at
+            # the surveyed ceiling level; taper its toe inside the actual rafter.
+            beam_edge=beam['A'][0]-max(abs(u) for u,v in beam['section'])
+            flange=max(u for u,v in beam['section'])-min(u for u,v in beam['section'])
+            cap=beam['A'][2]
+            if (abs(near-beam_edge)>.003 or not 0<bottom-cap<.035 or not 0<y-half-rear<.02 or slope<=0):
+                raise ValueError('Ceiling bearer no longer matches the measured beam and rafter')
+            tip=rx(bottom+.025); crest=rx(top+.003)
+            if not (min(a[0],b[0])<tip<crest<=x0): raise ValueError('Ceiling tie is outside its measured rafter')
+            end=near+flange
+            # The low, scribed end stays below the crossing wing rafter.
+            profile = [(tip,bottom),(end,bottom),(end,bottom+.035),(near,bottom+.035),
+                       (near,top),(crest,top),(tip,rz(tip)-.003)]
+            from hb_geom import prism
+            verts,faces=prism(profile,-y-half,-y+half)
+            joist['fitted_mesh']=([(x,-v,z) for x,z,v in verts],faces)
+            joist['A']=(tip,y,top);joist['B']=(end,y,top)
+            joist['sig']=sig_of('ceiling bearing',profile,y)
+            # The background phase table gives the flitch and rafter sequences;
+            # position each attachment after its own carrier, the joist last.
+            joist['after_rafter']=r['id']
+            label=detail['source']; prefix=joist['id']
+            seat=atom(prefix+'-seat','mesh',beam['phase'],M('timber_beam','roof','Timber bearing pack on flitch',
+                      label,'assumed','Ceiling joist bearing',False), sig=sig_of(prefix,'seat',near,end,y,bottom),
+                      mesh=box(near,end,y-half,y+half,cap,bottom),mat='timber',seq_bias=.01)
+            # Fill the actual side gap, over the intersection of the two timbers.
+            # Choose a lap entirely between their upper and lower surfaces.
+            lo,hi=rx(bottom+.065),rx(top-.015)
+            p=[(lo,rear),(hi,rear),(hi,y-half),(lo,y-half)]
+            from hb_geom import prism_varz
+            shim=atom(prefix+'-rafter-fillet','mesh',r['phase'],M('ceiling_joist','roof','Timber fillet at rafter-side tie',
+                      label,'assumed','Joist to rafter connection',False),sig=sig_of(prefix,'fillet',p),
+                      mesh=prism_varz(p,lambda q:max(bottom,rz(q[0])-rd),lambda q:min(top,rz(q[0])-.003)),
+                      mat='timber',side_bearing=r['id'],seq_bias=.005)
+            # Two small through-fixings cross the actual fillet and enter
+            # the rafter on its broad face. Their heads seat on the joist.
+            nails=[]
+            for x in (lo+(hi-lo)*.27,lo+(hi-lo)*.73):
+                z=(max(bottom,rz(x)-rd)+min(top,rz(x)-.003))/2
+                for radius,front,back in [(.0018,y+half,a[1]-rw+.004),(.0033,y+half+.0015,y+half)]:
+                    ring=[(x+radius*math.cos(i*math.tau/10),z+radius*math.sin(i*math.tau/10)) for i in range(10)]
+                    vs,fs=prism(ring,-front,-back)
+                    nails.append(([(nx,-v,nz) for nx,nz,v in vs],fs))
+            fixing=atom(prefix+'-rafter-fixings','mesh',r['phase'],M('fitting','roof','Two fixings through the joist into the rafter',
+                        label,'assumed','Joist to rafter fixings',False),sig=sig_of(prefix,'fixings',lo,hi,y),
+                        mesh=merge_meshes(nails),mat='lintel_galv',seq_bias=.025)
+            board=by_id[detail['soffit']]
+            if min(board['z1'],bottom)-max(board['z0'],cap)>.001:
+                board.setdefault('seat_cuts',[]).append([(near,y-half),(end,y-half),(end,y+half),(near,y+half)])
+                board['sig']=sig_of('packed ceiling',board['id'],board['poly'],board['seat_cuts'],board['z0'],board['z1'])
+            atoms.extend((seat,shim,fixing))
+            joist['side_bearing']=shim['id']
+
     # -------------------------------------------------------------- roofs
     def roof_atoms(self, sysspec):
         """atoms of one pitched roof system: covers (convex pieces per plane), membrane, battens, rafters, creases,
@@ -1214,7 +1292,7 @@ class StateBuilder:
             meta = M("roof_cover", "roof", "gutters 110mm half round black upvc", cov["drawing"], "exact" if cat == "new" else "assumed",
                      "Gutter", False)
             out.append(atom(f"RG-{sid}-{pl.id}-{tile_a[0]:.2f}-{tile_a[1]:.2f}", "mesh", "eaves", meta, sig=sig_of("gut", a, b), mesh=R.eave_solid(_cut(gut, HP), ztop - 0.07, ztop - 0.005, rakes, gutter=True),
-                            mat="black_upvc", wing_cat=cat))
+                            mat="black_upvc", wing_cat=cat, side_bearing=edge_id))
         # abutment flashings (lean-to tops against a wall)
         for (wing, pl, a, b) in R.top_edges(sysm):
             ws = wing.spec
@@ -1270,6 +1348,10 @@ class StateBuilder:
                 if abs(W.z1 - ps["z"]) > 0.03 and not W.profile: continue
                 L = W.layers()
                 core = [l for l in L if not l.get("lining") and not l.get("void")]
+                head = self.S.get('roof_bearings',{}).get('door_head',{})
+                corrected = W.id.split('~')[0] == head.get('host')
+                if corrected:
+                    core = [layer for layer in core if layer.get('group') in ('wall_inner','wall_outer')]
                 inner = core[-1]
                 w_, h_ = ps["section"]
                 o_in = inner["o1"]                          # plate flush with the inner face of the inner leaf
@@ -1321,7 +1403,9 @@ class StateBuilder:
                                 plate_wall=W.id, linear=True))
                 W.layer_tops[inner["key"]] = ps["z"] - h_
                 for l in L:
-                    if ps.get("position") == "centre" and not l.get("lining"):
+                    if corrected and l['group']=='wall_lining':
+                        W.layer_tops[l['key']] = ps['z'] - h_
+                    elif ps.get("position") == "centre" and not l.get("lining"):
                         W.layer_tops[l["key"]] = ps["z"] - h_
                     elif l is not inner and not l.get("lining"):
                         W.layer_tops[l["key"]] = min(W.layer_tops.get(l["key"], 9), ps.get("outer_top", ps["z"] - h_))

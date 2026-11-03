@@ -8,7 +8,7 @@ geometric signature. Then temporary works from the spec, stages and seq, wall jo
 contract's extras)."""
 import math, re, copy
 from hb_geom import (sub, add, mul, dot, unit, length, area, ccw, centroid, point_in_poly, box, prism, hexa, slab3d,
-                     merge_meshes, rect_section, extrude_section, frame_matrix, apply_matrix, clip_convex, poly_halfplanes,
+                     merge_meshes, rect_section, extrude_section, frame_matrix, apply_matrix, clip_convex, poly_halfplanes, v3cross,
                      convex_minus, interval_minus, merge_intervals, clip_segment_convex, mesh_bbox, v3sub, v3len, v3unit,
                      v3add, v3mul, seg_point_dist, clip_half)
 from hb_geom import interval_minus as G_interval_minus
@@ -368,6 +368,9 @@ def stage_atoms(atoms, spec, lv, version_kind):
             st, sq = ST["phases"].get(ph, ST["phases"]["default"])
             if a.get("seq") is not None and a["kind"] == "slab": sq = a["seq"]
             if a.get("seq_bias"): sq = min(0.99, sq + a["seq_bias"])
+            if a.get('after_rafter'):
+                rst,rsq=ST['phases']['rafter']
+                if rst>=st: st,sq=rst,max(sq if st==rst else 0,rsq+.01)
             m.update(stage_in=st, stage_out=None, seq=sq, seq_out=None, category="finish" if ph in ST.get("finish_phases", []) else "new")
     return atoms
 
@@ -444,6 +447,55 @@ def finish_walls(atoms, spec, lv, version_kind):
     return extra
 
 
+def split_door_head(atoms, owner, opening, detail):
+    """Frame the measured opening between retained masonry and the later perpendicular stud wall."""
+    w=owner['wall']; z=opening['z1']; high=z+detail['head_depth_m']
+    walls=[a['wall'] for a in atoms if a['kind']=='wall' and not a['meta'].get('stage_out')]
+    ua,ub=opening['u0'],opening['u1']
+    left=next(v for v in walls if v.id.split('~')[0]==detail['left_wall'] and
+              abs(dot(sub(v.point(v.ub,0),w.point(ua,0)),w.d))<.003)
+    right=next(v for v in walls if v.id.split('~')[0]==detail['right_wall'])
+    if abs(dot(w.d,right.d))>.001 or abs(w.d[0]-1)>.001 or abs(right.d[1]-1)>.001:
+        raise ValueError('Signed door return orientation changed')
+    # The right end lies wholly within the drawn 100 mm partition. Keep its
+    # jack and upper cripple when the remaining studs and rails arrive later.
+    left_x=w.point(ua,0)[0]; right_x=w.point(ub,0)[0]
+    right_faces=sorted(right.point(right.ua,c)[0] for c in (-right.t/2,right.t/2))
+    if abs(right_faces[0]-right_x)>.003: raise ValueError('Door jamb and perpendicular structure no longer meet')
+    y0,y1=sorted(w.point(ub,c)[1] for c in (-w.t/2,w.t/2))
+    left_start=left_x-detail['left_bearing_m']; end=right_faces[1]
+    right.early_jamb=(u_of(right,(right_x,y0)),u_of(right,(right_x,y1)))
+    stem='L-'+slug(w.id)+'-'+slug(opening['id'])
+    def member(suffix,label,group,mat,mesh,**fields):
+        meta=M(group,w.storey,label,detail['source'],'assumed',label,False)
+        return atom(stem+suffix,'mesh','ff_wall',meta,sig=sig_of(stem,suffix,z,high),
+                    mesh=mesh,mat=mat,cat='new',**fields)
+    inner=next(l for l in left.layers() if l['group']=='wall_inner' and not l.get('void'))
+    bearing_top=min(left.z1,left.layer_tops.get(inner['key'],left.z1))
+    ly0,ly1=sorted(left.point(left.ub,left.c_of(o))[1] for o in (inner['o0'],inner['o1']))
+    py0,py1=max(y0,ly0),min(y1,ly1)
+    if py1-py0<.045 or bearing_top>z+.001:
+        raise ValueError('No positive retained masonry bed beneath the door header')
+    members=[]
+    if bearing_top<z-.001:
+        members.append(member('-bed','Masonry bearing course on retained inner leaf','wall_inner','existing_brick',
+                              box(left_start,left_x,py0,py1,bearing_top,z),seq_bias=.03))
+    members.append(member('-jamb','Timber jamb within perpendicular partition','wall_inner','timber',
+                          box(right_x,end,y0,y1,right.z0,z),seq_bias=.03))
+    head=member('','Concrete head on retained masonry and framed return','lintel','concrete',
+                box(left_start,end,y0,y1,z,high),head=z,top=high,host=w)
+    members.append(head)
+    members.append(member('-cripple','Timber above the framed door return','wall_inner','timber',
+                          box(right_x,end,y0,y1,high,right.z1),follow_head=head))
+    # Cut the brick and finish to the actual lintel. The remaining masonry is
+    # carried by its top surface and courses start at its real seat and top.
+    w.holes.append((ua,ub,z,high,-1,w.t+1))
+    fixed={round(z,4),round(high,4)}
+    w.lifts=sorted(set(w.lifts)|fixed)
+    w.__dict__.setdefault('_fixed',set()).update(fixed)
+    return members
+
+
 def lintel_atoms(atoms, spec, lv):
     """lintels over the openings of new walls and the new openings of kept walls"""
     out = []
@@ -456,7 +508,11 @@ def lintel_atoms(atoms, spec, lv):
         elif cat == "existing": ops = list(getattr(W, "openings_new", []))
         for o in ops:
             if o["id"] in LT.get("skip", []): continue
-            if (W.ub - W.ua) < (o["u1"] - o["u0"]) + 0.1: continue        # the piece is all opening: nothing to bear on
+            if (W.ub - W.ua) < (o["u1"] - o["u0"]) + 0.1:
+                detail=spec.get('roof_bearings',{}).get('door_head',{})
+                if cat=='new' and W.id.split('~')[0]==detail.get('host') and o['id']==detail['opening']:
+                    out.extend(split_door_head(atoms,a,o,detail))
+                continue        # an all-opening fragment needs identifiable adjoining carriers
             txt = o.get("lintel") or LT.get("by_opening", {}).get(o["id"])
             if not txt:
                 txt = LT.get("default_cavity" if W.ckey in ("cav337_new", "cav_existing") else "default_internal")
@@ -505,6 +561,27 @@ def lintel_atoms(atoms, spec, lv):
     return out
 
 
+def seat_lintel_stages(atoms, spec):
+    """a lintel goes in after the lift that ends at its head, before the lift that starts on top of it"""
+    for a in atoms:
+        if "host" not in a or a["meta"].get("category") != "new": continue
+        W = a["host"]
+        host = next((h for h in atoms if h.get("wall") is W), None)
+        if host is None or host["meta"].get("category") not in ("new", "existing"): continue
+        if host["meta"].get("category") == "existing":
+            a["meta"]["seq"] = 0.55; continue
+        st, sq = lift_stage_seq(host, a["head"], spec)
+        a["meta"]["stage_in"] = st
+        a["meta"]["seq"] = round(max(0.0, sq - 0.001), 4)                       # on the courses under the head, before those that start on it
+        if host.get("lift_stage_after") and a["head"] >= host["lift_stage_after"][0] - 1e-4:
+            a["meta"]["stage_in"] = host["lift_stage_after"][1]; a["meta"]["seq"] = host["lift_stage_after"][2]
+
+    for a in atoms:
+        head=a.get('follow_head')
+        if head:
+            a['meta'].update(stage_in=head['meta']['stage_in'],seq=min(.99,head['meta']['seq']+.01))
+
+
 def stud_atoms(atoms, lv):
     out = []
     for a in atoms:
@@ -523,6 +600,11 @@ def stud_atoms(atoms, lv):
         n = max(1, int((ub_ - ua_ - sd["w"]) / sp))
         us = [ua_ + sd["w"] / 2 + k * (ub_ - ua_ - sd["w"]) / n for k in range(n + 1)]
         hw = sd["w"] / 2
+        reserved = [W.early_jamb] if hasattr(W,'early_jamb') else []
+        def timber(ua,ub,zb,zt):
+            for start,end in G_interval_minus([(ua,ub)],reserved):
+                P=[W.point(start,c0),W.point(end,c0),W.point(end,c1),W.point(start,c1)]
+                meshes_s.append(prism(P,zb,zt))
         for o in W.openings:
             us += [o["u0"] - hw, o["u1"] + hw]
         us = sorted(u for u in us if ua_ + hw - 1e-6 <= u <= ub_ - hw + 1e-6)
@@ -534,12 +616,10 @@ def stud_atoms(atoms, lv):
         for u in us:
             if any(o["u0"] - hw < u < o["u1"] + hw - 1e-6 and not (abs(u - (o["u0"] - hw)) < 1e-6 or abs(u - (o["u1"] + hw)) < 1e-6) for o in W.openings): continue
             top = min(z1, W.top_at(u)) - sd["w"]
-            P = [W.point(u - sd["w"] / 2, c0), W.point(u + sd["w"] / 2, c0), W.point(u + sd["w"] / 2, c1), W.point(u - sd["w"] / 2, c1)]
-            meshes_s.append(prism(P, z0 + sd["w"], top))
+            timber(u-hw, u+hw, z0+sd["w"], top)
         for (zz0, zz1) in [(z0, z0 + sd["w"])] + ([(z1 - sd["w"], z1)] if not W.profile else []):
             for (sa, sb) in ([(ua_, ub_)] if zz0 > z0 else G_interval_minus([(ua_, ub_)], [(o["u0"], o["u1"]) for o in W.openings if o["z0"] <= z0 + 0.01])):
-                P = [W.point(sa, c0), W.point(sb, c0), W.point(sb, c1), W.point(sa, c1)]
-                meshes_s.append(prism(P, zz0, zz1))
+                timber(sa,sb,zz0,zz1)
         for o in W.openings:
             if o["z1"] < z1 - 0.1:
                 P = [W.point(o["u0"], c0), W.point(o["u1"], c0), W.point(o["u1"], c1), W.point(o["u0"], c1)]
@@ -565,6 +645,39 @@ def coexist_fn(N):
 
 
 # ======================================================================================== parts
+def vertical_bearing_area(vertices, faces, other_vertices, other_faces, tolerance=.0006):
+    """Intersection area of opposing vertical carrier faces (m²), never an AABB proxy."""
+    def face_data(verts,indices):
+        data=[]
+        for face in indices:
+            a,b,c=(verts[i] for i in face[:3])
+            normal=v3unit(v3cross(v3sub(b,a),v3sub(c,a)))
+            if abs(normal[2])>.03 or abs(normal[0])+abs(normal[1])<.5:
+                continue
+            # Exported extrusions can wind their lateral faces inward. A true
+            # outside face has the whole solid on one side of its plane.
+            distances=[sum((p[k]-a[k])*normal[k] for k in range(3)) for p in verts]
+            if max(distances)>tolerance:
+                if min(distances)<-tolerance:continue
+                normal=tuple(-v for v in normal)
+            data.append(([verts[i] for i in face],normal))
+        return data
+    right=face_data(other_vertices,other_faces)
+    total=0.
+    for face,n in face_data(vertices,faces):
+        axis=(-n[1],n[0])
+        project=lambda p:(p[0]*axis[0]+p[1]*axis[1],p[2])
+        plane=dot(face[0],n)+face[0][2]*n[2]
+        A=[project(p) for p in face]
+        half=poly_halfplanes(A)
+        for B,m in right:
+            if n[0]*m[0]+n[1]*m[1]+n[2]*m[2]>-.999: continue
+            if any(abs(dot(p,n)+p[2]*n[2]-plane)>tolerance for p in B):continue
+            clipped=clip_convex([project(p) for p in B],half)
+            if clipped:total+=abs(area(clipped))
+    return total
+
+
 def contract_props(a, **over):
     m = a["meta"]
     p = dict(element=a["id"], stage_in=m.get("stage_in", 1), seq=round(float(m.get("seq", 0.0)), 4), category=m.get("category", "existing"),
@@ -660,7 +773,13 @@ def parts_of(a, ctx):
             out.append(dict(name=name, mat=mat, props=props, mesh=mesh, uv="world"))
         return out
     if k == "prism":
-        return [dict(name=a["id"], mat=a["mat"], props=contract_props(a), mesh=prism(a["poly"], a["z0"], a["z1"]), uv="world")]
+        if a.get('seat_cuts'):
+            from hb_geom import poly_minus_convex
+            pieces=poly_minus_convex(a['poly'],a['seat_cuts'])
+            mesh=merge_meshes([prism(poly,a['z0'],a['z1']) for poly in pieces])
+        else:
+            mesh=prism(a["poly"],a["z0"],a["z1"])
+        return [dict(name=a["id"], mat=a["mat"], props=contract_props(a), mesh=mesh, uv="world")]
     if k == "slab":
         mesh = ctx["clip_slab"](a)
         if not mesh: return []
@@ -680,6 +799,8 @@ def parts_of(a, ctx):
         uv = ("roof", pl.e, pl.d, pl.cos)
         return [dict(name=a["id"], mat=a["mat"], props=contract_props(a), mesh=mesh, uv=uv if a["layer"] == "tiles" else None)]
     if k == "member":
+        if a.get('fitted_mesh'):
+            return [dict(name=a['id'],mat=a['mat'],props=contract_props(a),mesh=a['fitted_mesh'],uv='world')]
         A3, B3 = a["A"], a["B"]
         if a.get("clip_to_walls"):
             segs = ctx["clip_member"](a)
@@ -873,6 +994,9 @@ def fixture_parts(a):
         a = dict(a, sill_mat=frame_mat)
         if a.get("leaf_mat") or kind in ("door", "bifold"): a = dict(a, leaf_mat=frame_mat if not a.get("internal") else "door_oak")
     leaf_mat = a.get("leaf_mat") or ("door_oak" if a.get("internal") else ("aluminium" if kind == "bifold" else "upvc_white"))
+    hardware = (sd or {}).get("ironmongery", "").lower()
+    if o.get("retained_exterior_frame") and "white letter-plate-free leaf" in hardware:
+        leaf_mat = "upvc_white"  # the signed leaf has its own finish, independent of the exterior frame
     props = contract_props(a, part="frame")
     res = [dict(name=a["id"] + "_frame", mat=frame_mat, props=props, mesh=merge_meshes(fr), uv=None)]
     if inner:
@@ -937,11 +1061,14 @@ def fixture_parts(a):
             L["lf"],L["lg"],lead=J.porch_leaf(W,L["ua"],L["ub"],zb+.004,z1-f-.004,sum(L["cf"])/2)
             res.append(dict(name=nm+"_leading",mat="ironmongery",props=contract_props(a,**dict(extra,part="lead motif")),mesh=merge_meshes(lead),uv=None,leaf=True))
         res.append(dict(name=nm, mat=leaf_mat, props=contract_props(a, **extra), mesh=merge_meshes(L["lf"]), uv=None, leaf=True))
-        if L.get("shaker"):
+        retained = o.get("retained_exterior_frame")
+        if L.get("shaker") or retained:
             import hb_joinery as J
-            hg, hd = J.door_ironmongery(W, L["ua"], L["ub"], z0 + 0.008, hinge_u, L["cf"][0], L["cf"][1], z1 - 0.03 - 0.003)
+            hg, hd = J.door_ironmongery(W, L["ua"], L["ub"], z0 + 0.008, hinge_u, L["cf"][0], L["cf"][1],
+                                        z1 - 0.03 - 0.003, hinge_c=cface if retained else None)
+            white_lever = retained and hardware.startswith("white lever")
             res.append(dict(name=nm + "_hinges", mat="ironmongery", props=contract_props(a, part="hinges"), mesh=merge_meshes(hg), uv=None))
-            res.append(dict(name=nm + "_handle", mat="ironmongery", props=contract_props(a, **dict(extra, part="handle")), mesh=merge_meshes(hd), uv=None, leaf=True))
+            res.append(dict(name=nm + "_handle", mat="upvc_white" if white_lever else "ironmongery", props=contract_props(a, **dict(extra, part="handle")), mesh=merge_meshes(hd), uv=None, leaf=True))
         if L["lg"]:
             res.append(dict(name=nm + "_glass", mat="glass", props=contract_props(a, **dict(extra, part="leaf_glass")), mesh=merge_meshes(L["lg"]), uv=None, leaf=True))
     return res

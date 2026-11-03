@@ -3,17 +3,6 @@
  "allow": [
   {
    "check": "a",
-   "room": "R-g-hall",
-   "kind": "face off the drawn line",
-   "near": [
-    5.5,
-    -1.2
-   ],
-   "tol": 0.15,
-   "reason": "trace conflict: the hall outline steps out to x 5.5 at z -1.10, but the wing wall (G-wingL) runs on to z -1.255, so for 155 mm the wall face stands 165 mm inside the outline (a nib at the hall/sitting-room corner). 4915.1/2B: which is right, the outline or the wall end? Built as the wall (structure wins)."
-  },
-  {
-   "check": "a",
    "room": "R-f-landing",
    "kind": "face off the drawn line",
    "near": [

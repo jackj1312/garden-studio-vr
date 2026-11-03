@@ -1,0 +1,51 @@
+{
+  "23 Battle Road, Hailsham BN27 1DU (architect: Michael D Hall Building Design Services, job 4915)": {
+    "hall_return": {
+      "decision": "F102 · 2026-11-03. Jack measured 1.80 m just inside the porch. At displayed paper x 137.075333 and 173.270333 mm the native 4915.1 and 4915.2B ground plans, both 1:50, give 1809.75 mm. The 0.298 m doorway jamb is 2 mm ahead of the nominal 0.300 m hall datum.",
+      "trace_versions": [
+        "before",
+        "today"
+      ],
+      "issued_versions": [
+        "as_built_now",
+        "approved_2b"
+      ],
+      "room_name": "hall",
+      "room_id": "R-g-hall",
+      "exterior_wall": "G-wingL",
+      "partition": "G-hallKit",
+      "opposite_wall": "G-livHall",
+      "stair_wall": "G-stair",
+      "door": "sitting room door",
+      "front_depth_m": 0.3,
+      "old_step_depth_m": 1.1,
+      "native_clear_m": 1.809749,
+      "stair_clear_m": 0.855
+    },
+    "roof_bearings": {
+      "door_head": {
+        "host": "F-rearC",
+        "opening": "bedroom 3 door 762",
+        "left_wall": "F-rear",
+        "right_wall": "F-ensL",
+        "left_bearing_m": 0.15,
+        "head_depth_m": 0.14,
+        "source": "4915.2B first floor plan, retained inner leaf and perpendicular en-suite partition. Default internal concrete head and staged timber jamb within the partition are modelled details (not scheduled)."
+      },
+      "joists": {
+        "field": "CJ-left",
+        "indices": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "beam": "B-beam-3",
+        "rafter_plane": "ext.left",
+        "source": "4915.3A section C-C, 45 x 145 ceiling joists and 45 x 95 rafters; timber packing and side fixing at the measured interfaces are modelled details (not scheduled).",
+        "soffit": "CL-ff-new"
+      }
+    }
+  }
+}

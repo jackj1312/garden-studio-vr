@@ -17,6 +17,7 @@ Colour (exterior): the colour_check.json from check_colour.py is folded in (dE <
 Writes <out>/spec_check.json and spec_check.md; exit 1 on any failure."""
 import sys, os, json, struct, math, argparse, re
 import numpy as np
+from hb_countertops import base_units, board_support, rail_drape, splash_segments
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--site", default="assets/sites/house"); ap.add_argument("--spec", default="assets/sites/house/spec/spec_v1.json")
@@ -30,7 +31,21 @@ NC = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
 
 def glb(p):
     b = open(p, "rb").read(); n = struct.unpack("<I", b[12:16])[0]
-    return json.loads(b[20:20 + n])
+    doc=json.loads(b[20:20+n])
+    doc['_bin']=memoryview(b)[28+n:]
+    return doc
+
+
+def source_vertices(g,node):
+    chunks=[]
+    for prim in g['meshes'][node['mesh']]['primitives']:
+        a=g['accessors'][prim['attributes']['POSITION']];v=g['bufferViews'][a['bufferView']]
+        dt=np.dtype(CT[a['componentType']]);offset=v.get('byteOffset',0)+a.get('byteOffset',0)
+        chunks.append(np.ndarray((a['count'],3),dtype=dt,buffer=g['_bin'],offset=offset,
+                      strides=(v.get('byteStride',3*dt.itemsize),dt.itemsize)).astype(float))
+    xyz=np.concatenate(chunks)*np.array(node.get('scale',[1,1,1]))
+    a=math.radians(quat_yaw(node.get('rotation',[0,0,0,1])));c,s=math.cos(a),math.sin(a)
+    return xyz@np.array([[c,0,-s],[0,1,0],[s,0,c]])+node.get('translation',[0,0,0])
 
 
 def quat_yaw(q):
@@ -81,13 +96,21 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
         if sdz is not None and abs(sdz) <= 60:                # lowered/lifted onto its surface (written description governs, row 188)
             p[1] += sdz / 1000; r["note"] = f"snapped {sdz:+.0f} mm onto its surface (spec height off; written description governs)"
         expected_yaw=it["yaw_deg"]
+        if kind=='board' and it['asset'].get('leaning'):
+            units=base_units(S['versions'][vkey]['items'],it['room'])
+            if units:
+                owner,at=board_support(it,units,S['versions'][vkey]['items']);expected_yaw=owner['yaw_deg'];p[0],p[2]=at[0],at[2]
+                r['note']='board leans along its signed worktop '+owner['id']
         mount=nd.get("extras",{}).get("host_offset_m")
         if mount is not None and kind in ("towels","tea_towel"):
             host_id=nd["extras"].get("host_id")
             host=next((n for n in by.get(host_id,[]) if n.get("extras",{}).get("textile_bar_m")),None)
             if host is None:raise ValueError("Unsupported textile "+it["id"])
             bar=host["extras"]["textile_bar_m"]
-            crown=np.array(mount)+[0,it['size_mm'][2]/1000-(.007 if kind=='tea_towel' else .012),0]
+            radius=.007 if kind=='tea_towel' else .012
+            height=it['size_mm'][2]/1000
+            support_drop=rail_drape(height,radius)[0] if kind=='tea_towel' else height-radius
+            crown=np.array(mount)+[0,support_drop,0]
             if np.linalg.norm(crown-bar)>.002:raise ValueError("Textile misses the bar: "+it['id'])
             expected_yaw=quat_yaw(host.get("rotation",[0,0,0,1]));angle=math.radians(expected_yaw)
             x,y,z=mount;p=np.array(host.get('translation',[0,0,0]))+[math.cos(angle)*x+math.sin(angle)*z,y,-math.sin(angle)*x+math.cos(angle)*z]
@@ -125,6 +148,19 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
                 r["size_ok"] = bool(all(okax)); r["size"] = [round(x) for x in dims]
             else: r["size_ok"] = True; r["size_note"] = "parts beyond the box by design (valves, finials, flex, drop)"
             nm = {mats[pr.get("material", 0)].split(".")[0] for pr in g["meshes"][nd["mesh"]]["primitives"]}
+            if kind=='upstand' and it['asset'].get('hob_splash'):
+                verts=source_vertices(g,nd)
+                for run in splash_segments(it,base_units(S['versions'][vkey]['items'],it['room'])):
+                    yaw=math.radians(run['yaw']);top=run['base']+run['height']
+                    for sign in (-1,1):
+                        end=np.array([run['x']+sign*math.cos(yaw)*run['width']/2,top,run['z']-sign*math.sin(yaw)*run['width']/2])
+                        if np.min(np.linalg.norm(verts-end,axis=1))>.016: r['size_ok']=False
+                r['size_note']='actual quartz vertices at the top and both ends of each fitted run'
+            if kind=='tea_towel':
+                verts=source_vertices(g,nd);floor=next(room['floor_y'] for room in S['versions'][vkey]['rooms'] if room['id']==it['room'])
+                r['size_ok']=bool(verts[:,1].min()>=floor+.03 and abs(np.ptp(verts[:,1])-(support_drop+radius))<.012)
+                if not {'Studio towel · natural cotton','Studio towel · woven sage stripe'}<=nm:r['size_ok']=False
+                r['size_note']='hem above floor, metric cut length and two visible woven colours'
             mm_ = dict(it.get("materials") or {})
             if kind == "kitchen_unit" and it["size_mm"][2] > 1200: mm_.pop("worktop", None)       # a tall housing has no worktop
             want = {f"spec_{v}" for v in mm_.values() if re.match(r"^[A-Z0-9-]+$", str(v)) and v != "as asset"}

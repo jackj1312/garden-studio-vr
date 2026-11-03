@@ -80,14 +80,14 @@ export function createGardenPanel({ action }) {
   root.innerHTML = `
     <header class="gd-header">
       <div class="gd-brand"><span class="gd-kicker">Garden Studio</span><h2>Garden design</h2><span class="gd-context"></span></div>
-      <div class="gd-head-actions">
+      <div class="gd-head-actions"><a class="gd-return-house" href="/preview/">Furnished house</a>
         <button type="button" class="gd-help" data-editor-help="garden">How to use</button>
         <button type="button" class="gd-collapse" data-cmd="collapse" aria-expanded="true" aria-label="Collapse garden tools" title="Collapse tools">Minimise</button>
         <button type="button" data-cmd="close" aria-label="Close garden design" title="Close garden design">×</button>
       </div>
     </header>
     <div class="gd-walk-hint"><span class="gd-mouse-walk">WASD to walk · Mouse to look · Esc releases · Tab shows tools</span><span class="gd-touch-walk">Use the thumb controls to walk and look. Tap Show tools to draw again.</span></div>
-    <div class="gd-body">
+    <div class="gd-body"><p><a href="/plan/">Wi-Fi room planner</a> · <a data-mac-furniture href="https://127.0.0.1:8450/house.html?site=house&amp;version=approved_2b&amp;mode=review&amp;edit=1">3D furniture editor on studio Mac</a></p>
       <div class="gd-view-row">
         <button type="button" data-cmd="vr" hidden>Enter VR</button>
         <div class="gd-segment gd-views" aria-label="Garden view">
@@ -293,6 +293,12 @@ export function createGardenPanel({ action }) {
   }
 
   function update(next) {
+    const home=new URL('/preview/',location.href);home.port='8450';
+    if(next.version)home.searchParams.set('version',next.version);
+    root.querySelector('.gd-return-house').href=home.href;
+    const furniture=new URL('https://127.0.0.1:8450/house.html');
+    furniture.search=new URLSearchParams({site:'house',version:next.version||'approved_2b',mode:'review',edit:'1'});
+    root.querySelector('[data-mac-furniture]').href=furniture.href;
     state = next; root.hidden = !state.active;
     if (!state.active) return;
     root.classList.toggle('gd-collapsed',!!state.collapsed);

@@ -1,0 +1,506 @@
+{
+  "uv_policy": "UV coordinates in real metres, divided by explicit material repeat_m. Repeat sizes are independently chosen visual calibration, not claimed surveyed scan dimensions.",
+  "inspected_sources": {
+    "inspected_sources": [
+      "oak_veneer_02",
+      "rough_linen",
+      "wool_boucle",
+      "cotton_jersey",
+      "hessian_380",
+      "curly_teddy_natural",
+      "waffle_pique_cotton",
+      "polar_fleece",
+      "terry_cloth",
+      "hessian_230",
+      "knitted_fleece",
+      "Marble019"
+    ],
+    "rejected": {
+      "rough_linen": "Blue source conflicts with warm neutral palette.",
+      "wool_boucle": "Multicolour checked source, not neutral boucle.",
+      "waffle_pique_cotton": "Strong yellow source not selected for main upholstery.",
+      "terry_cloth": "Strong blue source not selected for white bedding."
+    }
+  },
+  "materials": {
+    "oak": {
+      "source_id": "PH.oak_veneer_02",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/oak_veneer_02",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 1.0,
+      "maps": {
+        "colour": "maps/oak_veneer_02_diff_1k.jpg",
+        "roughness": "maps/oak_veneer_02_rough_1k.jpg",
+        "normal": "maps/oak_veneer_02_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.28,
+      "albedo_gain": [
+        0.6702538866306814,
+        0.6012124456438945,
+        0.4791236712089671
+      ],
+      "albedo_gain_space": "linear-srgb",
+      "albedo_source_max_linear": [
+        0.8713671191987972,
+        0.6172065624196511,
+        0.41254261348390375
+      ],
+      "albedo_gain_source": {
+        "target_srgb": "#B8936A",
+        "mean_source_linear": [
+          0.71513226952004,
+          0.4853037423485993,
+          0.3008168444159315
+        ],
+        "method": "Mean linear source albedo calibration; raw image unchanged",
+        "evidence": "work/oak-colour-check.json"
+      },
+      "map_sha256": {
+        "colour": "69410573a965898d455f389ede7c0de5709de33430ad489786e5ba70b3e7ba81",
+        "roughness": "e9d438b6d00db37cbf4745cc7ff3b59ee29fd7cc75ce6396356dd004a84d2e43",
+        "normal": "4e5444b3fa1f3456891ca06e9f8978f7f303cadaf36cd4041da8e207be7202ce"
+      }
+    },
+    "upholstery": {
+      "source_id": "PH.curly_teddy_natural",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/curly_teddy_natural",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 0.3,
+      "maps": {
+        "colour": "maps/curly_teddy_natural_diff_1k.jpg",
+        "roughness": "maps/curly_teddy_natural_rough_1k.jpg",
+        "normal": "maps/curly_teddy_natural_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.32,
+      "sheen": 0.18,
+      "map_sha256": {
+        "colour": "3e524df3f6b35bfd87b71ed6a1e2d0c96797e55ec4c1a5b2f7c4332b635a1d79",
+        "roughness": "b6e3c3eba019ec5d97b690c97fc602891d29de2428b536c0cc8b814e7c23520b",
+        "normal": "a6cea84bddf31c9d4643a25a09c3ec8fa8884e3c3e2d8ac291623e3f702159b8"
+      }
+    },
+    "linen": {
+      "source_id": "PH.cotton_jersey",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/cotton_jersey",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 0.24,
+      "maps": {
+        "colour": "maps/cotton_jersey_diff_1k.jpg",
+        "roughness": "maps/cotton_jersey_rough_1k.jpg",
+        "normal": "maps/cotton_jersey_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.24,
+      "sheen": 0.12,
+      "map_sha256": {
+        "colour": "0f1b790e4087223275aaa6fdffdd46a556a26d2af72cd811acf72ba9c21ec1f6",
+        "roughness": "89bed18f5c3f03fc7b4c2382446891629716278e521e06e8b7f6c8f02dd22590",
+        "normal": "9b79709806511b62567fb007ff61009c3b194bb0d0821fbaee3faf1b2bff0318"
+      }
+    },
+    "throw": {
+      "source_id": "PH.knitted_fleece",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/knitted_fleece",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 0.22,
+      "maps": {
+        "colour": "maps/knitted_fleece_diff_1k.jpg",
+        "roughness": "maps/knitted_fleece_rough_1k.jpg",
+        "normal": "maps/knitted_fleece_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.32,
+      "sheen": 0.15,
+      "map_sha256": {
+        "colour": "57d7e416b698d02171a260da1a47109fc0f85b232f565d2a42d6d1be416c32e0",
+        "roughness": "0f82adaf29135b0d0a799d7dfcb2f64e76a9836bbf43d5745fb66330077e2042",
+        "normal": "ca1f965fee9957665a78a54bfa09e2c44f4e626d38fff6238a9a214cad5bab99"
+      }
+    },
+    "rug": {
+      "source_id": "PH.hessian_380",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/hessian_380",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 0.3,
+      "maps": {
+        "colour": "maps/hessian_380_diff_1k.jpg",
+        "roughness": "maps/hessian_380_rough_1k.jpg",
+        "normal": "maps/hessian_380_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.45,
+      "map_sha256": {
+        "colour": "5727302df3a9c845e6320ff186ac13fc7d0f1ffcd6fda71667e808e09379fe6f",
+        "roughness": "a828755c5ddc9af0697eeed46427c5145df1dea5f1e2839f643156a285282fed",
+        "normal": "3994fd74148cb413892edd08155976497b3e7e15a403a182f07325a6b1e7be1a"
+      }
+    },
+    "white_fabric": {
+      "colour": "#ece9df",
+      "roughness": 0.86,
+      "source_id": "BRI.white-cotton+PH.cotton_jersey",
+      "licence": "CC0-1.0",
+      "sheen": 0.16,
+      "repeat_m": 0.24,
+      "maps": {
+        "roughness": "maps/cotton_jersey_rough_1k.jpg",
+        "normal": "maps/cotton_jersey_nor_gl_1k.jpg"
+      },
+      "normal_strength": 0.18,
+      "channel_choice": "Original neutral dye; CC0 cotton roughness/normal weave only. Original colour retained in linen material and source files.",
+      "map_sha256": {
+        "roughness": "89bed18f5c3f03fc7b4c2382446891629716278e521e06e8b7f6c8f02dd22590",
+        "normal": "9b79709806511b62567fb007ff61009c3b194bb0d0821fbaee3faf1b2bff0318"
+      },
+      "source_url": "https://polyhaven.com/a/cotton_jersey",
+      "licence_url": "https://polyhaven.com/license",
+      "colour_authorship": "Original studio colour"
+    },
+    "stone": {
+      "source_id": "ambientCG.Marble019",
+      "licence": "CC0-1.0",
+      "source_url": "https://ambientcg.com/a/Marble019",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "repeat_m": 2.0,
+      "maps": {
+        "colour": "maps/Marble019_1K-JPG_Color.jpg",
+        "roughness": "maps/Marble019_1K-JPG_Roughness.jpg",
+        "normal": "maps/Marble019_1K-JPG_NormalGL.jpg"
+      },
+      "normal_strength": 0.18,
+      "map_sha256": {
+        "colour": "71648451058b5db8c36dc849cfdd36be9641cf8b9a7bb7ce5aa479d450567609",
+        "roughness": "7cfd3c3cacab69252aef4dce361142cf847b4901f4a58b4bf4d5d823de9beae2",
+        "normal": "ab0887a7d2ae4bea17a7af0204b5ac44d5be4999020202a28f5f93ae719bec91"
+      }
+    },
+    "white": {
+      "colour": "#e8e6df",
+      "roughness": 0.48,
+      "source_id": "BRI.original.white",
+      "licence": "original-work"
+    },
+    "ceramic": {
+      "colour": "#e4dfd3",
+      "roughness": 0.28,
+      "source_id": "BRI.original.ceramic",
+      "licence": "original-work"
+    },
+    "glaze": {
+      "colour": "#f1eee8",
+      "roughness": 0.17,
+      "source_id": "BRI.original.glaze",
+      "licence": "original-work"
+    },
+    "seam": {
+      "colour": "#c6bba8",
+      "roughness": 0.88,
+      "source_id": "BRI.original.seam",
+      "licence": "original-work"
+    },
+    "accent": {
+      "colour": "#9ca58e",
+      "roughness": 0.88,
+      "source_id": "BRI.original.accent",
+      "licence": "original-work"
+    },
+    "kitchen": {
+      "colour": "#bdc2b5",
+      "roughness": 0.46,
+      "source_id": "BRI.original.kitchen",
+      "licence": "original-work"
+    },
+    "black": {
+      "colour": "#202322",
+      "roughness": 0.4,
+      "source_id": "BRI.original.black",
+      "licence": "original-work"
+    },
+    "dark_glass": {
+      "colour": "#111b1d",
+      "roughness": 0.14,
+      "source_id": "BRI.original.dark_glass",
+      "licence": "original-work"
+    },
+    "paper": {
+      "colour": "#eee8db",
+      "roughness": 0.82,
+      "source_id": "BRI.original.paper",
+      "licence": "original-work"
+    },
+    "book_sage": {
+      "colour": "#727b68",
+      "roughness": 0.72,
+      "source_id": "BRI.original.book_sage",
+      "licence": "original-work"
+    },
+    "book_ochre": {
+      "colour": "#b39862",
+      "roughness": 0.72,
+      "source_id": "BRI.original.book_ochre",
+      "licence": "original-work"
+    },
+    "book_clay": {
+      "colour": "#a86e59",
+      "roughness": 0.72,
+      "source_id": "BRI.original.book_clay",
+      "licence": "original-work"
+    },
+    "soil": {
+      "colour": "#302a22",
+      "roughness": 0.99,
+      "source_id": "BRI.original.soil",
+      "licence": "original-work"
+    },
+    "leaf": {
+      "colour": "#4b6843",
+      "roughness": 0.68,
+      "source_id": "BRI.original.leaf",
+      "licence": "original-work"
+    },
+    "leaf_light": {
+      "colour": "#73875c",
+      "roughness": 0.67,
+      "source_id": "BRI.original.leaf_light",
+      "licence": "original-work"
+    },
+    "art_sand": {
+      "colour": "#c3ad87",
+      "roughness": 0.85,
+      "source_id": "BRI.original.art_sand",
+      "licence": "original-work"
+    },
+    "art_clay": {
+      "colour": "#a87158",
+      "roughness": 0.85,
+      "source_id": "BRI.original.art_clay",
+      "licence": "original-work"
+    },
+    "art_sage": {
+      "colour": "#88977c",
+      "roughness": 0.85,
+      "source_id": "BRI.original.art_sage",
+      "licence": "original-work"
+    },
+    "matboard": {
+      "colour": "#eee8da",
+      "roughness": 0.9,
+      "source_id": "BRI.original.matboard",
+      "licence": "original-work"
+    },
+    "metal": {
+      "colour": "#a5aaa9",
+      "roughness": 0.25,
+      "source_id": "BRI.original.metal",
+      "licence": "original-work",
+      "metallic": 1
+    },
+    "bronze": {
+      "colour": "#b69a65",
+      "roughness": 0.28,
+      "source_id": "BRI.original.bronze",
+      "licence": "original-work",
+      "metallic": 1
+    },
+    "mirror": {
+      "colour": "#e6e8e7",
+      "roughness": 0.06,
+      "source_id": "BRI.original.mirror",
+      "licence": "original-work",
+      "metallic": 1
+    },
+    "glass": {
+      "colour": "#b9c9c6",
+      "roughness": 0.12,
+      "source_id": "BRI.original.glass",
+      "licence": "original-work",
+      "alpha": 0.18
+    },
+    "bulb": {
+      "colour": "#fff1d8",
+      "roughness": 0.35,
+      "source_id": "BRI.original.bulb",
+      "licence": "original-work",
+      "emission": "#fff0cf",
+      "emission_strength": 1.8
+    },
+    "ember": {
+      "colour": "#a44b22",
+      "roughness": 0.7,
+      "source_id": "BRI.original.ember",
+      "licence": "original-work",
+      "emission": "#ed6a20",
+      "emission_strength": 0.12
+    },
+    "floor_oak": {
+      "source_id": "PH.wood_floor",
+      "source_url": "https://polyhaven.com/a/wood_floor",
+      "licence": "CC0-1.0",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 1.7,
+      "source_dimensions_m": [
+        1.7,
+        1.7
+      ],
+      "maps": {
+        "colour": "maps/wood_floor_diff_2k.jpg",
+        "roughness": "maps/wood_floor_rough_2k.jpg",
+        "normal": "maps/wood_floor_nor_gl_2k.jpg",
+        "occlusion": "maps/wood_floor_ao_2k.jpg"
+      },
+      "normal_strength": 0.35,
+      "review_note": "Native 2K colour inspected. Warm brown oak with staggered end joints, about nine 189 mm boards across 1.7 m. Preferred floor, separate from furniture veneer. Browser angled-view scale check pending.",
+      "metadata": "independent/assets/material-sources/wood_floor/info.json",
+      "albedo_gain": [
+        2.0879013914864792,
+        2.2179261377939206,
+        2.2911073471144388
+      ],
+      "albedo_gain_space": "linear-srgb",
+      "albedo_gain_source": {
+        "target_srgb": "#B48C64",
+        "mean_source_linear": [
+          0.21859797835350037,
+          0.11824138462543488,
+          0.05562274530529976
+        ],
+        "method": "Mean linear source albedo calibration; raw image unchanged",
+        "evidence": "work/floor-colour-check.json"
+      },
+      "albedo_source_max_linear": [
+        0.39675523,
+        0.28314874,
+        0.20507874
+      ],
+      "map_sha256": {
+        "colour": "7c3ff1164c8dd0758ef2c048e9a266d28174120de01052ec40e6ca486177345c",
+        "roughness": "297eda0d75f2020cc541dbf242e1f5fd058053249567f49a4506fc2c5b1a172b",
+        "normal": "eff2e4db46bab930dc05997faf5085157eec4fd652cdfc6cd01fa11edd56ef10",
+        "occlusion": "9f9aa2da94211afcd08c56d6d74d9bb80b7792666b000297e3b3470739dd18e5"
+      }
+    },
+    "floor_oak_quiet": {
+      "source_id": "PH.oak_wood_planks",
+      "source_url": "https://polyhaven.com/a/oak_wood_planks",
+      "licence": "CC0-1.0",
+      "licence_url": "https://polyhaven.com/license",
+      "repeat_m": 1.2,
+      "source_dimensions_m": [
+        1.2,
+        1.2
+      ],
+      "maps": {
+        "colour": "maps/oak_wood_planks_diff_2k.jpg",
+        "roughness": "maps/oak_wood_planks_rough_2k.jpg",
+        "normal": "maps/oak_wood_planks_nor_gl_2k.jpg",
+        "occlusion": "maps/oak_wood_planks_ao_2k.jpg"
+      },
+      "normal_strength": 0.35,
+      "review_note": "Native 1K and fresh 2K inspected. Quieter warm oak alternative; source scan is 1.2 m, so preserve that physical repeat rather than arbitrarily enlarging to 2 m.",
+      "metadata": "independent/assets/material-sources/oak_wood_planks/info.json",
+      "map_sha256": {
+        "colour": "ec3d2deb1fe21150ede5f987b48c691b3c7dbffe4183850a9b8717e904917a46",
+        "roughness": "18b2a97f44b18e1a794652dbb2ec4bbdfc35869e2f028e4bbb85441258da1018",
+        "normal": "340a51d81e5ec2ead28a1c864637375becb00a1e11861e47a72dde4c03950968",
+        "occlusion": "576633bf0b497cfa39f799d92318b5e57d33c5ad6083abb1a0f69bdc9c13ba89"
+      }
+    },
+    "hearth_slate": {
+      "source_id": "PH.slate_floor.single-cleaved-patch",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/slate_floor",
+      "licence_url": "https://polyhaven.com/license",
+      "colour": "#3E3F42",
+      "repeat_m": 4.666666666666667,
+      "physical_repeat_m": 4.666666666666667,
+      "roughness": 0.78,
+      "metallic": 0,
+      "normal_strength": 0.65,
+      "maps": {
+        "colour": "maps/slate_floor_diff_1k.jpg",
+        "normal": "maps/slate_floor_nor_gl_2k.jpg"
+      },
+      "albedo_gain": [
+        2.2118382866848054,
+        4.136272949098138,
+        4.304103714762267
+      ],
+      "albedo_gain_space": "linear-srgb",
+      "albedo_gain_source": "work/slate-review/slate-material-check.json; joint-free UV patch mean calibrated to signed#3E3F42",
+      "albedo_source_max_linear": [
+        0.10224173308810132,
+        0.07227185068231748,
+        0.06662593864377289
+      ],
+      "review_note": "Signed riven slate. Native cleaved stone scan patch only; no mosaic joints, polished coating or image alteration. Matte roughness. Geometry UV patch and gain are paired; browser close-up pending.",
+      "map_sha256": {
+        "colour": "ca47f5ba941cca29af7c7c16f7c6e7a8ba9dbdeb440e26c7a166d2f3bae9ace5",
+        "normal": "cfa50bd8c911030d5aed7e611f7a07eef51829ccabf1c0a424c2e0fc605a5515"
+      }
+    },
+    "quartz": {
+      "source_id": "ambientCG.Marble005",
+      "source_url": "https://ambientcg.com/a/Marble005",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "licence": "CC0-1.0",
+      "repeat_m": 2,
+      "roughness": 0.23,
+      "maps": {
+        "colour": "maps/Marble005_1K-JPG_Color.jpg"
+      },
+      "map_sha256": {
+        "colour": "2149d3faa40d9dd6c14b08a4e99ef7d722d26285bc08944777076ea3028bc9bc"
+      }
+    },
+    "apple": {
+      "source_id": "studio.apple",
+      "licence": "original-work",
+      "colour": "#b4bb67",
+      "roughness": 0.28
+    },
+    "apple_red": {
+      "source_id": "studio.apple_red",
+      "licence": "original-work",
+      "colour": "#a64f37",
+      "roughness": 0.32
+    },
+    "wax": {
+      "source_id": "studio.wax",
+      "licence": "original-work",
+      "colour": "#e5d9c1",
+      "roughness": 0.59
+    },
+    "basket": {
+      "source_id": "studio.basket",
+      "licence": "original-work",
+      "colour": "#a78d68",
+      "roughness": 0.84
+    },
+    "wax_wick": {
+      "source_id": "studio.wax_wick",
+      "licence": "original-work",
+      "colour": "#302822",
+      "roughness": 0.95
+    },
+    "metro_tile": {
+      "source_id": "studio.metro_tile",
+      "licence": "original-work",
+      "colour": "#F2F1EC",
+      "roughness": 0.18
+    },
+    "metro_grout": {
+      "source_id": "studio.metro_grout",
+      "licence": "original-work",
+      "colour": "#D9D3C8",
+      "roughness": 0.85
+    },
+    "wall": {
+      "source_id": "studio.wall",
+      "licence": "original-work",
+      "colour": "#EFEDE7",
+      "roughness": 0.81
+    }
+  }
+}

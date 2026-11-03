@@ -738,9 +738,9 @@ def spec_post(h):
 
 
 handler = functools.partial(Handler, directory=root)
-httpd = http.server.ThreadingHTTPServer(("0.0.0.0", port), handler)
+httpd = http.server.ThreadingHTTPServer((sys.argv[2] if len(sys.argv) > 2 else "0.0.0.0", port), handler)
 ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 ctx.load_cert_chain(os.path.join(cert, "cert.pem"), os.path.join(cert, "key.pem"))
 httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
-print(f"https://0.0.0.0:{port}/", flush=True)
+print(f"https://{httpd.server_address[0]}:{port}/", flush=True)
 httpd.serve_forever()

@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8"><title>Garden Studio catalogue photography</title>
+<script type="importmap">{"imports":{"three":"/assets/vendor/three/build/three.module.js","three/addons/":"/assets/vendor/three/examples/jsm/"}}</script>
+<style>body{margin:0}canvas{display:block}</style>
+<script type="module">
+import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setSize(256,256);document.body.append(renderer.domElement);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
+renderer.toneMapping=T.NeutralToneMapping; renderer.toneMappingExposure=.82;
+const scene=new T.Scene(), camera=new T.OrthographicCamera();
+scene.background=new T.Color(0xbfc0bc);
+const pmrem=new T.PMREMGenerator(renderer),room=new RoomEnvironment();
+// Large alternating cards read in planar mirrors and glazed metal.
+for(const [x,y,z,w,h,color] of [[-2,2,4,2.5,4,0xffffff],[1.2,1.6,3,1.5,3,0x292e33]]){
+ const card=new T.Mesh(new T.BoxGeometry(w,h,.04),new T.MeshBasicMaterial({color}));
+ card.position.set(x,y,z);room.add(card);
+}
+const environment=pmrem.fromScene(room,.04);
+scene.environment=environment.texture;scene.environmentIntensity=.65;room.dispose();pmrem.dispose();
+const floor=new T.Mesh(new T.PlaneGeometry(200,200),new T.MeshStandardMaterial({color:0xbfc0bc,roughness:.96}));
+floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+const key=new T.DirectionalLight(0xfffbf5,1.85);key.castShadow=true;
+key.shadow.mapSize.set(512,512);key.shadow.normalBias=.001;key.shadow.bias=-.0004;
+scene.add(key,key.target,new T.HemisphereLight(0xfffcf7,0x8d8984,.35));
+const loader=new GLTFLoader();
+window.photograph=async function(url){
+ const {scene:item}=await loader.loadAsync(url);
+ item.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(item);
+ const bounds=new T.Box3().setFromObject(item,true);
+ const centre=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()),radius=size.length();
+ floor.position.y=bounds.min.y-.001;
+ camera.position.copy(centre).add(new T.Vector3(.77,.54,1.36).normalize().multiplyScalar(radius*2));
+ camera.lookAt(centre);camera.updateMatrixWorld();
+ const projected=[];
+ for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
+   projected.push(new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse));
+ }
+ const side=Math.max(...projected.flatMap(p=>[Math.abs(p.x),Math.abs(p.y)]))*1.09;
+ Object.assign(camera,{left:-side,right:side,top:side,bottom:-side,near:radius*.01,far:radius*6});camera.updateProjectionMatrix();
+ key.position.copy(centre).add(new T.Vector3(-1.4,2,1.6).multiplyScalar(radius));
+ key.target.position.copy(centre);
+ Object.assign(key.shadow.camera,{left:-radius,right:radius,top:radius,bottom:-radius,near:radius*.01,far:radius*6});
+ key.shadow.camera.updateProjectionMatrix();
+ renderer.render(scene,camera);const png=renderer.domElement.toDataURL('image/png');
+ scene.remove(item);const geometries=new Set(),materials=new Set(),textures=new Set();
+ item.traverse(o=>{if(!o.isMesh)return;geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
+ for(const m of materials){for(const v of Object.values(m))if(v?.isTexture)textures.add(v);m.dispose();}
+ for(const t of textures){t.dispose();t.source?.data?.close?.();}for(const g of geometries)g.dispose();
+ return png;
+};
+</script>

@@ -10,7 +10,10 @@ Registration for 23 Battle Road (renders/front-garden/audit-4/AUDIT.md): photo x
 z = drawn z + 0.231, so the shift into the drawing frame is (+4.63, -3.09, -0.231)."""
 import sys, argparse, math
 import bpy
+from pathlib import Path
 from mathutils import Matrix
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hb_setting_marks import apply_hardscape, street_sections, surveyed_foliage
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 ap = argparse.ArgumentParser()
@@ -137,6 +140,7 @@ for ob in list(bpy.data.objects):
     if grey_mat is not None:
         for i_ in range(len(ob.material_slots)): ob.material_slots[i_].material = grey_mat
 print("setting: border blocks flush with the path and grey:", nflush, "parts")
+apply_hardscape(grey_mat)
 # Quest draw calls: look-alike materials of the garden share one (round 6: 47 -> ~27 batches)
 MERGE = [("FG2_timber_pale_v", "FG2_timber_pale"), ("FG2_bin_grey_face", "FG2_bin_grey"), ("FG2_bin_brown_face", "FG2_bin_brown"),
          ("FG2_anthracite", "FG_gutter_black"), ("FG2_dark_grey", "FG_gutter_black"), ("FG_wheel", "FG_gutter_black"),
@@ -186,6 +190,7 @@ try:                                                                            
     if _h: HEDGE_TOP = (float(_h.group(1)), float(_h.group(2)))
     print("setting: GF-1 hedge blocks from the spec", HEDGE_BLOCKS, HEDGE_TOP)
 except Exception as _e: print("setting: GF-1 not read from the spec:", _e)
+HEDGE_BLOCKS = street_sections(HEDGE_BLOCKS)
 for ob in list(bpy.data.objects):
     if ob.type != "MESH" or not ob.name.startswith("B_street_hedge"): continue
     pieces = []
@@ -231,6 +236,7 @@ if box is not None and shrubs:
         o2["plain_label"] = "Shrub by the door"; o2["element"] = f"SET-door-shrub-{k}"
     bpy.data.objects.remove(box)
     print("setting: door hedge box ->", n, "shrubs (", proto.name, ")")
+surveyed_foliage()
 # 3. gravel warm gold flint, block paving deep red/brown/charcoal with contrast (walk_0011, 0027, 0035, 0041, 20260719_102925)
 def recolour_image(im, target, contrast):
     """per-channel gain to the photo's mean colour, then contrast about the mean: each unit keeps its own colour

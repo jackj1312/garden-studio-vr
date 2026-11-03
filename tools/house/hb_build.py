@@ -228,6 +228,13 @@ class StateBuilder:
                     w = piece(w, us[0], us[1], pid=add_.get("as", w.id))
                     w.openings = []
                 (gw if add_["storey"] == "ground" else fw).append(w)
+        for measured in self.S.get('finish_interfaces',{}).get('walls',[]):
+            if vspec['id'] not in measured['versions']:continue
+            line=measured['line']
+            W=Wall(measured['id'],line[:2],line[2:],measured['thickness'],measured['base'],measured['top'],'stud_existing',storey='ground')
+            W.meta=dict(type='Existing internal door head',src=self.S['finish_interfaces']['source'],conf='scaled',existing=True)
+            W.openings=[dict(id=measured['opening'],kind='door',u0=0.,u1=measured['width'],z0=0.,z1=measured['head'],swing=measured['swing'],src=W.meta['src'],conf='scaled')]
+            gw.append(W)
         for cw in st.get("context_walls", []):            # walls not on the trace (the attached neighbour), as massing
             x1, y1, x2, y2 = cw["line"]
             W = Wall(cw["id"], (x1, y1), (x2, y2), cw["t"], cw.get("z0", 0.0), cw["z1"], "massing", 1, cw.get("storey", "ground"))

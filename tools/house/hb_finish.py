@@ -372,7 +372,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
     if lin_tree is not None:
         for ob, p in live_parts():
             pr = p["props"]
-            if pr.get("group") != "wall_lining" or ob.name.startswith(("FS-", "SPEC-")): continue
+            if pr.get("group") != "wall_lining" or ob.name.startswith(("FS-", "SPEC-", "RL-")): continue
             bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
             lo = Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb))); hi = Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
             if min(hi.x - lo.x, hi.y - lo.y) > 0.03 or hi.z - lo.z < 1.0: continue
@@ -531,6 +531,13 @@ def scribe_architraves(objs, N, log, reach=0.035):
             linings.append((ob,[min(v[k] for v in verts) for k in range(3)],[max(v[k] for v in verts) for k in range(3)]))
     for ob,p in objs:
         if ob.name.endswith('_architraves') and not p['props'].get('as_built'):scribe_to_room_finish(ob,linings)
+    valleys=[]
+    for ob,p in objs:
+        if ob.type=='MESH' and p['props'].get('group')=='valley' and not p['props'].get('stage_out'):
+            v=[ob.matrix_world@q.co for q in ob.data.vertices]
+            valleys.append((ob,[min(q[k] for q in v) for k in range(3)],[max(q[k] for q in v) for k in range(3)]))
+    for ob,p in objs:
+        if ob.name.startswith('RCF-WP-'):scribe_to_room_finish(ob,valleys)
     log(f"joinery: {moved} architrave legs scribed to the return wall beside them")
 
 

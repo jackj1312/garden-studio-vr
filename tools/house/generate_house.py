@@ -57,6 +57,9 @@ def resolve(o, defs, depth=0):
 
 
 SPEC["versions"] = resolve(SPEC["versions"], SPEC.get("defs", {}))
+interfaces_path=os.path.join(os.path.dirname(args.spec_v1),'finish_interfaces.json')
+if os.path.isfile(interfaces_path):
+    SPEC['finish_interfaces']=json.load(open(interfaces_path))
 OUT = os.path.abspath(args.out); os.makedirs(OUT, exist_ok=True)
 T0 = time.time()
 def log(*a): print(f"[house {time.time() - T0:6.1f}s]", *a, flush=True)
@@ -330,6 +333,7 @@ class VersionBuild:
         if key and not args.no_items:
             import hb_room_faces
             scheduled=SPEC_V1['versions'][key]
+            self.finish_interfaces=SPEC.get('finish_interfaces',{})
             linings=hb_room_faces.build(self,scheduled['rooms'],scheduled['items'])
             from hb_horizontal import horizontal
             linings.extend(horizontal(self,scheduled['rooms']))
@@ -412,7 +416,7 @@ class VersionBuild:
         perimeter=[(x0,y0),(x1,y0),(x1,y1),(x0,y1)]
         holes=[];returns=[]
         for light in SPEC['defs']['porch'].get('rooflights',[]):
-            a,b,right,d=light['rect'];holes.append([(a,b),(right,b),(right,d),(a,d)])
+            a,b,right,d=light['rect'];holes.append([(a+.010,b+.010),(right-.010,b+.010),(right-.010,d-.010),(a+.010,d-.010)])
             for lo,hi,front,rear in [(a,a+.010,b,d),(right-.010,right,b,d),(a+.010,right-.010,b,b+.010),(a+.010,right-.010,d-.010,d)]:
                 returns.append(prism_varz([(lo,front),(hi,front),(hi,rear),(lo,rear)],zt,
                                           lambda p:zt(p)+pv['rafter_depth']/math.cos(math.radians(pl['pitch']))))
@@ -438,17 +442,20 @@ class VersionBuild:
         sqf = 0.7 if self.N > 1 else 0.0                      # the floor finish goes down on the finished screed (0.6)
         walls = self.walls_live()
         fps = [(w, w["wall"].footprint(full=True)) for w in walls]
-        def in_wall(q): return any(G.point_in_poly(q, f) for (w, f) in fps)
+        def in_wall(q): return any(G.point_in_poly(q, f) for (w, f) in room_carriers)
         def doorway(q, outn):
-            for (w, f) in fps:
+            for (w, f) in room_carriers:
                 if not G.point_in_poly(q, f): continue
                 W = w["wall"]; u = G.dot(G.sub(q, W.a), W.d)
                 floor_open = 0.2 if W.storey == "ground" else 2.9          # a door opening starts at its floor
-                if any(o["u0"] - 0.01 <= u <= o["u1"] + 0.01 and o["z0"] < floor_open for o in W.openings): return True
+                if any(o["u0"] - 0.01 <= u <= o["u1"] + 0.01 and o["z0"] < floor_open and not o.get("infilled") for o in W.openings): return True
             return False
         for r in V["rooms"]:
             fin = r["finishes"]; fl = re.search(r"FIN-FLR-[A-Z]+", fin.get("floor", ""))
             P = [(x, -z) for (x, z) in r["polygon"]]; fy = r["floor_y"]
+            from hb_room_faces import active_footprint
+            room_carriers=[(w,active_footprint(w['wall'])) for w,f in fps if not w['meta'].get('stage_out')
+                           and w['wall'].storey==r['storey'] and w['wall'].z0<=fy+.08<=w['wall'].z1]
             P = self._to_walls(P, fps, fy)
             if fl:
                 fid = fl.group(0); SPEC_MATS.add(fid)
@@ -470,11 +477,22 @@ class VersionBuild:
                 if L < 0.05: runs_e.append((0.0, [], L)); continue
                 d = G.unit(G.sub(b0, a0)); inw = (-d[1], d[0]); outn = (d[1], -d[0])
                 mid = G.add(a0, G.mul(d, L / 2))
-                of = 0.0
-                for k_ in range(1, 41):
-                    if not in_wall(G.add(mid, G.mul(inw, k_ * 0.001 - 0.0005))): break
-                    of = k_ * 0.001
-                of += SKIRT_LINING_T          # the wall stack's footprint ends 10 mm short of the lined face the room sees: the board stood 8 mm proud of the plaster, not 18 (round-1 sweep: skirting invisible)
+                # A skirting back beds against the actual active room face.
+                # The signed floor polygon may extend into a removed wall
+                # or its cavity; it is not itself a mounting plane.
+                from hb_room_faces import active_faces,lining_coordinate,SKIM
+                lining_rules={line['wall']:line for line in SPEC.get('finish_interfaces',{}).get('room_linings',[]) if self.v['id'] in line['versions'] and line['room']==r['id']}
+                candidates=[]
+                for carrier,_ in room_carriers:
+                    w=carrier['wall']
+                    if carrier['meta'].get('stage_out') or w.storey!=r['storey'] or abs(G.dot(w.d,d))<.97 or not w.z0<=fy+.08<=w.z1:continue
+                    along=G.dot(G.sub(mid,w.a),w.d)
+                    if not w.ua-.035<=along<=w.ub+.035:continue
+                    side=1 if G.dot(w.n,inw)>0 else -1
+                    c=lining_coordinate(w,active_faces(w)[1 if side>0 else 0],side,dict(r,_lining=lining_rules))+side*SKIM
+                    dist=G.dot(G.sub(w.point(along,c),a0),inw)
+                    if abs(dist)<.15:candidates.append(dist)
+                of=min(candidates,key=abs) if candidates else 0.
                 steps = max(2, int(L / 0.01)); ok = []; door_ = []
                 for k in range(steps):
                     u = (k + 0.5) * L / steps
@@ -483,13 +501,13 @@ class VersionBuild:
                     door_.append(dw_); ok.append(in_wall(q) and not dw_)
                 # the door jambs on this edge (exact): the skirting stops against the architrave, 31 mm past each jamb
                 jambs = []
-                for (w_, f_) in fps:
+                for (w_, f_) in room_carriers:
                     W_ = w_["wall"]
                     if abs(G.dot(W_.d, d)) < 0.95: continue
                     if abs(G.dot(G.sub(W_.point(0.0, 0.0), a0), inw)) > W_.t + 0.05: continue
                     floor_open = 0.2 if W_.storey == "ground" else 2.9
                     for o_ in W_.openings:
-                        if o_["z0"] >= floor_open: continue
+                        if o_["z0"] >= floor_open or o_.get("infilled"): continue
                         for uj in (o_["u0"], o_["u1"]):
                             jambs.append(G.dot(G.sub(W_.point(uj, 0.0), a0), d))
                 def snap(u, sgn):
@@ -1098,7 +1116,12 @@ class VersionBuild:
             wl = S.lifetime(w["meta"], self.N)
             if min(wl[1], life[1]) <= max(wl[0], life[0]): continue
             if min(W.z1, z1 + a.get("clip_reach", 0.0)) - max(W.z0, z0) < 0.002: continue
-            fp = W.footprint(full=True)          # linings included: floors stop at the board face
+            if W.only_layers is not None:
+                from hb_room_faces import active_faces
+                ca,cb=active_faces(W)
+                fp=[W.point(W.end_u(end,c),c) for end,c in [('a',ca),('b',ca),('b',cb),('a',cb)]]
+            else:
+                fp=W.footprint(full=True)
             cutters.append(G.ccw(fp))
         for c in self.extra_cutters(a):
             cutters.append(c)
@@ -2291,7 +2314,6 @@ FAULTS = []
 SPEC_V1 = json.load(open(args.spec_v1)) if os.path.exists(args.spec_v1) else None
 SPEC_V1_MAP = {"as_built_now": "before", SPEC.get("default", "approved_2b"): "after"} if SPEC_V1 else {}
 SPEC_MATS = set()
-SKIRT_LINING_T = 0.010       # measured on the built GLB (party wall, living rear wall): skirting back 10 mm inside the lining face
 SKIRTING_HELD = False    # Jack 1 Nov: skirting, architraves, window boards to the joinery bar: moulded profiles (hb_joinery), proved on the joinery test sheet
 NOTES_MANIFOLD = []      # wall parts whose cells could not weld into one shell (kept as separate closed cells)
 SETTING_IMAGES = set()        # the garden's own textures: kept at the garden test's size in the Quest GLB too (log 162)
@@ -2344,6 +2366,9 @@ def setting_objects(coll, vb):
         src = o if "stage_in" in o.keys() else (o.parent if o.parent and "stage_in" in o.parent.keys() else None)
         if src is None: continue
         props = {k: src[k] for k in src.keys() if k in ("element", "stage_in", "seq", "category", "group", "storey", "label", "plain_label", "drawing", "conf", "collide")}
+        if src.get('surface_role')=='terrain' or (o.name.split('.')[0] in ('G2_lawn','G2_lawn_west') and
+            any(m and 'Studio turf' in m.name for m in o.data.materials)):
+            props['surface_role']='terrain'
         props["context"] = True
         keep_all = always and str(props.get("element", "")).replace("SET-", "").startswith(always)
         if mode == "none" and not keep_all:

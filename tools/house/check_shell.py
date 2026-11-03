@@ -156,7 +156,11 @@ for r in ROOMS:
         while (k + 0.5) * 0.2 < L - 0.08:
             u = 0.1 + k * 0.2; k += 1
             if u > L - 0.1: break
-            ex, ez = x0 + dx * u, z0 + dz * u
+            ex, ez = x0 + dx*u,z0 + dz*u
+            # The room's navigation polygon follows the structural ashlar.
+            # Its signed finish schedule explicitly dimensions the room face.
+            ashlar=re.search(r'ashlar wall \(x ([0-9.]+)\)',r['finishes'].get('walls',''))
+            if ashlar and abs(dx)<1e-6 and abs(x0-min(x for x,z in P))<.001:ex=float(ashlar.group(1))
             for hy in (0.35, 1.25):
                 y = fy + hy
                 o = B(ex - out[0] * 0.25, y, ez - out[1] * 0.25)

@@ -221,7 +221,7 @@ def build_item(it,collection):
         made=objects
     elif source in ('linear_pendant','pendant_drum'):
         drop=(it['asset'].get('drop_mm',0)/1000+h) if source=='pendant_drum' else max(h,it['position_m'][1]-it['asset'].get('bottom_y',it['position_m'][1]))
-        add(kind,(w,d,drop),(0,0,-drop if source=='linear_pendant' else 0),**opts)
+        add(kind,(w,d,drop),(0,0,-drop),**opts)
     elif kind=='wall_wc':
         add(kind,(w,d*.72,.32),(0,-d*.14,.17))
         add('cistern_box',(w,d*.28,h),(0,d*.36,0))
@@ -253,6 +253,9 @@ def build_item(it,collection):
             bar=Vector(((min(v.x for v in verts)+max(v.x for v in verts))/2,min(v.y for v in verts)+.006,(min(v.z for v in verts)+max(v.z for v in verts))/2))
     empties=[o.name for o in made if o.type=='EMPTY']
     anchor=merge_objects(made,collection,name)
+    if source in ('pendant_drum','linear_pendant'):
+        crown=max(v.co.z for v in anchor.data.vertices)
+        anchor.data.transform(Matrix.Translation((0,0,-crown)));anchor.data.update()
     for key in empties:
         obj=bpy.data.objects.get(key)
         if obj:bpy.data.objects.remove(obj,do_unlink=True)

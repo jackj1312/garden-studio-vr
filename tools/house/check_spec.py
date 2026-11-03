@@ -103,6 +103,10 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
             lo = np.min([acc_minmax(g, pr["attributes"]["POSITION"])[0] for pr in g["meshes"][nd["mesh"]]["primitives"]], 0) * sc
             hi = np.max([acc_minmax(g, pr["attributes"]["POSITION"])[1] for pr in g["meshes"][nd["mesh"]]["primitives"]], 0) * sc
             dims = (hi - lo) * 1000                        # glTF local: x = width, y = height, z = -depth
+            if kind in ('pendant_drum','linear_pendant'):
+                mount_mm=round(1000*abs(hi[1]+t[1]-p[1]),1)
+                r['ceiling_contact_mm']=mount_mm
+                if mount_mm>1:fails.append(f"{vkey} {it['id']} ceiling rose is {mount_mm} mm off the mounting surface")
             box = np.array([it["size_mm"][0], it["size_mm"][2], it["size_mm"][1]], float)
             if src == "polyhaven" or (nd.get("extras") or {}).get("fit") == "uniform":
                 ratio = float(np.max(dims / np.maximum(box, 1)))

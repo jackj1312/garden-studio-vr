@@ -55,5 +55,11 @@ def check(site,round_name,only):
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('site',type=Path)
     parser.add_argument('round');parser.add_argument('--only',choices=['all','model','compressed','walk'],default='all')
+    parser.add_argument('--publish-to',type=Path,help='local client site; runs every gate before publishing the manifest')
     args=parser.parse_args()
+    if args.publish_to and args.only!='all':parser.error('publication requires --only all')
     check(args.site.resolve(),args.round,args.only)
+    if args.publish_to:
+        subprocess.run([sys.executable,'tools/review/lessons.py','gate','--site',args.publish_to.name],cwd=ROOT,check=True)
+        from publish_candidate import promote
+        promote(args.site.resolve(),args.publish_to)

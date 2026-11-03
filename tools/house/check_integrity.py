@@ -75,6 +75,8 @@ for ob in sc.objects:
     dbl = [m for m in ob.data.materials if m and not m.use_backface_culling]
     foliage = any(FOLIAGE_MAT.search(m) for m in mats) or bool(re.match(r"(Plant2_|island_tree|Conifer|B_street_hedge|B_hedge|SPEC-.*PLANT)", ob.name)) \
         or str(src.get("category_spec", "")) == "plant"
+    if src.get('surface_role')=='terrain':
+        foliage=False
     opn = all(OPEN_MAT.search(m) for m in mats) if mats else True
     parts.append(dict(ob=ob, name=ob.name, el=str(src.get("element", ob.name)), group=str(src.get("group", "")), props=src,
                       mats=mats, foliage=foliage, open=opn, ctx=bool(src.get("context")), spec=str(src.get("spec_id", ""))))
@@ -125,7 +127,6 @@ def shell_stats(p):
         except ValueError: pass
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5)
     bnd = sum(1 for e in bm.edges if e.is_boundary); nm = sum(1 for e in bm.edges if not e.is_manifold and not e.is_boundary)
-    vol = bm.calc_volume(signed=True) if bm.faces else 0.0
     bm.free()
     # generalized winding number just behind and just in front of every face: an outward face has the solid behind it
     # (w_behind - w_front ~ +1); a face between two closed cells has solid on both sides (~0, never seen); an inside-out
@@ -134,7 +135,12 @@ def shell_stats(p):
     V = np.array([tuple(v) for v in p["V"]], dtype=np.float64)
     T = np.array([t[:3] for t in p["T"] if len(t) >= 3], dtype=np.int64)
     from integrity_winding import inward_mask
-    inward = int(inward_mask(V[T]).sum())
+    tris=V[T]
+    # Welding is for the edge topology check. It can coalesce opposite
+    # faces of touching closed cells; measure volume on the real GLB faces.
+    relative=tris-V.mean(axis=0)
+    vol=float(np.einsum('ij,ij->i',relative[:,0],np.cross(relative[:,1],relative[:,2])).sum()/6)
+    inward=int(inward_mask(tris).sum())
     return bnd, nm, vol, inward
 
 
@@ -223,14 +229,14 @@ def fib(n):
 POS = [pt for _, pt, _ in positions]
 
 
-def visible(pt, n=None, reach=9.0, tries=60):
+def visible(pt, n=None, reach=9.0, tries=60, tolerance=.004):
     """pt (a point in air) is seen from some walkable position: a straight line from the position reaches it unobstructed"""
     near = sorted(((q - pt).length, q) for q in POS if (q - pt).length < reach)[:tries]
     for dist, q in near:
         d = (pt - q).normalized()
         if n is not None and d.dot(n) > -0.02: continue           # must look at the face's front
         h = TREE.ray_cast(q, d, dist + 0.01)
-        if h[0] is None or h[3] >= dist - 0.004:
+        if h[0] is None or h[3] >= dist - tolerance:
             e = pt + (q - pt).normalized() * min(1.0, dist)          # an inspection eye 1 m from the fault on that sight line
             return [round(e.x, 3), round(e.z, 3), round(-e.y, 3)]
     return None
@@ -386,10 +392,25 @@ for key, lst in buckets.items():
     # entering the narrow phase, preserving pair order and both plane bins.
     bb_lo, bb_hi = points.min(axis=1), points.max(axis=1)
     part_ids = np.array([row[0] for row in cand])
+    axes=[k for k in range(3) if k!=int(np.argmax(np.abs(key[:3])))]
+    grid={}; long_faces=[]; cells=[]
+    for j in range(len(cand)):
+        low=np.floor((bb_lo[j,axes]-1e-6)/.35).astype(int); high=np.floor((bb_hi[j,axes]+1e-6)/.35).astype(int)
+        if (high[0]-low[0]+1)*(high[1]-low[1]+1)>256:
+            long_faces.append(j);cells.append(None);continue
+        keys=[(x,y) for x in range(low[0],high[0]+1) for y in range(low[1],high[1]+1)]
+        cells.append(keys)
+        for cell in keys:grid.setdefault(cell,[]).append(j)
     for i in range(len(lst)):
         pi, ki, ni, di, Pi = lst[i]
-        hit = (part_ids[i+1:] != pi) & np.all(bb_hi[i+1:] >= bb_lo[i] - 1e-6, axis=1) & np.all(bb_lo[i+1:] <= bb_hi[i] + 1e-6, axis=1)
-        for j in (np.flatnonzero(hit) + i + 1):
+        if cells[i] is None: nearby=np.arange(i+1,len(cand))
+        else:
+            ids=set(long_faces)
+            for cell in cells[i]:ids.update(grid[cell])
+            nearby=np.array(sorted(j for j in ids if j>i),dtype=np.intp)
+        if not len(nearby):continue
+        same=(part_ids[nearby]!=pi) & np.all(bb_hi[nearby]>=bb_lo[i]-1e-6,axis=1) & np.all(bb_lo[nearby]<=bb_hi[i]+1e-6,axis=1)
+        for j in nearby[same]:
             pj, kj, nj, dj, Pj = cand[j]
             if abs(di - dj) > 0.0005 or ni.dot(nj) < 0.999: continue
             u = (Pi[1] - Pi[0]).normalized(); v = ni.cross(u)
@@ -397,8 +418,8 @@ for key, lst in buckets.items():
             Cp = clip(A, B); ov = area2(Cp)
             if ov < 1e-4: continue
             cx = sum(c_[0] for c_ in Cp) / len(Cp); cy = sum(c_[1] for c_ in Cp) / len(Cp)
-            cpt = Pi[0] + u * cx + v * cy + ni * 0.002
-            eye = visible(cpt, ni, reach=30.0)
+            cpt = Pi[0] + u * cx + v * cy + ni * (max(di,dj)-di+.00008)
+            eye = visible(cpt, ni, reach=30.0, tolerance=.00012)
             if eye is None: continue
             pa, pb = parts[pi], parts[pj]
             if FURNISHING.match(pa["name"]) and FURNISHING.match(pb["name"]): continue      # two loose items side by side

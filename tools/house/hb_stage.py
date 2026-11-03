@@ -792,6 +792,14 @@ def fixture_parts(a):
         glass = kind != "door" or a.get("conservatory") or pair
         sw_ = 0.05 if kind != "bifold" else 0.06                   # sash profile, stepped 15 mm proud of the frame
         cs = c + out_sign * 0.015
+        if is_door and kind!='bifold':
+            stop_side=-side if side else -out_sign
+            cf=cs+stop_side*.030
+            ca,cb=sorted((cf,cf+stop_side*.008))
+            fr.extend([bx(u0+f-.008,u0+f+.010,zb,z1-f,ca,cb),
+                       bx(u1-f-.010,u1-f+.008,zb,z1-f,ca,cb),
+                       bx(u0+f+.010,u1-f-.010,z1-f-.010,z1-f+.008,ca,cb),
+                       bx(u0+f+.010,u1-f-.010,zb-.008,zb+.010,ca,cb)])
         for bi, (xa, xb) in enumerate(bays):
             lf, lg = [], []
             tgt_f = lf if is_door else fr
@@ -812,6 +820,12 @@ def fixture_parts(a):
                         m=(ya+yb)/2;ca,cb=sorted((face-out_sign*.012,face-out_sign*.032))
                         inner.append(bx(xa2+.018,xa2+.033,m-.045,m+.045,ca,cb))
             if is_door:
+                if pair and a.get('conservatory') and bi==0:
+                    # The weathered meeting stile belongs to the active leaf.
+                    # It laps its neighbour on the outside when both close.
+                    face=cs+out_sign*.030
+                    ca,cb=sorted((face,face+out_sign*.009))
+                    lf.append(bx(xb-.019,xb+.016,zb+.004,z1-f-.004,ca,cb))
                 leaves.append(dict(lf=lf, lg=lg, ua=xa + gap, ub=xb - gap, cf=(cs - 0.03, cs + 0.03), bay=bi, n=n))
         if kind == "window" and not a.get("internal"):
             # external sill: white uPVC, projecting 40 mm past the brick face
@@ -833,7 +847,9 @@ def fixture_parts(a):
         import hb_joinery as J
         fw = 0.03
         cl_, ch_ = W.full_extent_c()
-        if a.get("finished_jamb"):cl_-=.0025;ch_+=.0025
+        if a.get("finished_jamb"):
+            from hb_room_faces import SKIM
+            cl_-=SKIM;ch_+=SKIM
         fr.append(bx(u0, u1, z1 - fw, z1, cl_, ch_))
         fr.append(bx(u0, u0 + fw, z0, z1 - fw, cl_, ch_)); fr.append(bx(u1 - fw, u1, z0, z1 - fw, cl_, ch_))
         sc_ = -side                                              # the stops stand on the side the leaf closes against

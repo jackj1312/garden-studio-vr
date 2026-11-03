@@ -21,6 +21,7 @@ def apply():
         nt.links.new(src,bs.inputs[{'Color':'Base Color','NormalGL':'Normal','Roughness':'Roughness'}[channel]])
     mat['licence']='CC0-1.0';mat['source_url']='https://ambientcg.com/a/Grass001';mat['physical_repeat_m']=1.4
     for ob in lawns:
+        ob["surface_role"]="terrain"
         me=ob.data;me.materials.clear();me.materials.append(mat)
         uv=me.uv_layers.active or me.uv_layers.new()
         for loop in me.loops:

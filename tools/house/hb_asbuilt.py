@@ -301,6 +301,7 @@ def as_built(vb, spec, notes):
                 hu0, hu1 = sorted((F.u((X(ls["x"][0]), fc)), F.u((X(ls["x"][1]), fc))))
                 pz0, pz1 = Z(w["packer_z"][0]), Z(w["packer_z"][1])
                 parts.append((F.slab(ua + 0.01, ub - 0.01, pz0, pz1, 0.02, fo0 - 0.002), "packer", "packer over the frame (recessed, between the jamb returns)"))
+                parts.append((F.slab(ua,ub,z1,z1+packer,fo0-.002,fo1),"upvc_white","internal cover to measured head packer"))
                 parts.append((F.slab(hu0, hu1, pz1, hz1, -0.005, 0.0), "buff_concrete", "concrete head"))
                 parts.append((F.slab(hu0, hu1, Z(ls["z"][0]), Z(ls["z"][1]), -0.005 - ls.get("thick_m", 0.003), -0.005), "lead", "lead strip over the head"))
                 top, su0, su1 = hz1, hu0, hu1

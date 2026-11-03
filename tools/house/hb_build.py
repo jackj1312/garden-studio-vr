@@ -282,7 +282,7 @@ class StateBuilder:
         for sysspec in st.get("roofs", []):
             A.extend(self.roof_atoms(sysspec))
         for fr in st.get("flat_roofs", []):
-            A.extend(self.flat_roof_atoms(fr))
+            A.extend(self.flat_roof_atoms(fr,st.get('flat_roofs', [])))
         from hb_walls import resolve_joins
         resolve_joins(self.walls, lambda a, b: True)          # corners of this state, so plates stop at the inner leaf
         A.extend(self.wall_plate_atoms(st))
@@ -456,7 +456,7 @@ class StateBuilder:
         from hb_conservatory import elevations
         roof=next((r for r in st.get('flat_roofs',[]) if r.get('mat')=='polycarbonate' and 'z_house' in r),None)
         records=[r for r in gsrc['storeys']['ground']['fittings'] if 'conservatory' in r['name'].lower() and r['name'] not in st.get('exclude_fittings',[])]
-        if roof and records:out.extend(elevations(records,roof))
+        if roof and records:out.extend(elevations(records, roof, self.walls, st.get("flat_roofs", [])))
         for stn, V in (("ground", gsrc), ("first", fsrc)):
             for f in V["storeys"][stn]["fittings"]:
                 if roof and f in records:continue
@@ -1169,12 +1169,12 @@ class StateBuilder:
         # stated extra roof members on a plane (trimmers, doubled rafters, plates)
         return out
 
-    def flat_roof_atoms(self, fr):
+    def flat_roof_atoms(self, fr, roofs):
         meta = M("roof_cover", "ground", fr["label"], fr.get("drawing", ""), fr.get("conf", "scaled"), fr.get("plain", "Flat roof"), False)
         P = fr["poly"]
         if fr.get("mat")=="polycarbonate" and "z_house" in fr:
             from hb_conservatory import canopy
-            return canopy(fr)
+            return canopy(fr, roofs)
         if "z_house" in fr:            # lean-to (polycarbonate): plane through the two edge heights
             zh, zr = fr["z_house"], fr["z_rear"]; ya, yb = min(p[1] for p in P), max(p[1] for p in P)
             zf = (zh, zr, ya, yb, 0.016)

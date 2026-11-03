@@ -9,11 +9,11 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { createFade, attachControllerModels, hapticPulse } from "../presence.js?v=f383e46-1642";
-import { createModel, progress } from "./model.js?v=h18";
+import { createModel, progress } from "./model.js?v=furnish2";
 import { buildBVH } from "./bvh.js?v=h15";
 import { createSection, XRAY } from "./section.js?v=h11";
 import { createMeasure } from "./measure.js?v=h11";
-import { createWalker, BODY } from "./walk.js?v=h34";
+import { createWalker, BODY } from "./walk.js?v=furnish2";
 import { createEditor } from "./edits.js?v=h15";
 import { checkRules } from "./rules.js?v=h11";
 import { modeFromURL, PLAIN_GROUP, PLAIN_CATEGORY, TAB_LABEL } from "./modes.js?v=h22";
@@ -336,7 +336,7 @@ let target = null;                            // {part, point, source, at}: what
 let boardTab = MODE.tabs[0];
 const section = createSection(() => [...versions.values()].flatMap(v => v.model ? [...v.model.sets.values()] : []));
 const measure = createMeasure(scene);
-const walker = createWalker(() => V.bvh, () => V.model.masks.solid);
+const walker = createWalker(() => V.bvh, () => V.model.masks.solid, () => V.model.masks.floor);
 const requests = createRequests({ site: SITE, getVersion: () => V?.def.id, mode: MODE.key });
 const recorder = createRecorder();
 const inspections = new Map();                // inspection point id -> {checks: {key: {status, note, at}}}

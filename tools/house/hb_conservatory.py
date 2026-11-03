@@ -59,22 +59,52 @@ def geometry(source):
   'assumption':'Typical clear twin-wall structure; web/skin sizes are not surveyed. Original outer plane/outline and white75mm frame depth retained.'}
 
 
-def canopy(fr):
+def adjacent_felt(fr, roofs):
+    x0 = min(x for x,y in fr['poly'])
+    x1 = max(x for x,y in fr['poly'])
+    rear = max(y for x,y in fr['poly'])
+    for roof in roofs:
+        if roof.get('mat') != 'felt' or 'z_top' not in roof:
+            continue
+        edge = min(x for x,y in roof['poly'])
+        end = max(y for x,y in roof['poly'] if abs(x-edge)<.001)
+        if x0 < edge < x1 and min(y for x,y in fr['poly']) < end < rear:
+            return edge, end, roof
+    return None
+
+
+def canopy(fr, roofs):
     """Map the independent twin-wall construction onto this survey's rectangle and clear heights."""
     from hb_build import atom,M,sig_of
     poly=fr['poly'];x0,x1=min(p[0] for p in poly),max(p[0] for p in poly)
     y0,y1=min(p[1] for p in poly),max(p[1] for p in poly)
     slope=(fr['z_rear']-fr['z_house'])/(y1-y0)
     plane=[0,slope,fr['z_house']-slope*y0+BAR_DEPTH]
-    data=geometry({'roof_bounds_xy':[x0,y0,x1,y1],'roof_plane':plane})
+    from hb_geom import merge_meshes, prism_varz
+    joint=adjacent_felt(fr,roofs)
+    runs=[[x0,y0,x1,y1]]
+    if joint:
+        edge,end,felt=joint
+        runs=[[x0,y0,edge,end],[x0,end,x1,y1]]
+    sections=[geometry({'roof_bounds_xy':bounds,'roof_plane':plane}) for bounds in runs]
     out=[]
     for group,mat in [('bars','upvc_white'),('skins','multiwall_skin'),('webs','multiwall_web')]:
-        mesh=data['groups'][group];name=fr['id']+'-'+group
+        meshes=[section['groups'][group] for section in sections]; name=fr['id']+'-'+group
         meta=M('roof_cover','ground',fr['label']+' / '+group,fr['drawing'],fr['conf'],'Conservatory roof '+group,False)
-        out.append(atom(name,'mesh','existing',meta,sig=sig_of(name,poly,plane),mat=mat,mesh=(mesh['vertices'],mesh['faces'])))
+        out.append(atom(name,'mesh','existing',meta,sig=sig_of(name,poly,plane),mat=mat,mesh=merge_meshes([(m['vertices'],m['faces']) for m in meshes])))
+    if joint and slope<0 and fr['z_house']>felt['z_top']:
+        # The pitched frame rises above the felt near the house. Close its
+        # visible side cheek exactly to the measured felt top.
+        tip=min(end,y0+(felt['z_top']-fr['z_house'])/slope)
+        if tip>y0+.001:
+            cheek=[(edge-.016,y0),(edge,y0),(edge,tip),(edge-.016,tip)]
+            v=prism_varz(cheek,lambda p:felt['z_top'],lambda p:fr['z_house']+slope*(p[1]-y0))
+            name=fr['id']+'-abutment-cheek'
+            meta=M('window','ground','White closure at the felt abutment',fr['drawing'],'assumed','Conservatory abutment',False)
+            out.append(atom(name,'mesh','existing',meta,sig=sig_of(name,edge,tip,felt['z_top']),mat='upvc_white',mesh=v))
     return out
 
-def elevations(records,roof):
+def elevations(records,roof,walls,roofs):
     from hb_build import atom,M,sig_of,slug,dref
     from hb_geom import box
     from hb_walls import Wall
@@ -88,6 +118,23 @@ def elevations(records,roof):
         start,end=(x0,x1) if along_x else (ya,yb)
         thickness=yb-ya if along_x else x1-x0
         isdoor=f in doors
+        joint=adjacent_felt(roof,roofs)
+        if not along_x and joint:
+            edge,roof_end,felt=joint
+            wall_ends=[max(y for x,y in w.footprint()) for w in walls
+                       if w.storey=='ground' and min(x for x,y in w.footprint())<centre<max(x for x,y in w.footprint())
+                       and 0<start-max(y for x,y in w.footprint())<.12]
+            if wall_ends:
+                from hb_geom import prism_varz,merge_meshes
+                jamb0=max(wall_ends)
+                split=max(jamb0,min(start,roof_end))
+                spans=[(jamb0,split,lambda p: min(ceiling(p[1]),felt['z_top']-felt['t'])),
+                       (split,start,lambda p: ceiling(p[1]))]
+                pieces=[prism_varz([(x0,a),(x1,a),(x1,b),(x0,b)],lambda p:0,top)
+                        for a,b,top in spans if b>a+.0001]
+                name='FT-'+slug(f['name'])+'-wall-jamb'
+                meta=M('window','ground','Fitted uPVC jamb to measured masonry',dref(f['src']),'scaled','Conservatory jamb',False)
+                out.append(atom(name,'mesh','existing',meta,sig=sig_of(name,jamb0,start),mesh=merge_meshes(pieces),mat='upvc_white'))
         intervals=[(start,end)]
         if not isdoor:
             for door in doors:

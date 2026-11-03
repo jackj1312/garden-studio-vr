@@ -67,6 +67,11 @@ function normaliseGeometry(g, wantUV, wantColor = false) {
   return out;
 }
 
+// Older GLBs identify furnishings by their spec fitting rather than a walkable flag.
+function carriesFeet(p) {
+  return p.now.solid && p.ud.walkable !== false && !p.ud.furnishing && !(p.group==="fitting" && p.ud.spec_id);
+}
+
 function partFromExtras(index, name, ud, geometry, matrix0, materialName) {
   const bbox = geometry.boundingBox.clone().applyMatrix4(matrix0);
   const so = ud.stage_out;
@@ -258,15 +263,17 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
     for (const p of parts) {
       masks.visible[p.index] = p.now.visible ? 1 : 0;
       masks.solid[p.index] = p.now.solid ? 1 : 0;
+      masks.floor[p.index] = carriesFeet(p) ? 1 : 0;
       masks.present[p.index] = p.now.present && p.collide ? 1 : 0;
     }
     return doomedCount;
   }
 
-  const masks = { visible: new Uint8Array(0), solid: new Uint8Array(0), present: new Uint8Array(0), structural: new Uint8Array(0) };
+  const masks = { floor: new Uint8Array(0), visible: new Uint8Array(0), solid: new Uint8Array(0), present: new Uint8Array(0), structural: new Uint8Array(0) };
   function resizeMasks() {
     masks.visible = new Uint8Array(parts.length);
     masks.solid = new Uint8Array(parts.length);
+    masks.floor = new Uint8Array(parts.length);
     masks.present = new Uint8Array(parts.length);
     masks.structural = new Uint8Array(parts.length);
   }
@@ -356,7 +363,10 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
     if (p.now.visible) placePart(p, p.last.inT < 0 ? 1 : p.last.inT, p.last.outT < 0 ? 0 : p.last.outT);
     p.now.solid = p.now.visible && p.collide && !p.passable && progress(stageValue, p.stage_in, p.seq) >= 0.999
       && !(p.stage_out && progress(stageValue, p.stage_out, p.seq_out) > 0.001);
-    if (masks.solid.length === parts.length) masks.solid[p.index] = p.now.solid ? 1 : 0;
+    if (masks.solid.length === parts.length) {
+      masks.solid[p.index] = p.now.solid ? 1 : 0;
+      masks.floor[p.index] = carriesFeet(p) ? 1 : 0;
+    }
   }
 
   /* free the GPU and the memory a version holds (the Quest keeps one version at a time) */

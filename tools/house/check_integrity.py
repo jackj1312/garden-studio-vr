@@ -31,6 +31,7 @@ ap.add_argument("--spec", default="assets/sites/house/spec/spec_v1.json")
 ap.add_argument("--rays", type=int, default=1500); ap.add_argument("--out", default="")
 args = ap.parse_args(argv)
 T0 = time.time()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 site = args.site if os.path.isabs(args.site) else os.path.join(ROOT, args.site)
 glb = args.glb or os.path.join(site, f"{args.version}.glb")
@@ -132,22 +133,8 @@ def shell_stats(p):
     import numpy as np
     V = np.array([tuple(v) for v in p["V"]], dtype=np.float64)
     T = np.array([t[:3] for t in p["T"] if len(t) >= 3], dtype=np.int64)
-    A, B, C = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
-    N = np.cross(B - A, C - A); L = np.linalg.norm(N, axis=1); ok = L > 1e-12
-    N[ok] /= L[ok, None]; cen = (A + B + C) / 3
-    def wind(Q):
-        out = np.zeros(len(Q))
-        for i0 in range(0, len(Q), 256):
-            q = Q[i0:i0 + 256][:, None, :]
-            a, b, c = A[None] - q, B[None] - q, C[None] - q
-            la, lb, lc = (np.linalg.norm(x, axis=2) for x in (a, b, c))
-            det = np.einsum("ijk,ijk->ij", a, np.cross(b, c))
-            den = la * lb * lc + np.einsum("ijk,ijk->ij", a, b) * lc + np.einsum("ijk,ijk->ij", a, c) * lb + np.einsum("ijk,ijk->ij", b, c) * la
-            out[i0:i0 + 256] = (2 * np.arctan2(det, den)).sum(1) / (4 * np.pi)
-        return out
-    eps = 2e-4
-    d = wind(cen - N * eps) - wind(cen + N * eps)
-    inward = int(((d < -0.5) & ok).sum())
+    from integrity_winding import inward_mask
+    inward = int(inward_mask(V[T]).sum())
     return bnd, nm, vol, inward
 
 
@@ -167,6 +154,7 @@ log("open shells:", len(FAULTS["open_shell"]), "walls/roofs/floors;", len(INFO["
 # ------------------------------------------------------------------------------------------------ one tree of everything
 allV, allT, owner, tri_ds = [], [], [], []
 for pi, p in enumerate(parts):
+    p['tri_offset'] = len(allT)
     b = len(allV); allV.extend(p["V"])
     for k, t in enumerate(p["T"]):
         allT.append(tuple(b + i for i in t)); owner.append(pi); tri_ds.append(p["ds"][k])
@@ -392,16 +380,18 @@ for key, lst in buckets.items():
     k2 = (key[0], key[1], key[2], key[3] + 1)
     cand = lst + buckets.get(k2, [])
     if len(cand) < 2: continue
+    import numpy as np
+    points = np.array([[tuple(v) for v in row[4][:3]] for row in cand])
+    # GLB polygons are triangles. Match the existing AABB tolerance before
+    # entering the narrow phase, preserving pair order and both plane bins.
+    bb_lo, bb_hi = points.min(axis=1), points.max(axis=1)
+    part_ids = np.array([row[0] for row in cand])
     for i in range(len(lst)):
         pi, ki, ni, di, Pi = lst[i]
-        lo_i = [min(c[a] for c in Pi) for a in range(3)]; hi_i = [max(c[a] for c in Pi) for a in range(3)]
-        for j in range(i + 1, len(cand)):
+        hit = (part_ids[i+1:] != pi) & np.all(bb_hi[i+1:] >= bb_lo[i] - 1e-6, axis=1) & np.all(bb_lo[i+1:] <= bb_hi[i] + 1e-6, axis=1)
+        for j in (np.flatnonzero(hit) + i + 1):
             pj, kj, nj, dj, Pj = cand[j]
-            if pj == pi and kj == ki: continue
             if abs(di - dj) > 0.0005 or ni.dot(nj) < 0.999: continue
-            if any(max(c[a] for c in Pj) < lo_i[a] - 1e-6 or min(c[a] for c in Pj) > hi_i[a] + 1e-6 for a in range(3)): continue
-            if pj == pi:
-                continue        # a part's own faces in one plane are its own tessellation (shared edges, no overlap area)
             u = (Pi[1] - Pi[0]).normalized(); v = ni.cross(u)
             A = ccw(tri2d(Pi, Pi[0], u, v)); B = ccw(tri2d(Pj, Pi[0], u, v))
             Cp = clip(A, B); ov = area2(Cp)
@@ -500,7 +490,7 @@ for label, pt, indoor in positions:
             mname = o["mats"][0] if len(o["mats"]) == 1 else None
             if mname is None and o["mats"]:
                 # multi-material part: the polygon's own material
-                k_local = h[2] - sum(len(parts[j]["T"]) for j in range(owner[h[2]]))
+                k_local = h[2] - o['tri_offset']
                 try: mname = o["ob"].data.materials[o["ob"].data.polygons[k_local].material_index].name
                 except Exception: mname = o["mats"][0]
             if mname and RAW.match(mname):

@@ -32,7 +32,7 @@ const DIRS = [...Array(8)].map((_, i) => new THREE.Vector3(Math.cos(i * Math.PI 
 const SOLE = DIRS.map(d => [d.x * BODY.foot, d.z * BODY.foot]);
 const EDGE = DIRS.map(d => [d.x * BODY.edge, d.z * BODY.edge]);
 
-export function createWalker(getBVH, getMask) {
+export function createWalker(getBVH, getMask, getFloorMask = getMask) {
   const ray = new THREE.Ray();
   const dir = new THREE.Vector3(), n = new THREE.Vector3(), rem = new THREE.Vector3();
 
@@ -58,7 +58,7 @@ export function createWalker(getBVH, getMask) {
      something). Back faces (the inside of a tread or slab the ray starts in) are skipped by the tree; a steep
      face (a stringer's sloped top, a roof) is looked past. null = nothing within reach. */
   function floorRay(x, y, z, reach) {
-    const bvh = getBVH(), mask = getMask();
+    const bvh = getBVH(), mask = getFloorMask();
     ray.origin.set(x, y + BODY.step, z);
     ray.direction.set(0, -1, 0);
     let left = BODY.step + reach;

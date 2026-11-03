@@ -378,3 +378,6 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   Codex runs it in our folder (CODEX-FURNISH-PROMPT.md, 6 staged branches).
 - 2026-11-03 · docs · Pipeline document: docs/pipeline/ → ~/Desktop/Garden Studio Pipeline (HTML+PDF) via tools/docs/publish_pipeline.sh;
   Claude and Codex update it whenever a stage/tool/link changes. Server: ~/Desktop/Start Garden Studio Server.command (8443, new folder).
+- 2026-11-03 · product · Jack: AI builds the shell from drawings, the client/Jack designs the space with the furnishing tools. Roadmap
+  to an AI-light build (CAD import + trace editor, finish painter, room templates, garden editor, deterministic checks, buttons
+  for publish/bake/Unreal) is in PLAN.md's change log.

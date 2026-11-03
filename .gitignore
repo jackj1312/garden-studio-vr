@@ -16,6 +16,7 @@ master/polyhaven/
 
 # Real gardens: client data (and Jack's own house) never go in this public repo
 assets/sites/
+assets/previews/
 __pycache__/
 # Jack's own house: kept off the public repo
 master/front-garden*

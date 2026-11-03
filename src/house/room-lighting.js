@@ -327,8 +327,33 @@ export function createRoomLighting({scene,desktop=true}) {
       practicals:activePracticals.map((r,i)=>({id:r.id,room:r.room,position:r.position,intensity:r.power.intensity,shadow:!!lampSlots[i]?.castShadow})),
       emitters:activeEmitters.map(e=>({...e})),version:view?.def?.id??null};
   }
+  async function prepareDaylight(renderer,camera,entry) {
+    if(!desktop||renderer.xr.isPresenting||entry!==view||!source?.apertures.length)return;
+    if(entry.preparedDaylight)return entry.preparedDaylight;
+    // Compile the real fixed and instanced materials against the same light and
+    // environment defines, without temporarily lighting or reparenting the live scene.
+    const apertures=source.apertures,groups=activeGroups(source,view,entry.sidecar.stages.length);
+    const limit=Math.min(3,Math.max(0,...[...groups.values()].map(g=>apertures.filter(a=>g.rooms.includes(a.room)).length)));
+    const objects=new T.Group();
+    objects.children=[entry.model.root,...scene.children.filter(o=>o.userData.furnishRuntime)];
+    const target=new T.Scene();target.environment=scene.environment;target.environmentIntensity=scene.environmentIntensity;target.fog=scene.fog;
+    for(const light of scene.children.filter(o=>o.isLight&&o.visible))target.add(light.clone(false));
+    entry.preparedDaylight=(async()=>{
+      try {
+        for(let n=1;n<=limit && entry===view;n++){
+          const opening=new T.SpotLight(0xffffff,1,12,75*Math.PI/180,.8,2);shadow(opening,.020);
+          target.add(opening,opening.target);
+          await renderer.compileAsync(objects,camera,target);
+        }
+      }finally{
+        objects.children=[];for(const o of target.children)if(o.isLight)o.dispose?.();
+        target.clear();
+      }
+    })().catch(error=>{delete entry.preparedDaylight;throw error;});
+    return entry.preparedDaylight;
+  }
   function dispose(){setView(null);root.removeFromParent();fallbackGeometry.dispose();for(const m of emitterMaterials.values())m.dispose();emitterMaterials.clear();stored.clear();}
-  return {setView,update,invalidate,pick,status,toggle,toggleRoom,toggleAll,snapshot,dispose};
+  return {setView,update,invalidate,pick,status,toggle,toggleRoom,toggleAll,snapshot,prepareDaylight,dispose};
 }
 const EMPTY=Object.freeze([]);
 const VHoles=v=>v.cull?.holes?.done?1:0;

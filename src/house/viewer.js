@@ -550,6 +550,11 @@ function dropVersion(entry) {
   versions.delete(entry.def.id);
   perf.note({ event: "version freed", version: entry.def.id });
 }
+async function prepareVisitLight(entry) {
+  if(!entry||LITE||inVR()||LOOK_PROFILE!=="on")return;
+  if(!entry.preparedDaylight)setLoad(.99,"Preparing the window light…");
+  await roomLights.prepareDaylight(renderer,camera,entry);
+}
 async function useVersion(id,{deferReady=false}={}) {
   const ticket=++versionTicket;requestedVersion=id;loadingNow=true;
   $("loading").hidden=false;setLoad(.04,"Preparing this version…");
@@ -605,7 +610,7 @@ async function useVersion(id,{deferReady=false}={}) {
   if (garden) await garden.useVersion(entry);
   if (furnisher || entry.def.furnish_runtime) await syncFurnitureVersion(entry);
   if(ticket!==versionTicket)return false;
-  if(!deferReady)finishLoading(id);
+  if(!deferReady && visitReady){await prepareVisitLight(entry);if(ticket!==versionTicket)return false;finishLoading(id);}
   return true;
 }
 
@@ -2978,6 +2983,8 @@ async function beforeAfter(after) {
   setStage(after || today ? stageN : 1, true);
   if(furnisher){furnisher.setStage(stageValue);await furnisher.readyModels;}
   if(want && requestedVersion!==want)return;
+  await prepareVisitLight(V);
+  if(want && requestedVersion!==want)return;
   finishLoading(want||V.def.id);
   $("baBefore").setAttribute("aria-pressed", String(!after)); $("baAfter").setAttribute("aria-pressed", String(after));
   baPanel.userData.draw();
@@ -3596,6 +3603,7 @@ async function boot() {
   if (!LITE && params.get("preload")==="1" && !garden?.enabled && !furnisher?.enabled && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
+  await prepareVisitLight(V);
   visitReady=true;$("startDesktop").disabled=false;finishLoading(V.def.id);
   dispatchEvent(new Event("house-ready"));
   /* ?test=walk: climb and descend every stair, and walk each storey's rooms, in every version and stage */

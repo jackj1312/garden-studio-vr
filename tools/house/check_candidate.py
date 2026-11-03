@@ -40,6 +40,8 @@ def check(site,round_name,only):
             geometry('integrity',version,'on')
             geometry('integrity',version,'off')
             geometry('shell',version)
+        after=manifest['default']
+        run('living-kitchen-floor',[sys.executable,'tools/house/check_floor_junction.py',site/'furnish'/after/'fixed.glb'])
         contact_counts={}
         for version in versions:
             rows=json.loads((site/(version+'_furnish.json')).read_text())['validator']

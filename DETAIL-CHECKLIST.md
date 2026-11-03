@@ -212,3 +212,8 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Cross the measured exterior/room threshold and inspect actual aperture persistence. (row 480)
 - Inspect the colour, normal and roughness material strip. (row 481)
 - Matched pixels, doorway visibility and measured moving-frame intervals in the Wi-Fi preview. (row 482)
+- Measure coplanar triangle intersections in the issued and candidate floors. (row 483)
+- Verify fixing targets against each joist and rafter, reject a neighbouring rafter, and rerun the staged clash report. (row 484)
+- Compare matched real scene detail while moving and after settling, including after the moving budget steps down. (row 485)
+- At three stations verify matched finish height, no raised skirting and no overlapping top triangles. (row 255)
+- At three stations verify matched finish height, no raised skirting and no overlapping top triangles. (row 256)

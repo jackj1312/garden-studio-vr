@@ -69,6 +69,9 @@ class RoofBearingTests(unittest.TestCase):
             with self.subTest(name=name):
                 joist,seat,fillet,fixings=[self.atoms[name+s] for s in ('','-seat','-rafter-fillet','-rafter-fixings')]
                 rafter=self.atoms[fillet['side_bearing']]
+                self.assertEqual(fixings['fastens_to'],(joist['id'],rafter['id']))
+                other_rafter=next(a for a in self.atoms if a.startswith('RF-') and a!=rafter['id'])
+                self.assertNotIn(other_rafter,fixings['fastens_to'])
                 export=stage.parts_of(rafter,{'spec':self.spec})[0]
                 vertices,faces=export['local']
                 actual=(apply_matrix(export['matrix'],vertices),faces)

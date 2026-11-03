@@ -1024,7 +1024,7 @@ class StateBuilder:
                     nails.append(([(nx,-v,nz) for nx,nz,v in vs],fs))
             fixing=atom(prefix+'-rafter-fixings','mesh',r['phase'],M('fitting','roof','Two fixings through the joist into the rafter',
                         label,'assumed','Joist to rafter fixings',False),sig=sig_of(prefix,'fixings',lo,hi,y),
-                        mesh=merge_meshes(nails),mat='lintel_galv',seq_bias=.025)
+                        mesh=merge_meshes(nails),mat='lintel_galv',fastens_to=(joist['id'],r['id']),seq_bias=.025)
             board=by_id[detail['soffit']]
             if min(board['z1'],bottom)-max(board['z0'],cap)>.001:
                 board.setdefault('seat_cuts',[]).append([(near,y-half),(end,y-half),(end,y+half),(near,y+half)])

@@ -1697,6 +1697,10 @@ def opening_checks(vb, objs):
 def allowed(a, b):
     ga, gb = a["g"], b["g"]
     na, nb = a["ob"].name, b["ob"].name
+    for fixing,timber in ((a,b),(b,a)):
+        targets=fixing['p']['atom'].get('fastens_to',())
+        if targets and timber['p']['atom'].get('id') in targets:
+            return 'Fixing enters its specified receiving timber'
     for (x, y, why) in ALLOW_NAMES:
         if (x in na and y in nb) or (x in nb and y in na): return why
     for x, y, why in ALLOW:

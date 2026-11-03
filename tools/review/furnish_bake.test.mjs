@@ -90,6 +90,34 @@ test('garden-only layout gets the seed, while saving an intentionally empty room
   assert.deepEqual(effective(Buffer.from(JSON.stringify({...old,furnishSeeded:true})),seed,'v').items,[]);
 });
 
+test('a mixed structural carrier bakes only its named wall and floor material slots',async()=>{
+  const site=await fs.mkdtemp(path.join(os.tmpdir(),'studio-carrier-colours-')),k='v';
+  const d=new Document(),scene=d.createScene(),defs={id:k,glb:'fixed.glb',
+    furnish_runtime:{seed:'furnish/v/seed.json',variants:'furnish/v/variants.json'}};
+  try{
+    const material=(name,id,role,room)=>d.createMaterial(name).setExtras(id?{surface_id:id,surface_role:role,room_id:room}:{});
+    const a=material('A plaster','A/W/1','wall','A'),mesh=make(d,'structural carrier',[1,1,.2],a);
+    const first=mesh.listPrimitives()[0];
+    for(const other of [material('B plaster','B/W/-1','wall','B'),material('A ceiling','A/W/1','ceiling','A'),
+      material('Exterior brick'),material('A floor','floor/A','floor','A'),material('B floor','floor/B','floor','B')]){
+      mesh.addPrimitive(first.clone().setMaterial(other));
+    }
+    scene.addChild(d.createNode('mixed carrier').setMesh(mesh).setExtras({stage_in:3,surface_id:'A/W/1',surface_role:'wall',room_id:'A'}));
+    await io.write(path.join(site,defs.glb),d);
+    await put(path.join(site,defs.furnish_runtime.variants),{schema:1,variants:{},hosts:{}});
+    await put(path.join(site,defs.furnish_runtime.seed),{schema:1,items:[],wallColours:{'A/W/1':'#345C32'},roomFloors:{A:'floor-test'}});
+    await put(path.join(site,'spec/catalogue_v1.json'),{floors:[{id:'floor-test',hex:'#777777',pattern:'concrete'}]});
+    const receipt=await bakeVersion(site,defs,path.join(site,'spec'),{catalogue:{items:[]}});
+    assert.equal(receipt.paintedPrimitives,1);assert.equal(receipt.coveredPrimitives,1);
+    const result=await io.read(path.join(site,receipt.model));
+    const [wall,opposite,ceiling,outside,floor,otherFloor]=result.getRoot().listNodes()[0].getMesh().listPrimitives().map(p=>p.getMaterial());
+    assert.deepEqual(wall.getBaseColorFactor().slice(0,3),new T.Color('#345C32').toArray());
+    assert.equal(opposite.getName(),'B plaster');assert.equal(ceiling.getName(),'A ceiling');assert.equal(outside.getName(),'Exterior brick');
+    assert.equal(floor.getName(),'Client floor · floor-test');assert.equal(otherFloor.getName(),'B floor');
+    for(const m of [opposite,ceiling,outside,otherFloor])assert.deepEqual(m.getBaseColorFactor(),[1,1,1,1]);
+  }finally{await fs.rm(site,{recursive:true});}
+});
+
 test('generator handoff splits and bakes the completed version, preserves its sibling, and never creates a user save',async()=>{
   const site=await fs.mkdtemp(path.join(os.tmpdir(),'studio-build-')),k='v';
   try{

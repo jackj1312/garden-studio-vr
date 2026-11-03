@@ -50,53 +50,67 @@ async function floorPNG(def){
 }
 function copyMesh(document,mesh,change){
   const copy=document.createMesh(mesh.getName()).setExtras(mesh.getExtras()).setWeights(mesh.getWeights());
-  for(const original of mesh.listPrimitives()){
-    const p=original.clone();change(p);copy.addPrimitive(p);
+  for(const [index,original] of mesh.listPrimitives().entries()){
+    const p=original.clone();change(p,index);copy.addPrimitive(p);
   }
   return copy;
 }
 async function applyFinishes(doc,layout,defs){
   const floors=new Map(),paint=new Map(),wallsFound=new Set(),floorsFound=new Set();
+  let paintedPrimitives=0,coveredPrimitives=0;
   for(const n of doc.getRoot().listNodes()){
-    const e=n.getExtras(),mesh=n.getMesh(),id=e.surface_id;
-    if(!mesh||!id)continue;
-    const room=e.room_id||id.slice(6);
-    if(e.surface_role==='wall' && Object.hasOwn(layout.wallColours,id)){
-      const hex=layout.wallColours[id];if(!/^#[0-9a-f]{6}$/i.test(hex))throw Error('Invalid wall colour '+id);
-      n.setMesh(copyMesh(doc,mesh,p=>{
+    const mesh=n.getMesh();if(!mesh)continue;
+    const node=n.getExtras(),primitives=mesh.listPrimitives();
+    const slots=primitives.map(p=>({...p.getExtras(),...p.getMaterial()?.getExtras()}));
+    const mixed=primitives.length>1 && slots.some(s=>s.surface_id||s.surface_role);
+    const edits=new Map();
+    for(const [index,p] of primitives.entries()){
+      const slot=slots[index];
+      // An untagged brick primitive on a mixed carrier has no room finish.
+      // Ordinary single-owner node finishes still supply their room as a default.
+      if(mixed && !slot.surface_id && !slot.surface_role)continue;
+      const id=slot.surface_id??node.surface_id,role=slot.surface_role??node.surface_role;
+      if(!id)continue;
+      const room=slot.room_id??node.room_id??(id.startsWith('floor/')?id.slice(6):null);
+      if(role==='wall' && Object.hasOwn(layout.wallColours,id)){
+        const hex=layout.wallColours[id];if(!/^#[0-9a-f]{6}$/i.test(hex))throw Error('Invalid wall colour '+id);
         const orig=p.getMaterial();if(!paint.has(orig))paint.set(orig,new Map());
         const pool=paint.get(orig);
         if(!pool.has(hex)){
           const tinted=orig.clone().setName(orig.getName()+' · '+hex);
           tinted.setBaseColorFactor([...new T.Color(hex).toArray(),orig.getBaseColorFactor()[3]]);pool.set(hex,tinted);
         }
-        p.setMaterial(pool.get(hex));
-      }));wallsFound.add(id);
-    }else if(e.surface_role==='floor' && (Object.hasOwn(layout.roomFloors,room)||Object.hasOwn(layout.roomFloors,id))){
-      const value=layout.roomFloors[room]??layout.roomFloors[id],key=typeof value==='string'?value:value?.id;
-      if(!defs.has(key))throw Error('Unknown saved floor covering '+key);
-      if(!floors.has(key)){
-        const {image,repeat}=await floorPNG(defs.get(key));
-        const texture=doc.createTexture(key).setImage(image).setMimeType('image/png');
-        const material=doc.createMaterial('Client floor · '+key).setBaseColorTexture(texture).setRoughnessFactor(.82).setMetallicFactor(0);
-        material.getBaseColorTextureInfo().setWrapS(10497).setWrapT(10497);
-        floors.set(key,{material,repeat});
-      }
-      const {material,repeat}=floors.get(key),world=new T.Matrix4().fromArray(n.getWorldMatrix());
-      n.setMesh(copyMesh(doc,mesh,p=>{
-        const pos=p.getAttribute('POSITION'),buf=pos.getBuffer(),array=new Float32Array(pos.getCount()*2),v=new T.Vector3(),xyz=[];
-        for(let i=0;i<pos.getCount();i++){
-          v.fromArray(pos.getElement(i,xyz)).applyMatrix4(world);
-          // PNG image row 0 is top. The live CanvasTexture explicitly flips Y.
-          array[i*2]=v.x/repeat[0];array[i*2+1]=1-v.z/repeat[1];
+        edits.set(index,{material:pool.get(hex)});wallsFound.add(id);paintedPrimitives++;
+      }else if(role==='floor' && (Object.hasOwn(layout.roomFloors,room)||Object.hasOwn(layout.roomFloors,id))){
+        const value=layout.roomFloors[room]??layout.roomFloors[id],key=typeof value==='string'?value:value?.id;
+        if(!defs.has(key))throw Error('Unknown saved floor covering '+key);
+        if(!floors.has(key)){
+          const {image,repeat}=await floorPNG(defs.get(key));
+          const texture=doc.createTexture(key).setImage(image).setMimeType('image/png');
+          const material=doc.createMaterial('Client floor · '+key).setBaseColorTexture(texture).setRoughnessFactor(.82).setMetallicFactor(0);
+          material.getBaseColorTextureInfo().setWrapS(10497).setWrapT(10497);
+          floors.set(key,{material,repeat});
         }
-        p.setMaterial(material).setAttribute('TEXCOORD_0',doc.createAccessor().setType('VEC2').setArray(array).setBuffer(buf));
-      }));floorsFound.add(room);
+        edits.set(index,floors.get(key));floorsFound.add(room);coveredPrimitives++;
+      }
     }
+    if(!edits.size)continue;
+    const world=new T.Matrix4().fromArray(n.getWorldMatrix());
+    n.setMesh(copyMesh(doc,mesh,(p,index)=>{
+      const edit=edits.get(index);if(!edit)return;
+      p.setMaterial(edit.material);if(!edit.repeat)return;
+      const pos=p.getAttribute('POSITION'),array=new Float32Array(pos.getCount()*2),v=new T.Vector3(),xyz=[];
+      for(let i=0;i<pos.getCount();i++){
+        v.fromArray(pos.getElement(i,xyz)).applyMatrix4(world);
+        // PNG image row 0 is top. The live CanvasTexture explicitly flips Y.
+        array[i*2]=v.x/edit.repeat[0];array[i*2+1]=1-v.z/edit.repeat[1];
+      }
+      p.setAttribute('TEXCOORD_0',doc.createAccessor().setType('VEC2').setArray(array).setBuffer(pos.getBuffer()));
+    }));
   }
   for(const id of Object.keys(layout.wallColours))if(!wallsFound.has(id))throw Error('Painted room face missing in regenerated house: '+id);
   for(const id of Object.keys(layout.roomFloors))if(!floorsFound.has(id.replace(/^floor\//,'')))throw Error('Covered room floor missing: '+id);
-  return {wallFaceIds:[...wallsFound].sort(),floorRoomIds:[...floorsFound].sort()};
+  return {wallFaceIds:[...wallsFound].sort(),floorRoomIds:[...floorsFound].sort(),paintedPrimitives,coveredPrimitives};
 }
 function includeExtensions(target,source){
   for(const ext of source.getRoot().listExtensionsUsed())target.createExtension(ext.constructor).setRequired(ext.isRequired());
@@ -200,7 +214,7 @@ async function bakeVersion(site,def,specRoot=path.join(site,'spec'),opts={}){
     await immutable(model,out.bytes);
     const receipt={schema:1,version:def.id,fixed:def.glb,source:layout.source,layout:ref,layoutRevision:layout.revision,savedFileSHA256:finger,
       model:path.relative(site,model),modelSHA256:digest,items:out.furniture.ids,uniqueModels:out.furniture.variants,
-      wallFaceIds:out.finishes.wallFaceIds,floorRoomIds:out.finishes.floorRoomIds,
+      ...out.finishes,
       hosts:Object.fromEntries(layout.items.map(i=>[i.id,{...i.host,offset:i.hostOffset,rotation:i.hostRotation}])),
       garden:{ref:saved?layoutPath:null,count:layout.garden.objects?.length||0,sha256:sha(JSON.stringify(layout.garden))}};
     const body=pretty(receipt),stamp=path.join(folder,sha(body)+'.json');

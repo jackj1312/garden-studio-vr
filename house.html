@@ -261,7 +261,9 @@
 </style>
 <link rel="stylesheet" href="src/editor-help.css">
 <link rel="stylesheet" data-garden-panel-style href="src/garden/garden.css">
+<link rel="stylesheet" href="src/furnish/furnish.css">
 <script type="module" src="src/editor-help.js"></script>
+<script>if(location.protocol==='https:' && location.port==='8443' && (new URLSearchParams(location.search).get('edit')==='1'||new URLSearchParams(location.search).get('garden')==='1')){const u=new URL(location.href);u.port='8450';location.replace(u);}</script>
 </head>
 <body>
 
@@ -313,6 +315,7 @@
   <div class="spacer"></div>
   <button type="button" data-editor-help="house">How to use</button>
   <button type="button" data-garden-open>Garden design</button>
+  <button type="button" data-furnish-open>Furnish a room</button>
   <button id="vr" class="primary">Enter VR</button>
 </div>
 
@@ -328,6 +331,7 @@
   <button id="baFurnish" aria-pressed="false" title="Furnished / Unfurnished: hide the furniture, soft furnishings, decor and plants to see the house itself">Furnished</button>
   <button id="baComfort" title="While turning fast: subtle blur, a dark vignette, or nothing">Comfort: subtle blur</button>
   <button type="button" data-garden-open>Garden design</button>
+  <button type="button" data-furnish-open>Furnish a room</button>
   <button type="button" data-editor-help="house">How to use</button>
   <button id="baMark" class="review-only" aria-pressed="false" title="M · draw corrections and proposals on any surface">Mark</button>
   <div id="baHelp" class="meta"></div>
@@ -436,6 +440,6 @@
   }
 }
 </script>
-<script type="module" src="src/house/viewer.js?v=garden1"></script>
+<script type="module" src="src/house/viewer.js?v=furnish3"></script>
 </body>
 </html>

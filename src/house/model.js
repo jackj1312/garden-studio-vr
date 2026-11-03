@@ -72,6 +72,17 @@ function carriesFeet(p) {
   return p.now.solid && p.ud.walkable !== false && !p.ud.furnishing && !(p.group==="fitting" && p.ud.spec_id);
 }
 
+export function surfaceExtras(node, material, hasTaggedSlots=false) {
+  const face=material?.userData;
+  if(!face?.surface_id || !['wall','ceiling','floor'].includes(face.surface_role)){
+    if(hasTaggedSlots && node?.surface_id){
+      const result={...node};delete result.surface_id;delete result.surface_role;return result;
+    }
+    return node;
+  }
+  return {...node,surface_id:face.surface_id,room_id:face.room_id,surface_role:face.surface_role};
+}
+
 function partFromExtras(index, name, ud, geometry, matrix0, materialName) {
   const bbox = geometry.boundingBox.clone().applyMatrix4(matrix0);
   const so = ud.stage_out;
@@ -138,9 +149,13 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
   const pending = [];
   gltf.scene.traverse(o => {
     if (!o.isMesh) return;
-    const ud = readExtras(o);
-    if (!ud) { console.warn(`house: mesh ${o.name} has no stage extras; shown as existing`); }
     const mat = Array.isArray(o.material) ? o.material[0] : o.material;
+    const meshId=gltf.parser?.associations?.get(o)?.meshes;
+    const document=gltf.parser?.json;
+    const slots=document?.meshes?.[meshId]?.primitives||[];
+    const tagged=slots.length>1 && slots.some(p=>document.materials?.[p.material]?.extras?.surface_id);
+    const ud = surfaceExtras(readExtras(o),mat,tagged);
+    if (!ud) { console.warn(`house: mesh ${o.name} has no stage extras; shown as existing`); }
     materialsByName.set(mat.name, mat);
     pending.push({ o, ud: ud || { stage_in: 1, category: "existing", group: "fitting", storey: "ground", label: o.name }, mat });
   });
@@ -232,18 +247,40 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
       m.premultiply(_t.clone().multiply(_s).multiply(_t.makeTranslation(0, -y0, 0)));
     }
     if (p.pose) m.premultiply(p.pose);       // a door swung on its hinge (doors.js), in the viewer frame
+    if (p.finishMesh) { p.finishMesh.matrix.copy(m); p.finishMesh.matrixWorldNeedsUpdate=true; }
     if (p.batch) p.batch.setMatrixAt(p.instanceId, m);
     else if (p.mesh) { p.mesh.matrix.copy(m); p.mesh.matrixWorldNeedsUpdate = true; }
   }
 
   function setVisible(p, vis) {
-    if (p.batch) p.batch.setVisibleAt(p.instanceId, vis);
+    if (p.finishMesh) p.finishMesh.visible=vis;
+    if (p.batch) p.batch.setVisibleAt(p.instanceId, vis && !p.finishMesh);
     else if (p.mesh) p.mesh.visible = vis;
   }
   function setDoomed(p, on) {
-    if (p.batch) p.batch.setColorAt(p.instanceId, on ? DOOMED : WHITE);
+    if (p.batch) p.batch.setColorAt(p.instanceId, on ? DOOMED : (p.clientTint || WHITE));
   }
 
+  function paintPart(p,hex) {
+    if(!p.batch)return;
+    if(hex){const tint=new THREE.Color(hex),base=p.set.normal.color;
+      tint.setRGB(tint.r/Math.max(.001,base.r),tint.g/Math.max(.001,base.g),tint.b/Math.max(.001,base.b));p.clientTint=tint;
+    }else p.clientTint=null;
+    setDoomed(p,p.now.doomed);
+  }
+  function coverFloor(p,material,tile) {
+    if(!p.batch)return;
+    if(p.finishMesh){p.finishMesh.removeFromParent();p.finishMesh.geometry.dispose();p.finishMesh=null;}
+    if(material){
+      const g=p.geometry.clone(),pos=g.attributes.position,uv=new Float32Array(pos.count*2),v=new THREE.Vector3();
+      for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(p.matrix0);uv[2*i]=v.x/tile[0];uv[2*i+1]=v.z/tile[1];}
+      g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+      const mesh=new THREE.Mesh(g,material);mesh.name=p.name;mesh.matrixAutoUpdate=false;
+      p.batch.getMatrixAt(p.instanceId,mesh.matrix);mesh.matrixWorldNeedsUpdate=true;mesh.castShadow=p.batch.castShadow;mesh.receiveShadow=true;
+      root.add(mesh);p.finishMesh=mesh;
+    }
+    setVisible(p,p.now.visible);
+  }
   function applyStage(v, force = false) {
     stageValue = v;
     for (const set of sets.values()) {
@@ -390,6 +427,7 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
   function dispose() {
     root.removeFromParent();
     const textures = new Set();
+    for(const p of parts)if(p.finishMesh){p.finishMesh.removeFromParent();p.finishMesh.geometry.dispose();p.finishMesh=null;}
     for (const b of batchMeshes) b.dispose();
     for (const m of generated.children) m.geometry?.dispose();
     for (const s of sets.values()) for (const m of [s.normal, s.xray]) {
@@ -424,7 +462,7 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
 
   return {
     root, parts, sets, table, byElement, masks, storeyShown, sidecar, bounds,
-    applyStage, applyElements, roomAt, finalMask, repose, dispose,
+    applyStage, applyElements, roomAt, finalMask, repose, dispose, paintPart, coverFloor,
     get stage() { return stageValue; },
     setStorey(s, on) { storeyShown[s] = on; applyStage(stageValue, true); },
     get hasAsBuilt() { return asBuiltEls.length > 0; },

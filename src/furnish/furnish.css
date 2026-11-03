@@ -1,0 +1,16 @@
+.fu-panel {top:12px;max-height:calc(100dvh - 24px);}
+.fu-panel .gd-segment {display:flex;gap:4px;flex-wrap:wrap;}
+.fu-panel .gd-field {margin-top:.4rem;}
+.fu-panel section h3 {font-size:.92rem;color:var(--gd-accent);font-weight:600;margin-bottom:5px;}
+.fu-panel .fu-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-height:240px;overflow:auto;margin-top:10px;overscroll-behavior:contain;}
+.fu-panel .fu-grid button {width:100%;padding:3px;font-size:11px;line-height:1.12;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;}
+.fu-grid img {width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;background:#d3cfc2;}
+.fu-grid button[aria-pressed=true],.fu-panel button[aria-pressed=true] {background:#d3dfbe;color:#24312a;}
+.fu-panel a{color:#dceabf;}
+.fu-panel input[type=color]{width:100%;min-height:32px;}
+.fu-panel .fu-blocked{color:#ffc4b8;}
+#furnish-plan {display:block;position:fixed;z-index:29;touch-action:none;background:#23312a;cursor:crosshair;}
+#furnish-plan[hidden]{display:none!important;}
+.furniture-editing :is(#baBar,#top,#stagebar,#crosshair,#lookHint,#stageListWrap),.furniture-immersive .fu-panel {display:none!important;}
+@media (max-width:700px) and (orientation:portrait),(any-pointer:coarse) and (max-width:1100px) and (orientation:portrait){.fu-panel{top:auto;}}
+

@@ -309,7 +309,7 @@ if (!LITE) {
  *  State
  * ------------------------------------------------------------------ */
 const versions = new Map();                  // id -> {def, sidecar, model, bvh, editor, rules}
-let garden = null, gardenLean = false;
+let garden = null, gardenLean = false, furnisher = null, furnishInit = null;
 const gardenStroke = createEditorStroke();
 let V = null, manifest = null, lastProposal = null, regs = null, materialsJson = null;
 let stageValue = 1, stageN = 1, playing = false, tween = null, stageDirty = true;
@@ -483,7 +483,7 @@ async function useVersion(id) {
   perf.tag("version load");
   const entry = await loadVersion(id);
   if (V && V !== entry && gardenLean) gardenQuality(false);
-  if (V && V !== entry) { V.model.root.visible = false; if (KEEP_ONE || renderer.xr.isPresenting) dropVersion(V); }
+  if (V && V !== entry) { furnisher?.releaseView(V); V.model.root.visible = false; if (KEEP_ONE || renderer.xr.isPresenting) dropVersion(V); }
   V = entry;
   V.model.root.visible = true;
   if (renderer.xr.isPresenting && VRQ[vrQuality].lean) leanMaterials(true);
@@ -522,6 +522,7 @@ async function useVersion(id) {
   if (MODE.inspect) loadInspections();
   refreshBoard();
   if (garden) await garden.useVersion(entry);
+  if (furnisher || entry.def.furnish_runtime) await syncFurnitureVersion(entry);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1238,6 +1239,7 @@ function showHouseHelp(){
 function toolsBlocks() {
   const out = [];
   const tools = [
+    { id:"arrange",label:"Furnish a room",press:openFurniture },
     { id:"how", label:"How to use", press:showHouseHelp },
     { id:"garden", label:"Garden design", press:()=>garden?.enter() },
     { id: "info", label: "Info", on: () => tool === "info", press: () => setTool("info") },
@@ -1800,6 +1802,7 @@ function markDoorsHidden() {                      // (both rules: the door leave
 function looseCount() { return V ? new Set(V.model.parts.filter(isLoose).map(p => p.ud.spec_id || p.element || p.name)).size : 0; }
 function setUnfurnished(on) {
   unfurnished = !!on;
+  furnisher?.setFurnished(!unfurnished);
   store.set("house-unfurnished-v1", unfurnished ? "1" : "0");
   markDoorsHidden();
   if (V) applyStageNow();
@@ -2266,7 +2269,7 @@ const wristTab = createBoardTab();
 let heightOffer = false;
 /* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
 /* round 8: Furnished / Unfurnished next to No doors */
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", null]];
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null], ["garden", "how", "arrange"]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -2279,7 +2282,7 @@ const baPanel = (() => {
   mesh.renderOrder = 905; mesh.visible = false;
   mesh.position.set(0, 0.05, 0.075); mesh.rotation.set(-Math.PI / 2.6, 0, 0);          // on the back of the left wrist
   const LABEL = { before: "Before", after: "After", height: "Height", doors: "No doors", goto: "Go to", fast: "Fast",
-                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use" };
+                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture", garden: "Garden", how:"How to use", arrange:"Arrange" };
   const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
     : id === "height" ? !!floorOffset : id === "fast" ? fastWalk : id === "goto" ? gotoMenu.isOpen : id === "mark" ? !!marks?.active : false;
   const sub = id => id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
@@ -2327,6 +2330,7 @@ const baPanel = (() => {
       else if (id === "comfort") setComfort(COMFORT[(COMFORT.indexOf(comfort) + 1) % COMFORT.length]);
       else if (id === "how") showHouseHelp();
       else if (id === "garden") garden?.enter();
+      else if (id === "arrange")openFurniture();
       else beforeAfter(id === "after");
       draw();
       return id;
@@ -2824,6 +2828,7 @@ async function beforeAfter(after) {
   if (inVR()) { fade.black(); fade.to(0, 0.5); }
   playing = false; tween = null;
   setStage(after || today ? stageN : 1, true);
+  if(furnisher){furnisher.setStage(stageValue);await furnisher.readyModels;}
   $("baBefore").setAttribute("aria-pressed", String(!after)); $("baAfter").setAttribute("aria-pressed", String(after));
   baPanel.userData.draw();
   if (!inVR()) toast(after ? "After: the finished extension and the garden" : manifest.as_built_now ? "Before: your house as it is today" : "Before: the house before the works");
@@ -2919,11 +2924,12 @@ function vrFrame(dt, now) {
   const stick = a => a.length >= 4 ? [a[2], a[3]] : [a[0] || 0, a[1] || 0];
   const dead = v => Math.abs(v) < 0.15 ? 0 : (v - Math.sign(v) * 0.15) / 0.85;
 
-  const raised = !garden?.enabled && !SIMPLE && !boardMin && (boardPinned || boardFacing());
+  const editor = garden?.enabled ? garden : (furnisher?.enabled ? furnisher : null);
+  const raised = !editor && !SIMPLE && !boardMin && (boardPinned || boardFacing());
   vrBoard.mesh.material.opacity += ((raised ? 1 : 0) - vrBoard.mesh.material.opacity) * 0.25;
   vrBoard.mesh.visible = !!L && vrBoard.mesh.material.opacity > 0.03;
   wristTab.visible = !SIMPLE && !!L && boardMin;
-  baPanel.visible = !garden?.enabled && SIMPLE && !!L;
+  baPanel.visible = !editor && SIMPLE && !!L;
   if (vrBoard.mesh.visible) perf.tag("board open");
   /* the person's height (4 ft by default, Jack 1 Nov) applied once the head pose has arrived: no button needed */
   if (autoHeightAt && now > autoHeightAt && rawEye() > 0.3) { autoHeightAt = 0; heightOffer = false; heightCheck({ auto: true }); }
@@ -2962,7 +2968,8 @@ function vrFrame(dt, now) {
 
   const [stickX, stickY] = stick(ra).map(dead);
   const changingLevel = garden?.stickLevel(stickY);
-  const rx = garden?.bird ? 0 : stickX, ry = changingLevel || garden?.bird ? 0 : stickY;
+  const turningItem = furnisher?.stick(stickX);
+  const rx = editor?.bird || turningItem ? 0 : stickX, ry = changingLevel || editor?.bird ? 0 : stickY;
   // right stick left / right: turn (not while the grip steers a flight). Smooth: the push sets the speed (75 deg/s
   // full), reached and let go of over TURN.ease s; snap: 30 deg steps (builder / inspector / architect, or Turn: snap)
   if (turnMode === "smooth") {
@@ -3019,7 +3026,7 @@ function vrFrame(dt, now) {
     if (Math.abs(lx) > 0.7) {
       if (!tabLatch) { const t = MODE.tabs; boardTab = t[(t.indexOf(boardTab) + (lx > 0 ? 1 : t.length - 1)) % t.length]; vrBoard.resetPage(); refreshBoard(); tabLatch = true; hapticPulse([L], 0.25, 15); }
     } else if (Math.abs(lx) < 0.3) tabLatch = false;
-  } else if ((free || (hovering && !landing)) && !garden?.bird && (lx || ly)) {
+  } else if ((free || (hovering && !landing)) && !editor?.bird && (lx || ly)) {
     const fwd = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const mv = new THREE.Vector3().addScaledVector(fwd, -ly).addScaledVector(right, lx);
@@ -3046,13 +3053,13 @@ function vrFrame(dt, now) {
   laser.visible = true;
   const trig = !!rb[0]?.pressed;
   const tDown = pressed("trig", trig);
-  if (garden?.enabled) {
+  if (editor) {
     card.hide(); cardUntil=0; heightOffer=false;
     vrBoard.mesh.visible = wristTab.visible = baPanel.visible = false;
-    const d = !gardenStroke.drawing ? garden.wrist.hitWrist(controllerRay(R), tDown) : null;
+    const d = !gardenStroke.drawing ? editor.wrist.hitWrist(controllerRay(R), tDown) : null;
     if (d != null) { laser.scale.z = d; gardenStroke.skip(trig); }
     else {
-      const hit = gardenStroke.frame(R, trig, garden.consumer);
+      const hit = gardenStroke.frame(R, trig, editor.consumer);
       laser.scale.z = hit?.distance ?? 2;
       if (hit) { laserDot.position.copy(hit.displayPoint || hit.point); laserDot.visible = true; }
     }
@@ -3311,6 +3318,7 @@ addEventListener("resize", () => {
 function gardenQuality(on) {
   if (gardenLean === on) return;
   gardenLean = on;
+  furnisher?.gardenLite(on);
   markDoorsHidden(); V.model.applyStage(stageValue, true); V.cull?.invalidate?.();
   // Preserve the outdoor PBR sets, translucent doors, windows, and fixed structure.
   const groups = new Map();
@@ -3339,7 +3347,7 @@ async function initGarden() {
   pickRay.isOutdoor = index => { const p=V.model.parts[index]; return p?.group==="ground" || p?.storey==="site"; };
   garden = createGardenEditor({scene,camera,renderer,site:SITE,marks,inVR,occlusion:pickRay,normalPass:()=>gtao?.normalMaterial,indoor:gardenQuality,
     prepare(on) {
-      freeMouse(); if (on) { gotoMenu.close(); if (V && stageValue !== stageN) setStage(stageN,true);
+      freeMouse(); if (on) { if(furnisher?.enabled)furnisher.leave();gotoMenu.close(); if (V && stageValue !== stageN) setStage(stageN,true);
         if (!inVR() && !walk) spawnAt("Front path"); orbit.enabled=false;
       } else { orbit.enabled=!walk&&!inVR();gardenStroke.cancel(garden.consumer); }
     },
@@ -3348,6 +3356,27 @@ async function initGarden() {
   await garden.useVersion(V);
   if(params.get("garden")==="1") {garden.enter(); $("start").hidden=true;}
 }
+async function ensureFurniture(){
+  if(furnisher)return furnisher;if(furnishInit)return furnishInit;
+  furnishInit=import("../furnish/editor.js").then(({createFurnishingEditor})=>{
+    furnisher=createFurnishingEditor({scene,camera,renderer,site:SITE,inVR,lite:LITE||SIM.on,
+      houseHit(ray){const h=pickRay(ray);return h?{...h,part:partOf(h)}:null;},
+      prepare(on){freeMouse();if(on){if(garden?.enabled)garden.leave();marks?.setActive(false);gotoMenu.close();
+          if(stageValue!==stageN)setStage(stageN,true);if(unfurnished)setUnfurnished(false);orbit.enabled=false;
+        }else{orbit.enabled=!walk&&!inVR();gardenStroke.cancel(furnisher.consumer);}},
+      goRoom(room){const pl=places().find?.(r=>r.room===room.id) || placesCache?.list.find(r=>r.room===room.id);if(pl)goToPlace(pl);},
+      openGarden(){garden?.enter();garden?.action("kind","plant");},
+      changedShadow(){if(renderer.shadowMap.enabled)renderer.shadowMap.needsUpdate=true;}
+    });return furnisher;
+  }).catch(e=>{furnishInit=null;throw e;});return furnishInit;
+}
+async function syncFurnitureVersion(entry){
+  const f=await ensureFurniture();await f.useVersion(entry);f.setStage(stageValue);f.setFurnished(!unfurnished);await f.readyModels;
+}
+async function openFurniture(){
+  if(!V)return;try{const f=await ensureFurniture();await f.useVersion(V);await f.enter();}catch(e){toast(e.message);}
+}
+document.querySelectorAll("[data-furnish-open]").forEach(b=>b.addEventListener("click",openFurniture));
 async function boot() {
   $("modeLabel").textContent = MODE.label;
   try {
@@ -3392,6 +3421,8 @@ async function boot() {
   if (marks) { await marks.load(); marks.refreshVisibility(); }
   setXray(false);
   await initGarden();
+  if(V.def.furnish_runtime)await syncFurnitureVersion(V);
+  if(params.get("edit")==="1"){await openFurniture();$("start").hidden=true;}
   const lg = $("legend");
   for (const c of Object.values(XRAY)) {
     const s = document.createElement("span");
@@ -3528,16 +3559,16 @@ function loop(fakeNow) {
   if (stageDirty) applyStageNow();
   else V.cull?.prepare();                      // the wall holes are found once, on the first frame at the last stage (not on the first frame in the headset)
   if (V.doors?.moving) { V.doors.update(dt); perf.tag("doors"); if (hoverPart?.pose) { const h = hoverPart; hoverPart = null; setHover(h); } }
-  garden?.frame(hands.left,now);
+  garden?.frame(hands.left,now);furnisher?.setStage(stageValue);furnisher?.frame(hands.left);
   if (inVR()) { if (SIM.on) simPose(); vrFrame(dt, now); }
-  else if (garden?.bird) { /* The measured plan has its own camera. Preserve the standing pose. */ }
+  else if (garden?.bird || furnisher?.bird) { /* The measured plan has its own camera. Preserve the standing pose. */ }
   else if (walk) desktopWalk(dt);
   else orbit.update();
   if (target && (playing || tween || target.part.pose)) updateHighlight();
   measure.update(camera);
   if (marks) { marks.update(dt); if (marksListDirty) renderMarksList(); }
   /* mouse-look: the crosshair's colour, the capture hint; a mark's note box needs the mouse back to type and press Save */
-  if (!inVR() && !garden?.bird) {
+  if (!inVR() && !garden?.bird && !furnisher?.bird) {
     if (STICKS && walk) touchLookStep(dt);
     updateCrosshair(dt);
     if (marks?.noteOpen && locked()) freeMouse();
@@ -3563,7 +3594,7 @@ function loop(fakeNow) {
   const moving = comfort === "blur" && (inVR() ? Math.abs(turnVel) > BLUR.xrTurnFrac * TURN.rate || (flying && flySpeed > BLUR.flyMin) : deskMove.fast);
   blurFade = Math.max(0, Math.min(1, blurFade + (moving ? 1 : -1) * dt / BLUR.fade));
   deskMoving = !inVR() && deskMove.moving;
-  if (garden?.bird && !inVR()) { workPrev = performance.now() - now; return; }
+  if ((garden?.bird || furnisher?.bird) && !inVR()) { workPrev = performance.now() - now; return; }
   if (renderer.xr.isPresenting || SIM.on || !composer) {
     const t0 = performance.now();
     const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
@@ -3597,7 +3628,7 @@ window.__house = {
   setTurnMode, setComfort, get turnMode() { return turnMode; }, get comfort() { return comfort; }, get turnVel() { return turnVel; },
   get blurFade() { return blurFade; }, xrBlur, blurGovernor, sticks, touchMove, touchLook, layoutSticks, get locked() { return locked(); }, lockedClick, blurPass: () => blurPass, get renderMs() { return renderMs; }, vignette,
   specCameras: () => specCameras, lookAtMark, get autoHeightAt() { return autoHeightAt; }, howTo, showCard, card,
-  get garden() { return garden; }, sim, hands, perf, heightInfo, get cull() { return V?.cull; }, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
+  get garden() { return garden; }, get furnishing() {return furnisher;}, openFurniture, sim, hands, perf, heightInfo, get cull() { return V?.cull; }, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
   get flying() { return flying; }, get hovering() { return hovering; }, get landing() { return landing; }, get boardMin() { return boardMin; }, get hoverPart() { return hoverPart; },
   get seated() { return seated; }, get doorsHidden() { return doorsHidden; }, setUnfurnished, get unfurnished() { return unfurnished; }, isLoose, looseCount, baPanel, get stageN() { return stageN; }, manifest: () => manifest, dropVersion,
   stats() { renderer.render(scene, camera); const i = renderer.info.render; return { calls: i.calls, triangles: i.triangles, houseBatches: V.model.drawCalls(), houseBatchesLive: V.model.liveCalls(), settingBatches: V.model.settingCalls(), parts: V.model.parts.length }; },
@@ -3643,7 +3674,7 @@ if (params.get("capture") === "1") {
   }
   Object.assign(window.__house, {
     furnished(on) { if (on !== undefined) setUnfurnished(!on); return !unfurnished; },
-    captureState: () => ({ ready: !!V && sky.visible, sky: sky.visible, version: V?.def.id, parts: V?.model.parts.length, furnished: !unfurnished, stage: stageValue, stageN, walk }),
+    captureState: () => ({ ready: !!V && sky.visible && !$("startDesktop").disabled, sky: sky.visible, version: V?.def.id, parts: V?.model.parts.length, furnished: !unfurnished, stage: stageValue, stageN, walk }),
     /* part index -> [element, material, group, storey, spec_id, label, bbox min x y z, max x y z (cm)] for the machine pass */
     partTable: () => V.model.parts.map(p => [p.index, p.element, p.materialName, p.group, p.storey, p.ud.spec_id || "", String(p.ud.label || p.name || "").slice(0, 60),
       ...[p.bbox.min, p.bbox.max].flatMap(v => [v.x, v.y, v.z].map(n => Math.round(n * 100)))]),

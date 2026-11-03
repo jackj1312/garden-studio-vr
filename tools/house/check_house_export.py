@@ -9,7 +9,7 @@ and at every stage no two walkable ground surfaces (group "ground", the house's 
 in plan within 30 mm in height (stacked ground reads as stripes and z-fighting from the road: round 6); and every GLB
 (full, quest, meshopt, setting) has a source on every texture and a uri/bufferView on every image and loads headless
 through three's GLTFLoader (tools/house/glb_load_test.mjs, row 190). Needs numpy and node."""
-import sys, os, json, struct, math, re
+import sys, os, json, struct, math, re, subprocess
 import numpy as np
 
 site = sys.argv[1]
@@ -17,6 +17,9 @@ FINISHED = "--finished" in sys.argv          # G5c gate blocking too (a WIP "fin
 fails, notes = [], []
 V = json.load(open(os.path.join(site, "versions.json")))
 
+
+if any(v.get("furnish_runtime") for v in V["versions"]):
+    subprocess.run(["node",os.path.join(os.path.dirname(__file__),"runtime_assets.mjs"),"--check",site],check=True)
 
 def glb_json(p):
     b = open(p, "rb").read(); n = struct.unpack("<I", b[12:16])[0]
@@ -109,7 +112,11 @@ for v in V["versions"]:
     missing = [k for k, p in files.items() if not os.path.exists(p)]
     for k in missing: fails.append(f"{v['id']}: missing {k} {files[k]}")
     if missing: continue
-    t_glb = max(os.path.getmtime(files["glb"]), os.path.getmtime(files["glb_quest"]))
+    source_models=[files["glb"],files["glb_quest"]]
+    if v.get("furnish_runtime"):
+        report=json.load(open(os.path.join(site,"furnish",v["id"],"split-check.json")))
+        source_models=[os.path.join(site,report["profiles"][kind]["source"]) for kind in ("full","quest")]
+    t_glb=max(os.path.getmtime(model) for model in source_models)
     for k in ("elements", "stages", "check"):
         if os.path.getmtime(files[k]) + 120 < t_glb: fails.append(f"{v['id']}: {k} older than the GLB (stale)")
     g = glb_json(files["glb"])

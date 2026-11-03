@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
 import {GardenStore} from './store.mjs';
 import {createGardenPanel} from './panel.js';
 import {createGardenScene} from './scene.js';
@@ -40,7 +41,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     if(version===entry.def.id)return;
     if(store){draw.cancel();if(store.dirty)status='The previous version still has an unsaved draft.';}
     version=entry.def.id;draw.state.selectedId=null;terrain.version(entry);plan.version(terrain.extent);
-    if(!stores.has(version))stores.set(version,new GardenStore({site,version,onChange:(s)=>{if(s===store)sync();}}));
+    if(!stores.has(version))stores.set(version,new GardenStore({site,version,fetcher:layoutFetcher(site,version),onChange:(s)=>{if(s===store)sync();}}));
     store=stores.get(version);const target=store;loaded=false;
     try{if(!target.dirty)await target.refresh();if(target===store){loaded=true;status='';}}
     catch(e){if(target===store){status='Layout service unavailable. Open this editor on port 8450. '+e.message;}}
@@ -63,7 +64,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     sync();if(bird)requestAnimationFrame(()=>{if(active){fitPlanToDock();plan.capture();plan.render();}});
   }
   function enter(){
-    if(!store)return;
+    if(!store||openLayoutEditor('garden',site,version))return;
     active=true;document.body.classList.add('garden-editing');marks?.setActive(false);prepare(true);
     view(true);status=loaded?'Draw a shape or select one to edit.':status;sync();
   }

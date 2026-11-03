@@ -584,6 +584,37 @@ class StateBuilder:
                      dref(s.get("src", "")), conf_of(s), "Existing stairs", True)
             out.append(atom("ST-stair", "mesh", "existing", meta, sig=sig_of("stair", n, rise), mesh=merge_meshes(meshes), mat="stair",
                             stair=self._stair_params(s, rise, n)))
+            # the underside of each flight is closed by a plastered soffit (row 191 walk inspection: the tread blocks' stepped
+            # undersides showed from the hall like a floating stair). Plane through the back-bottom corners of the treads (the
+            # steps' lowest edges), carried up at the top to the ground-floor ceiling; the walls each side close it.
+            fl_blocks = {1: [], 2: []}
+            for k, T in enumerate(treads):
+                if k == len(treads) - 1: continue                    # the half landing has its own flat underside
+                ztop = rise * (k + 1) if k < 7 else val(s["half_landing"]["z"]) + rise * (k - 6)
+                xs = [p[0] for p in T]; ys = [p[1] for p in T]
+                fl_blocks[1 if k < 7 else 2].append((min(xs), max(xs), min(ys), max(ys), max(0.0, ztop - 0.25)))
+            for fk, bl in fl_blocks.items():
+                if len(bl) < 2: continue
+                d = 1 if (bl[1][2] + bl[1][3]) > (bl[0][2] + bl[0][3]) else -1
+                back = (lambda b: b[3]) if d > 0 else (lambda b: b[2]); front = (lambda b: b[2]) if d > 0 else (lambda b: b[3])
+                ya, yb = back(bl[0]), back(bl[-1])
+                if abs(yb - ya) < 0.1: continue
+                slope = rise * (len(bl) - 1) / (yb - ya)              # dz/dy along the flight
+                # the line under every block's two bottom corners (lower envelope): nothing of a tread pokes through it
+                c0 = min(b[4] - slope * y for b in bl for y in (b[2], b[3]))
+                zl = lambda y: c0 + slope * y
+                y0 = front(bl[0])
+                if zl(y0) < 0.0: y0 = -c0 / slope                    # flight 1 starts on the floor
+                y1 = back(bl[-1])
+                z_up = val(s["half_landing"]["z"]) - 0.2 if fk == 1 else lv.gclg          # flight 1 runs up under the half landing
+                if zl(y1) < z_up: y1 = y1 + d * min(0.4, (z_up - zl(y1)) / abs(slope))
+                xa, xb = min(b[0] for b in bl) - 0.005, max(b[1] for b in bl) + 0.005   # to the wall faces each side (scribed in)
+                ylo, yhi = min(y0, y1), max(y0, y1)
+                q = [(xa, ylo), (xb, ylo), (xb, yhi), (xa, yhi)]          # counter-clockwise from above (outward normals)
+                V = [(x, y, zl(y) - 0.0125) for (x, y) in q] + [(x, y, zl(y)) for (x, y) in q]
+                meta = M("wall_inner", "ground", f"plastered soffit under flight {fk} (plasterboard on the strings, skimmed; {TYPICAL}): "
+                         "closes the underside of the stair", dref(s.get("src", "")), "assumed", "Stair soffit (plastered)", True)
+                out.append(atom(f"ST-soffit-flight{fk}", "mesh", "existing", meta, sig=sig_of("soffit", fk, q), mesh=hexa(V), mat="plaster"))
             f1, f2 = s.get("flight1"), s.get("flight2")
             if not (f1 and f2): continue
             y_top = f2["risers_y"][-1]                      # the top riser (14) at the landing

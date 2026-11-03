@@ -31,7 +31,7 @@ def glb_nodes(p):
     return json.loads(b[20:20 + n])["nodes"]
 
 
-ROOM_TYPE = [("kitchen", re.compile(r"kitchen", re.I)), ("bath", re.compile(r"bath|en-suite|ensuite|cloaks-WC|cloaks$|WC", re.I)),
+ROOM_TYPE = [("store", re.compile(r"utility|cpd|store|cupboard|conservatory", re.I)), ("kitchen", re.compile(r"kitchen", re.I)), ("bath", re.compile(r"bath|en-suite|ensuite|cloaks-WC|cloaks$|WC", re.I)),
              ("bed", re.compile(r"bedroom", re.I)), ("living", re.compile(r"living|sitting|lounge|dining", re.I)),
              ("hall", re.compile(r"hall|landing|lobby|porch", re.I)), ("store", re.compile(r"cpd|store|cupboard|utility|conservatory", re.I))]
 SOCKETS = {"kitchen": 4, "living": 4, "bed": 2, "hall": 1, "bath": 0, "store": 0}
@@ -58,19 +58,28 @@ for vid in [v for v in a.versions.split(",") if v]:
     by_room = {}
     for it in V["items"]: by_room.setdefault(it["room"], []).append(it)
     F = {k: [] for k in ("F1", "F2", "F3", "F4", "F5")}
+    Q = []
     for r in V["rooms"]:
         rid = r["id"]; t = rtype(rid); its = by_room.get(rid, [])
         if "conservatory" in rid: continue
         def has(rx, cats=None, need_placed=True):
             return [i for i in its if re.search(rx, i["type"] + " " + json.dumps(i["asset"]), re.I) and (cats is None or i["category"] in cats)
                     and (not need_placed or i["id"] in placed)]
-        if not has(r"light|pendant|downlight|lamp|sconce", ("lighting",)): F["F1"].append(dict(room=rid, missing="light fitting"))
-        if not any(n.startswith(f"JN-SW-{rid}") for n in names): F["F1"].append(dict(room=rid, missing="light switch by the door"))
+        def spec_has(rx, cats=None): return has(rx, cats, need_placed=False)
+        def need(fault, key, rx, cats):
+            """a required item: missing from the build = fault; missing from the signed spec too = a spec question (row 218)"""
+            if has(rx, cats): return
+            if spec_has(rx, cats): F[key].append(dict(room=rid, missing=fault))
+            else: Q.append(dict(room=rid, missing=fault, why="not scheduled in the signed spec: a question for Jack, never improvised"))
+        need("light fitting", "F1", r"light|pendant|downlight|lamp|sconce", ("lighting",))
+        if not any(n.startswith(f"JN-SW-{rid}") for n in names):
+            if spec_has(r"light|pendant|downlight|lamp|sconce", ("lighting",)): F["F1"].append(dict(room=rid, missing="light switch by the door"))
+            else: Q.append(dict(room=rid, missing="light switch (the room has no light in the spec)", why="follows the light question"))
         ns = len([n for n in names if n.startswith(f"JN-SKT-{rid}")])
-        if ns < SOCKETS.get(t, 0): F["F1"].append(dict(room=rid, missing=f"sockets ({ns} of {SOCKETS[t]} doubles)"))
+        need_s = 0 if (t == "hall" and r.get("area_m2", 5) < 1.5) else SOCKETS.get(t, 0)      # a lobby under 1.5 m2 has none (typical)
+        if ns < need_s: F["F1"].append(dict(room=rid, missing=f"sockets ({ns} of {need_s} doubles)"))
         ufh = "underfloor" in json.dumps(r["finishes"]).lower()
-        if t in ("bed", "living", "kitchen", "bath") and not ufh and not has(r"radiator|towel rail", ("radiator", "fitting", "sanitary")):
-            F["F1"].append(dict(room=rid, missing="radiator (or underfloor heating in the spec)"))
+        if t in ("bed", "living", "kitchen", "bath") and not ufh: need("radiator (or underfloor heating in the spec)", "F1", r"radiator|towel rail", ("radiator", "fitting", "sanitary"))
         if t == "hall" and ("hall" in rid or "landing" in rid) and not any(n.startswith(f"JN-SMOKE-{rid}") for n in names):
             F["F1"].append(dict(room=rid, missing="smoke alarm (Part B, typical)"))
         if t == "kitchen":
@@ -81,7 +90,8 @@ for vid in [v for v in a.versions.split(",") if v]:
         if t == "bath" and "lobby" not in rid:
             for lab, rx in (("WC", r"\bWC\b|toilet|pan"), ("basin and tap", r"basin"), ("towel rail", r"towel rail|towel_rail")):
                 if not has(rx, None) and not any(re.search(rx.replace("\\b", ""), n, re.I) and ("FT-" in n) for n in names):
-                    F["F3"].append(dict(room=rid, missing=lab))
+                    if spec_has(rx, None): F["F3"].append(dict(room=rid, missing=lab))
+                    else: Q.append(dict(room=rid, missing=lab, why="not scheduled in the signed spec: a question for Jack, never improvised"))
             if ("bathroom" in rid or "en-suite" in rid) and not (has(r"bath|shower", None) or any(re.search(r"shower|bath", n, re.I) and n.startswith("FT-") for n in names)):
                 F["F3"].append(dict(room=rid, missing="bath or shower"))
             if "TILE-WALL" not in json.dumps(r["finishes"]): F["F3"].append(dict(room=rid, missing="wall tiles in the spec"))
@@ -100,9 +110,9 @@ for vid in [v for v in a.versions.split(",") if v]:
             if rtype(r["id"]) in ("kitchen", "living", "bed", "bath") and r["id"] not in rooms_with: F["F5"].append(dict(room=r["id"], missing="lived-in details"))
         unplaced = [i["id"] for i in its if i["id"] not in ids]
         if unplaced: F["F5"].append(dict(missing="addendum items not in the build", items=unplaced[:10]))
-        bad = [i["id"] for i in its if i.get("validator", {}).get("ok") is False]
+        bad = [i["id"] for i in its if (i.get("validator") or {}).get("ok") is False]
         if bad: F["F5"].append(dict(missing="addendum items failing the validator", items=bad[:10]))
-    res = dict(version=vid, passed=not any(F.values()), counts={k: len(v) for k, v in F.items()}, faults=F,
+    res = dict(version=vid, passed=not any(F.values()), counts={k: len(v) for k, v in F.items()}, faults=F, spec_questions=Q,
                automated=["F1 services per room", "F2 kitchen complete", "F3 bathrooms complete", "F4 outside closed", "F5 lived-in layer"],
                inspected=["sealant lines", "beads at corners", "paving edges and kerbs", "lights on in the viewer", "variation and wear / flat feel",
                           "every mid-build tell the geometry tests cannot see (DETAIL-CHECKLIST)"])

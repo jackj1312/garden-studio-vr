@@ -29,3 +29,6 @@ renders/unreal/
 assets/sites/house-preview/
 master/ambientcg/
 assets/sites/house-wip/
+
+# pictures of the house interior (performance and plan evidence) stay local
+renders/perf/

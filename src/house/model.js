@@ -49,10 +49,16 @@ function floats(a) {
   for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) out[i * a.itemSize + c] = a.getComponent ? a.getComponent(i, c) : [a.getX, a.getY, a.getZ, a.getW][c].call(a, i);
   return new THREE.BufferAttribute(out, a.itemSize);
 }
-function normaliseGeometry(g, wantUV) {
+function normaliseGeometry(g, wantUV, wantColor = false) {
   const out = new THREE.BufferGeometry();
   out.setAttribute("position", floats(g.attributes.position));
   if (g.attributes.normal) out.setAttribute("normal", floats(g.attributes.normal));
+  /* vertex-coloured materials (the VertexPlant plants: their green is only in COLOR_0) keep it through the batch (row 296) */
+  if (wantColor) {
+    const c = floats(g.attributes.color), n = g.attributes.position.count, rgb = new Float32Array(n * 3).fill(1);
+    if (c && c.itemSize >= 3) for (let i = 0; i < n; i++) { rgb[i * 3] = c.getX(i); rgb[i * 3 + 1] = c.getY(i); rgb[i * 3 + 2] = c.getZ(i); }
+    out.setAttribute("color", new THREE.Float32BufferAttribute(rgb, 3));   // always RGB floats, so every geometry in the batch matches
+  }
   if (wantUV) out.setAttribute("uv", floats(g.attributes.uv) || new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
   if (g.index) out.setIndex(g.index);
   else out.setIndex([...Array(g.attributes.position.count).keys()]);
@@ -143,7 +149,7 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
     if (!batchDefs.has(key)) batchDefs.set(key, { set, items: [], geoms: new Map(), ctx });
     const b = batchDefs.get(key);
     b.items.push(p);
-    if (!b.geoms.has(p.o.geometry.uuid)) b.geoms.set(p.o.geometry.uuid, normaliseGeometry(p.o.geometry, hasTex(p.mat)));
+    if (!b.geoms.has(p.o.geometry.uuid)) b.geoms.set(p.o.geometry.uuid, normaliseGeometry(p.o.geometry, hasTex(p.mat), !!p.mat.vertexColors));
   }
   let done = 0;
   const batchMeshes = [];
@@ -152,7 +158,8 @@ export function createModel({ gltf, sidecar, elements, section, onBuildProgress,
     for (const g of b.geoms.values()) { nv += g.attributes.position.count; ni += g.index.count; }
     const mesh = new THREE.BatchedMesh(b.items.length, nv, ni, b.set.normal);
     mesh.name = key;
-    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.receiveShadow = true;
+    mesh.castShadow = !b.set.normal.transparent;            // glass lets the sun through (round-1: a glazed opening threw a solid shadow, so no sun reached any floor)
     mesh.perObjectFrustumCulled = true;
     /* per-instance sorting cost 0.6 ms a render on a laptop for the approved scheme (x2 eyes, and a slower CPU on the
        Quest); opaque parts don't need it, only transparent ones (glass, x-ray) */

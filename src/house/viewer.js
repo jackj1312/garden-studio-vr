@@ -9,22 +9,24 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { createFade, attachControllerModels, hapticPulse } from "../presence.js?v=f383e46-1642";
-import { createModel, progress } from "./model.js?v=h16";
+import { createModel, progress } from "./model.js?v=h18";
 import { buildBVH } from "./bvh.js?v=h15";
 import { createSection, XRAY } from "./section.js?v=h11";
 import { createMeasure } from "./measure.js?v=h11";
-import { createWalker, BODY } from "./walk.js?v=h15";
+import { createWalker, BODY } from "./walk.js?v=h34";
 import { createEditor } from "./edits.js?v=h15";
 import { checkRules } from "./rules.js?v=h11";
-import { modeFromURL, PLAIN_GROUP, PLAIN_CATEGORY, TAB_LABEL } from "./modes.js?v=h19";
-import { createMarks, KINDS as MARK_KINDS } from "../marks.js?v=h19";
+import { modeFromURL, PLAIN_GROUP, PLAIN_CATEGORY, TAB_LABEL } from "./modes.js?v=h22";
+import { createMarks, KINDS as MARK_KINDS } from "../marks.js?v=h31";
 import { createVRBoard, renderBoardDOM, createCard, createBoardTab } from "./board.js?v=h15";
 import { createDoors, isLeaf } from "./doors.js?v=h15";
 import { createPerf } from "./perf.js?v=h15";
+import { createCull } from "./cull.js?v=h33";
 import { wallFrame, layerSpans, CATALOGUE, setTiles } from "./geom.js?v=h11";
 import { moveWall, addWall, addOpening, swapFixture } from "./editops.js?v=h11";
 import { loadRegs, isVerified, extensionText, INSPECTION_POINTS } from "./regs.js?v=h15";
 import { createRequests, createRecorder } from "./requests.js?v=h11";
+import { MotionBlurPass, createXRBlur } from "./motionblur.js?v=h22";
 
 /* ------------------------------------------------------------------ *
  *  Build-stage viewer: a house extension built stage by stage from
@@ -67,8 +69,12 @@ const SIMPLE = CUST;
  *  Renderer, scene, light
  * ------------------------------------------------------------------ */
 const IS_QUEST = /OculusBrowser|Quest/i.test(navigator.userAgent);
+/* phones and tablets get the headset's light assets and no screen post (Jack, 1 Nov: "unusably laggy on my phone": a phone
+   was loading the full GLB, the 4k sky, 2048 shadows, GTAO at pixel ratio 2 and preloading the second version) */
+const IS_PHONE = !IS_QUEST && (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 900));
+const LITE = IS_QUEST || IS_PHONE;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.localClippingEnabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -88,29 +94,42 @@ const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
  *  (azimuth -138, elevation 22), soft shadows fitted to the house,
  *  ambient occlusion from the materials' ORM maps plus GTAO on a screen.
  * ------------------------------------------------------------------ */
+/* The sun (PLAN S7/S8). Compass bearing from north (house +x = north, +z = east) and elevation, as spec_v1 "lighting":
+   afternoon = Hailsham, 23 Sep, 16:00 BST: bearing 234 (south-west), elevation 25, 5000 K: the spec's interior sun, which comes
+   in through the rear glazing and lays bright patches on the kitchen-diner floor; filmed = the garden's solved sun (site.json
+   azimuthDeg -138, elevationDeg 22 = bearing 138, south-east, from Jack's own shadows, CORRECTIONS-LOG 14): the street front is lit,
+   for the matched front views. ?sun=filmed picks it. Everything that sets the look is in this one block: revert it to go back. */
+const sunVec = (bearing, el) => { const b = THREE.MathUtils.degToRad(bearing), e = THREE.MathUtils.degToRad(el); return new THREE.Vector3(Math.cos(e) * Math.cos(b), Math.sin(e), Math.cos(e) * Math.sin(b)); };
+const SUNS = { afternoon: { dir: sunVec(234, 25), colour: 0xffe4ce }, filmed: { dir: sunVec(138, 22), colour: 0xffeedd } };
+const SUN_KEY = SUNS[params.get("sun")] ? params.get("sun") : "afternoon";
 const LOOK = {
   hdri: "assets/hdri/kloofendal_43d_clear_puresky_2k.exr",
-  sky: IS_QUEST ? "assets/hdri/sky_midday_2k.jpg" : "assets/hdri/sky_midday_4k.jpg",
-  /* TO the sun, viewer frame: the garden viewer's own vector for its filmed sun (site.json azimuthDeg -138,
-     elevationDeg 22 -> (cos el cos az, sin el, -cos el sin az)). VIEWER-LOOK.md's (-0.620, 0.375, 0.689) has x and z
-     swapped against it; the garden build is the source. Low sun from the street side: the front is lit, the
-     garden side is in soft shade, as filmed. */
-  sunDir: new THREE.Vector3(-0.689, 0.375, 0.620).normalize(),
-  sunColour: 0xfff4e6, sunIntensity: 3.0, envIntensity: 0.85, hemi: 0.3,
+  sky: LITE ? "assets/hdri/sky_midday_2k.jpg" : "assets/hdri/sky_midday_4k.jpg",
+  sunDir: SUNS[SUN_KEY].dir.clone().normalize(), sunColour: SUNS[SUN_KEY].colour,      // TO the sun, viewer frame
+  sunIntensity: 9.0,                         // against a fill of about a fifth of it: sunlit floor about 4 x its shade, as the Airbnb frames
+  envIntensity: 0.28,                        // the blue sky map: reflections and a little sky; it was the whole fill (0.85) and made every interior blue-grey
+  hemi: 0.55, hemiSky: 0xfff7ec, hemiGround: 0xd9bf9c,      // a warm fill (oak floor bounce below, warm white above): shadows are never blue
+  bounce: 0.3, bounceColour: 0xffeedd,       // the floor's bounce on every downward face, so ceilings read warm white, not slate
+  exposureLite: 1.0,                         // phones and the headset: one fixed exposure, no per-frame cast (a cast costs about 1 ms on a laptop; unmeasured on a headset, PLAN S10)
+  exposureIn: 1.5, exposureOut: 0.6,         // eye adaptation: the sun is about 9 against an indoor fill of about 1, so a camera with a roof over it exposes for the room (shaded walls cream, a sunlit patch bright, not blown), one in the open for the sun (brick and gravel keep their colour). Khronos Neutral tone mapping holds colour to 0.8 and compresses above.
 };
+renderer.toneMappingExposure = LOOK.exposureOut;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xbcd0e2);            // until the sky arrives: a sky colour, never grey
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;   // stand-in until the EXR is in
 scene.environmentIntensity = LOOK.envIntensity;
-const hemi = new THREE.HemisphereLight(0xdfeaf5, 0x6b604d, LOOK.hemi);
+const hemi = new THREE.HemisphereLight(LOOK.hemiSky, LOOK.hemiGround, LOOK.hemi);
 scene.add(hemi);
+const bounce = new THREE.DirectionalLight(LOOK.bounceColour, LOOK.bounce);       // from below, pointing up, no shadow
+bounce.position.set(0, -1, 0);
+scene.add(bounce);
 const sun = new THREE.DirectionalLight(LOOK.sunColour, LOOK.sunIntensity);
 sun.castShadow = true;
-sun.shadow.mapSize.set(IS_QUEST ? 1024 : 2048, IS_QUEST ? 1024 : 2048);
+sun.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048);
 sun.shadow.bias = -0.0005;
 sun.shadow.normalBias = 0.02;
-sun.shadow.radius = IS_QUEST ? 1.5 : 3.5;
+sun.shadow.radius = LITE ? 1.5 : 3.5;
 scene.add(sun, sun.target);
 const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 48, 24),
   new THREE.MeshBasicMaterial({ side: THREE.BackSide, toneMapped: false, depthWrite: false, fog: false, color: 0xffffff }));
@@ -132,7 +151,7 @@ function fitSun(bounds) {
 /* the sky: the EXR lights the scene (its sun disc clamped out: the DirectionalLight IS the sun), the JPEG is
    what you see; both turned about the vertical so the sky's own sun sits where the filmed sun is */
 function loadSky() {
-  if (IS_QUEST) return loadSkyLight();
+  if (LITE) return loadSkyLight();
   new EXRLoader().setDataType(THREE.FloatType).load(LOOK.hdri, tex => {
     const { data, width, height } = tex.image;
     let best = -1, bi = 0, sum = 0, n = 0;
@@ -161,7 +180,7 @@ function loadSky() {
 /* the headset: no float EXR decode and no 2k prefilter at load. The sky JPEG is the background, and the lighting
    comes from it shrunk to 256 x 128 first (a prefilter of that costs a few ms), done after the first frame. */
 function loadSkyLight() {
-  hemi.intensity = 0.45;
+  /* (the headset and phones take the same LOOK: hemi / env / sun above; the old 0.45 hemisphere lit a blue sky. Not yet measured on a headset: PLAN S10) */
   new THREE.TextureLoader().load(LOOK.sky, jpg => {
     jpg.colorSpace = THREE.SRGBColorSpace;
     jpg.wrapS = THREE.RepeatWrapping; jpg.repeat.x = -1; jpg.offset.x = 1;
@@ -184,6 +203,24 @@ player.add(camera);
 scene.add(player);
 const EYE = 1.65;                            // the DESKTOP walk's eye height; in the headset the real head height is used, nothing added
 const fade = createFade(camera);
+/* eye adaptation (see LOOK.exposureIn / exposureOut): is there a roof, ceiling or floor over the camera within 6 m? Foliage does not count (a tree is shade, not a room). Checked 5 times a second. */
+const _upRay = new THREE.Raycaster(), _camPos = new THREE.Vector3(), SHADE = /leaves|branches|VertexPlant|hedge|conifer|foliage|ivy/i;
+_upRay.ray.direction.set(0, 1, 0); _upRay.far = 6; _upRay.layers.enableAll();      // (cull.js moves a batch with nothing in view off the camera's layer: the probe must still see its ceiling)
+let exposureNow = LOOK.exposureOut, coverAt = 0;
+function adaptExposure(dt, snap = false) {
+  if (LITE) { renderer.toneMappingExposure = LOOK.exposureLite; return; }
+  if (!V) return;
+  const t = performance.now();
+  if (snap || t - coverAt > 200) {
+    coverAt = t;
+    _upRay.ray.origin.copy(camera.getWorldPosition(_camPos));
+    const covered = _upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
+    adaptExposure.target = covered ? LOOK.exposureIn : LOOK.exposureOut;
+  }
+  const want = adaptExposure.target ?? LOOK.exposureOut;
+  exposureNow = snap ? want : exposureNow + (want - exposureNow) * Math.min(1, dt * 4);
+  renderer.toneMappingExposure = exposureNow;
+}
 attachControllerModels(renderer, player);
 /* a simulated headset for desktop tests (?xrsim=1 or __house.sim.start()): fake controllers drive the same VR code */
 const SIM = { on: false };
@@ -211,7 +248,8 @@ function passBreakdown() {
   for (const o of V.model.root.getObjectByName("edited")?.children || []) if (o.visible) live.edited++;
   const over = [["sky", sky], ["board", vrBoard.mesh], ["hud", perf.hud], ["laser", laser], ["laser dot", laserDot], ["hover", hover], ["pick fill", hl.fill], ["pick edges", hl.edges], ["scale figure", scaleCue], ["heights label", heightLabel], ["card", card.mesh], ["vignette", vignette]]
     .filter(([, o]) => o && o.visible && (o.parent === scene || o.parent?.visible !== false)).map(([n]) => n);
-  const out = { eyes: renderer.xr.isPresenting ? 2 : 1, ...live, overlays: over, shadow_passes: shadowPasses, shadows: renderer.shadowMap.enabled };
+  const cs = V.cull?.state, hid = V.cull ? V.model.root.children.filter(o => o.isBatchedMesh && o._cull?.hidden).length : 0;
+  const out = { eyes: renderer.xr.isPresenting ? 2 : 1, ...live, overlays: over, shadow_passes: shadowPasses, shadows: renderer.shadowMap.enabled, cull: V.cull ? { active: cs.active, why: cs.why || null, cells: cs.cells.length, empty_batches_skipped: hid } : null };
   shadowPasses = 0;
   return out;
 }
@@ -224,15 +262,45 @@ orbit.screenSpacePanning = true;
 
 /* desktop / phone post: GTAO at a small radius makes wall junctions, joists and rafters read; the headset
    renders straight (WebXR's own framebuffer; the ORM ambient occlusion carries it there) */
-let composer = null, gtao = null;
-if (!IS_QUEST) {
+let composer = null, gtao = null, blurPass = null;
+const xrBlur = createXRBlur(renderer, player);     // the headset's motion blur (src/house/motionblur.js)
+/* the rule (Jack, 1 Nov): motion blur must never take the Quest below a steady 72 fps. While it is drawing, every
+   36 frames are timed against the frames without it; if they average slower than 68 fps (and slower than without
+   it), the offscreen copy drops a step (70 % -> 60 % -> 50 % of the eye buffer); at 50 % and still slow, Comfort
+   switches itself to the vignette for this session and says so. Each judgement goes to the frame log. */
+const blurGov = { last: 0, n: 0, sum: 0, dn: 0, dsum: 0 };
+function blurGovernor(now, blurred) {
+  const dtMs = blurGov.last ? now - blurGov.last : 0;
+  blurGov.last = now;
+  if (!dtMs || dtMs > 100) return;                         // a hitch from loading or a version swap is not the blur
+  if (!blurred) { blurGov.dn++; blurGov.dsum += dtMs; if (blurGov.dn > 720) { blurGov.dn /= 2; blurGov.dsum /= 2; } return; }
+  blurGov.n++; blurGov.sum += dtMs;
+  if (blurGov.n < 36) return;
+  const avg = blurGov.sum / blurGov.n, base = blurGov.dn ? blurGov.dsum / blurGov.dn : 1000 / 72;
+  blurGov.n = blurGov.sum = 0;
+  const slow = avg > 1000 / 68 && avg > base + 0.7;
+  perf.note({ event: "motion blur fps", fps: +(1000 / avg).toFixed(1), fps_without: +(1000 / base).toFixed(1), scale: xrBlur.state.scale, slow });
+  if (!slow) return;
+  if (xrBlur.state.scale > 0.51) { xrBlur.state.scale = Math.round((xrBlur.state.scale - 0.1) * 10) / 10; return; }
+  setComfort("vignette");
+  showCard("Comfort", [`Motion blur ran at ${(1000 / avg).toFixed(0)} fps on this headset, under the 72 fps it must hold, so Comfort is now the vignette for this visit.`, "Comfort on your left wrist switches it back."], null, 10);
+}
+if (!LITE) {
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(),
     { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
   gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
   gtao.output = GTAOPass.OUTPUT.Default;
   gtao.updateGtaoMaterial({ radius: 0.4, distanceExponent: 1.2, thickness: 0.5, scale: 1.0, samples: 16 });
+  /* GTAO's depth / normal pass skips points and lines but drew SPRITES (the marks' labels, the scale figure's tags) as
+     solid quads, which came out as black boxes over every label (r7b). Sprites are left out of it too. */
+  gtao._overrideVisibility = function () {
+    const cache = this._visibilityCache;
+    this.scene.traverse(o => { if ((o.isPoints || o.isLine || o.isLine2 || o.isSprite) && o.visible) { o.visible = false; cache.push(o); } });
+  };
   composer.addPass(gtao);
+  /* homeowner / review: camera motion blur on turns and fast moves (Comfort: blur; src/house/motionblur.js) */
+  if (SIMPLE) { blurPass = new MotionBlurPass(camera); composer.addPass(blurPass); }
   composer.addPass(new OutputPass());
 }
 
@@ -310,7 +378,7 @@ async function loadVersion(id, quiet = false) {
     /* the headset loads a version's small-texture GLB when the generator wrote one (CONTRACT.md: glb_quest), and
        its meshopt-compressed twin (glb_quest_meshopt: EXT_meshopt_compression + KHR_mesh_quantization) first, falling
        back to glb_quest if that fails to decode. ?glb=quest | meshopt forces either on a desktop (tests). */
-    const want = params.get("glb") || (IS_QUEST ? "meshopt" : "full");
+    const want = params.get("glb") || (LITE ? "meshopt" : "full");
     const questGlb = want !== "full" && def.glb_quest;
     const tries = [...(want === "meshopt" && def.glb_quest_meshopt ? [def.glb_quest_meshopt] : []), questGlb || def.glb];
     const load = file => new Promise((res, rej) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(BASE + file, res,
@@ -321,7 +389,8 @@ async function loadVersion(id, quiet = false) {
       catch (err) { console.warn(`house: ${file} failed (${err?.message || err}); trying the next`); perf.note({ event: "glb failed", file, error: String(err?.message || err).slice(0, 200) }); if (file === tries[tries.length - 1]) throw err; }
     }
     if (show) setLoad(0.82, "Sorting parts into stages…");
-    if (IS_QUEST && !questGlb) await shrinkTextures(gltf.scene, 512);
+    if (LITE && !questGlb) await shrinkTextures(gltf.scene, 512);
+    prepareForBatching(gltf.scene);
     await new Promise(r => setTimeout(r));
     const model = createModel({ gltf, sidecar, elements, section, materials: materialsJson, onBuildProgress: f => show && setLoad(0.82 + 0.12 * f) });
     model.root.visible = false;
@@ -329,6 +398,10 @@ async function loadVersion(id, quiet = false) {
     const entry = { def, sidecar, model, bvh: buildBVH(model.parts), rules: [] };
     entry.editor = createEditor({ site: SITE, version: id, elements, onChange: (cur, ids) => onEdit(entry, cur, ids) });
     entry.doors = createDoors({ model, bvh: entry.bvh, roomAt: model.roomAt, table: entry.editor.current() });
+    /* room visibility (cull.js, PLAN S10): only on a stage where the cells' walls all stand, no slice, no x-ray, no storey hidden; ?cull=0 turns it off */
+    entry.cull = params.get("cull") === "0" ? null : createCull({ model, scene, getBvh: () => entry.bvh, canCull: () => !entry.edited && !section.active && !xray && stageValue >= entry.sidecar.stages.length - 1e-3 && Object.values(storeyState).every(Boolean) });
+    perf.note({ event: "gl caps", multi_draw: renderer.extensions.has("WEBGL_multi_draw"), max_textures: renderer.capabilities.maxTextures, note: "without multi_draw every instance of a batch is its own draw call" });
+    if (entry.cull) perf.note({ event: "room culling", version: id, cells: entry.cull.cells.length, portals: entry.cull.portals, exclusive_parts: entry.cull.exclusive, shared_parts: entry.cull.shared });
     if (entry.doors.derived.length) console.info(`house: ${entry.doors.derived.length} of ${entry.doors.count} doors have no hinge extras; hinges derived`, entry.doors.derived);
     for (const s of model.sets.values()) {
       s.current = xray ? s.xray : s.normal;
@@ -345,6 +418,29 @@ async function loadVersion(id, quiet = false) {
   })();
   versions.set(id, { def, loading: job });
   return job;
+}
+
+/* batching (model.js normaliseGeometry) keeps position, normal and one UV set, "uv". Two things rendered the furniture
+   near-black (CORRECTIONS-LOG 234): maps reading another UV set (glTF texCoord 1, the spec items' textures), so that set
+   moves into uv and the maps point at it; and materials from models with vertex colours (COLOR_0: vertexColors on), whose
+   colours the batch drops, so the shader multiplied by black. Batches tint per instance anyway, so vertexColors goes off. */
+function prepareForBatching(root) {
+  const SLOTS = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "alphaMap", "bumpMap"];
+  const moved = new Map();                    // material -> the set its maps read (shared materials are remapped once)
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!m) continue;
+      if (!moved.has(m)) {
+        if (m.vertexColors && m.map) { m.vertexColors = false; m.needsUpdate = true; }   // textured only: the plants' green IS their vertex colour (row 296)
+        const ch = SLOTS.map(s => m[s]?.channel).find(c => c > 0) || 0;
+        for (const s of SLOTS) if (ch && m[s] && m[s].channel === ch) { m[s] = m[s].clone(); m[s].channel = 0; m[s].needsUpdate = true; }
+        moved.set(m, ch);
+      }
+      const ch = moved.get(m);
+      if (ch && o.geometry.attributes["uv" + ch]) o.geometry.setAttribute("uv", o.geometry.attributes["uv" + ch]);
+    }
+  });
 }
 
 /* the headset's GPU memory: ~120 WebP textures at 1024 px are ~700 MB once uploaded; at 512 px a quarter
@@ -366,7 +462,7 @@ async function shrinkTextures(root, max) {
 }
 
 /* the headset keeps ONE version in memory: the one being left is freed (geometry, materials, textures) */
-const KEEP_ONE = IS_QUEST;
+const KEEP_ONE = LITE;
 function dropVersion(entry) {
   if (!entry?.model) return;
   entry.model.dispose();
@@ -1151,6 +1247,7 @@ function toolsBlocks() {
   out.push(B([
     { id: "doors", label: () => V?.doors?.anyOpen ? "Close all doors" : "Open all doors", on: () => !!V?.doors?.anyOpen, press: () => setAllDoors(!V.doors.anyOpen) },
     { id: "hidedoors", label: () => doorsHidden ? "Show doors" : "Hide doors", on: () => doorsHidden, press: () => setDoorsHidden(!doorsHidden) },
+    { id: "furnish", label: () => unfurnished ? "Unfurnished" : "Furnished", on: () => unfurnished, press: () => setUnfurnished(!unfurnished) },
     { id: "hts", label: "Heights", on: () => tool === "heights", press: () => setTool(tool === "heights" ? "info" : "heights") },
     { id: "cue", label: "Scale figure", on: () => !!scaleCue?.visible, press: toggleScaleCue },
     { id: "fly", label: () => inVR() ? (hovering ? "Land (L grip)" : "Fly: R grip") : flying ? "Flying (F)" : "Fly (F)", on: () => flying || hovering, press: () => {
@@ -1319,6 +1416,7 @@ function editSwap() {
 function onEdit(entry, current, ids) {
   const keepEl = target?.part?.element, keepPoint = target?.point;
   entry.model.applyElements(current, ids);
+  entry.edited = true;                         // a wall may have moved: the room culling's cells and portals are stale, so it stays off for this version (cull.js)
   entry.bvh = buildBVH(entry.model.parts);
   entry.doors = createDoors({ model: entry.model, bvh: entry.bvh, roomAt: entry.model.roomAt, table: current });   // rebuilt leaves open too (hinges derived)
   stageDirty = true;
@@ -1392,16 +1490,205 @@ function screenRay(x, y) {
 }
 const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 2 * 12 / innerHeight);
 
+/* ------------------------------------------------------------------ *
+ *  Mouse-look (round 7d, Jack 1 Nov: "to look around it should be just
+ *  moving the mouse"). Walking on a computer with a mouse: one click
+ *  into the view captures the mouse (Pointer Lock); then moving it
+ *  turns and looks (no inverted Y), W A S D walk, a centre crosshair
+ *  aims, and a left click acts on what is under it: a door opens or
+ *  shuts, a floor or the ground is jumped to (homeowner / review), the
+ *  other modes pick / measure as their tool says; in Mark mode the held
+ *  button draws along the crosshair. Esc frees the mouse for the
+ *  buttons. Touch screens, the overview, and a browser that refuses the
+ *  capture keep drag-to-look.
+ * ------------------------------------------------------------------ */
+const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
+const locked = () => document.pointerLockElement === renderer.domElement;
+let lockRefused = false, lockWanted = false;
+const lookEligible = e => walk && !inVR() && !IS_TOUCH && (!e || e.pointerType === "mouse") && !lockRefused;
+function captureMouse() {
+  lockWanted = true;
+  try {
+    const p = renderer.domElement.requestPointerLock({ unadjustedMovement: false });
+    if (p?.catch) p.catch(err => lockFailed(err));
+  } catch (err) { lockFailed(err); }
+}
+/* a refusal: browsers also refuse a re-capture within about a second of Esc, so a browser that has captured before
+   only gets a "click again"; one that refuses twice and never captured falls back to drag-to-look for the visit */
+let lockOk = false, lockFails = 0;
+function lockFailed(err) {
+  if (lockRefused) return;
+  lockWanted = false;
+  console.info("house: pointer lock refused", err?.message || err);
+  if (lockOk || ++lockFails < 2) { toast("Click the view again to look around with the mouse (or drag to look)"); return; }
+  lockRefused = true;
+  toast("This browser would not capture the mouse: drag to look around instead");
+  updateLookUI(); updateHelp();
+}
+document.addEventListener("pointerlockerror", () => lockFailed("pointerlockerror"));
+document.addEventListener("pointerlockchange", () => {
+  if (!locked()) { lockWanted = false; pointer.down = null; setHover(null); }
+  else { blurPass?.reset(); lockOk = true; lockFails = 0; }
+  updateLookUI();
+});
+function freeMouse() { if (locked()) document.exitPointerLock(); }
+function updateLookUI() {
+  const on = locked();
+  $("crosshair").hidden = !on;
+  $("lookHint").hidden = on || !lookEligible() || !$("start").hidden || !!marks?.noteOpen || !V;
+}
+/* the crosshair's ray (the screen's centre) or the cursor's */
+const centreRay = () => { rc.setFromCamera(ndc.set(0, 0), camera); return rc.ray.clone(); };
+const eventRay = e => locked() ? centreRay() : screenRay(e.clientX, e.clientY);
+/* a click under the crosshair: homeowner / review jump to a floor spot (walls, roofs, worktops refused), else act() */
+function lockedClick() {
+  const h = pickRay(centreRay());
+  if (SIMPLE) {
+    const p = partOf(h), d = p && V.doors?.doorOf(p);
+    if (d) { toggleDoor(p); return; }
+    const spot = h ? walkableSpot(h) : null;
+    if (spot) teleportTo(spot, null, "click teleport");
+    else if (h) toast("Not a place to stand: aim at a floor or the ground");
+    return;
+  }
+  act(h, h ? screenReach(h) : 0);
+}
+/* the crosshair's colour tells what a click would do (homeowner / review): yellow a door, green a floor */
+let crossTick = 0;
+function updateCrosshair(dt) {
+  if (!locked() || !V || (crossTick += dt) < 0.08) return;
+  crossTick = 0;
+  const el = $("crosshair");
+  if (marks?.active) { el.className = ""; return; }
+  const h = pickRay(centreRay()), p = partOf(h), d = p && V.doors?.doorOf(p);
+  setHover(SIMPLE ? (d ? p : null) : p);
+  if (!SIMPLE && tool === "heights") showHeights(h);
+  el.className = d ? "door" : SIMPLE && h && walkableSpot(h) ? "floor" : "";
+}
+
+/* ------------------------------------------------------------------ *
+ *  Thumb sticks (round 7d, Jack 1 Nov): phones and tablets, homeowner
+ *  and review. LEFT half of the lower screen = move (forward / back /
+ *  strafe, speed by how far you push, Fast respected), RIGHT half =
+ *  look (turn and pitch, rate by push, eased). Each stick rests faintly
+ *  in its corner and jumps to where the thumb lands, springing back on
+ *  release; both work at once (multi-touch). A tap anywhere else acts
+ *  like a click (a door, a jump to the floor, or draws in Mark mode);
+ *  dragging outside the stick zones still looks around.
+ * ------------------------------------------------------------------ */
+const STICKS = IS_TOUCH && SIMPLE;
+const STICK_R = 52;                              // thumb travel in px for a full push
+const touchMove = { x: 0, y: 0 }, touchLook = { x: 0, y: 0 }, lookVel = { yaw: 0, pitch: 0 };
+const LOOK_RATE = { yaw: 2.2, pitch: 1.3, ease: 0.12 };   // rad/s at full push; eased over 0.12 s
+const sticks = { L: { el: $("stickL"), id: null, cx: 0, cy: 0, v: touchMove }, R: { el: $("stickR"), id: null, cx: 0, cy: 0, v: touchLook } };
+const safe = (() => { const d = document.createElement("div");
+  d.style.cssText = "position:fixed;visibility:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
+  document.body.appendChild(d); return () => { const c = getComputedStyle(d); return { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 }; }; })();
+function stickRest(k) {
+  const sa = safe(), m = 30 + 64;
+  return k === "L" ? [sa.l + m, innerHeight - sa.b - m] : [innerWidth - sa.r - m, innerHeight - sa.b - m];
+}
+function placeStick(k, x, y, kx = 0, ky = 0) {
+  const st = sticks[k];
+  st.el.style.left = `${x}px`; st.el.style.top = `${y}px`;
+  st.el.querySelector("i").style.transform = `translate(${kx}px, ${ky}px)`;
+}
+function layoutSticks() {
+  const on = STICKS && walk && !inVR() && !!V && $("start").hidden && !marks?.active;   // marking: the finger draws instead
+  document.body.classList.toggle("touch-sticks", STICKS);
+  for (const k of ["L", "R"]) { sticks[k].el.hidden = !on; if (on && sticks[k].id === null) { const [x, y] = stickRest(k); placeStick(k, x, y); } }
+}
+/* which stick a touch at (x, y) starts: the lower 58 % of the screen, split in halves; null elsewhere */
+function stickZone(x, y) {
+  if (!STICKS || !walk || inVR() || marks?.active || y < innerHeight * 0.42) return null;
+  const bar = $("baBar").getBoundingClientRect();
+  if (x >= bar.left && x <= bar.right && y >= bar.top && y <= bar.bottom) return null;
+  return x < innerWidth / 2 ? "L" : "R";
+}
 renderer.domElement.addEventListener("pointerdown", e => {
-  if (marks?.active && e.button === 0 && !inVR()) return;      // review, marking: the left button draws (right-drag still looks)
+  if (e.pointerType !== "touch") return;
+  const k = stickZone(e.clientX, e.clientY);
+  if (!k || sticks[k].id !== null) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const st = sticks[k];
+  st.id = e.pointerId; st.cx = e.clientX; st.cy = e.clientY; st.v.x = st.v.y = 0; st.t0 = performance.now(); st.travel = 0;
+  st.el.classList.add("active"); placeStick(k, st.cx, st.cy);
+  try { renderer.domElement.setPointerCapture(e.pointerId); } catch (_) {}
+});
+const stickOf = id => sticks.L.id === id ? "L" : sticks.R.id === id ? "R" : null;
+addEventListener("pointermove", e => {
+  const k = stickOf(e.pointerId);
+  if (!k) return;
+  e.stopImmediatePropagation();
+  const st = sticks[k];
+  let dx = e.clientX - st.cx, dy = e.clientY - st.cy;
+  const d = Math.hypot(dx, dy);
+  st.travel = Math.max(st.travel, d);
+  if (d > STICK_R) { dx *= STICK_R / d; dy *= STICK_R / d; }
+  const dead = 0.12, m = Math.min(1, d / STICK_R), mm = m < dead ? 0 : (m - dead) / (1 - dead);
+  st.v.x = d ? dx / Math.min(d, STICK_R) * mm : 0; st.v.y = d ? dy / Math.min(d, STICK_R) * mm : 0;
+  placeStick(k, st.cx, st.cy, dx, dy);
+}, true);
+const stickUp = e => {
+  const k = stickOf(e.pointerId);
+  if (!k) return;
+  e.stopImmediatePropagation();
+  const st = sticks[k];
+  st.id = null; st.v.x = st.v.y = 0;
+  st.el.classList.remove("active");
+  /* a quick tap in a stick's zone (no push) still acts: a door opens, or you jump to the floor you tapped */
+  if (e.type === "pointerup" && st.travel < 10 && performance.now() - st.t0 < 280 && V) {
+    const h = pickRay(screenRay(st.cx, st.cy));
+    act(h, h ? screenReach(h) : 0);
+  }
+  placeStick(k, st.cx, st.cy, 0, 0);                        // the knob springs back (CSS), then the stick goes home
+  setTimeout(() => { if (st.id === null) { const [x, y] = stickRest(k); placeStick(k, x, y); } }, 200);
+};
+addEventListener("pointerup", stickUp, true);
+addEventListener("pointercancel", stickUp, true);
+/* the right stick turns and pitches the view (eased; a light curve keeps small pushes fine) */
+function touchLookStep(dt) {
+  const k = Math.min(1, dt / LOOK_RATE.ease);
+  const wantYaw = -Math.sign(touchLook.x) * touchLook.x * touchLook.x * LOOK_RATE.yaw;
+  const wantPitch = -Math.sign(touchLook.y) * touchLook.y * touchLook.y * LOOK_RATE.pitch;
+  lookVel.yaw += (wantYaw - lookVel.yaw) * k; lookVel.pitch += (wantPitch - lookVel.pitch) * k;
+  if (Math.abs(lookVel.yaw) < 1e-4 && !wantYaw) lookVel.yaw = 0;
+  if (Math.abs(lookVel.pitch) < 1e-4 && !wantPitch) lookVel.pitch = 0;
+  yawPitch.yaw += lookVel.yaw * dt;
+  yawPitch.pitch = Math.max(-1.3, Math.min(1.3, yawPitch.pitch + lookVel.pitch * dt));
+}
+
+renderer.domElement.addEventListener("pointerdown", e => {
+  if (inVR()) return;
+  if (!locked() && lookEligible(e) && e.button === 0) {      // the capture click: it only captures, it does not act or draw
+    e.stopImmediatePropagation();
+    pointer.down = { x: e.clientX, y: e.clientY, yaw: yawPitch.yaw, pitch: yawPitch.pitch, id: e.pointerId, capture: true };
+    pointer.moved = 0;
+    captureMouse();
+    return;
+  }
+  if (locked()) {
+    if (e.button !== 0) return;
+    if (marks?.active) return;                                // marks.js draws along the crosshair
+    lockedClick();
+    return;
+  }
+  if (marks?.active && e.button === 0) return;               // review, marking: the left button draws (right-drag still looks)
   pointer.down = { x: e.clientX, y: e.clientY, yaw: yawPitch.yaw, pitch: yawPitch.pitch, id: e.pointerId, marking: !!marks?.active };
   pointer.moved = 0;
 });
 if (MODE.marks) renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
 addEventListener("pointermove", e => {
+  if (locked()) {                                             // mouse-look: the mouse turns and looks
+    if (inVR()) return;
+    const mx = Math.max(-250, Math.min(250, e.movementX || 0)), my = Math.max(-250, Math.min(250, e.movementY || 0));
+    yawPitch.yaw -= mx * LOOK_SENS;
+    yawPitch.pitch = Math.max(-1.3, Math.min(1.3, yawPitch.pitch - my * LOOK_SENS));
+    return;
+  }
   if (pointer.down && pointer.down.id === e.pointerId) {
     pointer.moved = Math.max(pointer.moved, Math.hypot(e.clientX - pointer.down.x, e.clientY - pointer.down.y));
-    if (walk && !renderer.xr.isPresenting) {         // drag to look (grab the view)
+    if (walk && !renderer.xr.isPresenting) {         // drag to look (touch, or no mouse capture)
       yawPitch.yaw = pointer.down.yaw + (e.clientX - pointer.down.x) * 0.005;
       yawPitch.pitch = Math.max(-1.3, Math.min(1.3, pointer.down.pitch + (e.clientY - pointer.down.y) * 0.005));
     }
@@ -1418,8 +1705,9 @@ addEventListener("pointermove", e => {
 addEventListener("pointerup", e => {
   const d = pointer.down;
   pointer.down = null;
+  if (locked() || d?.capture) return;
   if (!d || e.target !== renderer.domElement || pointer.moved > 6 || !V || d.marking || marks?.active) return;
-  const h = pickRay(screenRay(e.clientX, e.clientY));
+  const h = pickRay(eventRay(e));
   act(h, h ? screenReach(h) : 0);
 });
 /* one click / trigger, whatever the tool */
@@ -1427,7 +1715,10 @@ function act(h, reach) {
   if (SIMPLE) {                                   // homeowners: a door opens, nothing else is picked
     const p = partOf(h);
     if (p && V.doors?.doorOf(p)) toggleDoor(p);
-    else if (h && walk && h.normal.y > 0.7 && p?.collide) glideTo(h.point);     // click / tap the ground: walk there
+    else if (h && walk) {                           // click / tap a floor or the ground: jump there (walls, roofs, worktops refused)
+      const spot = walkableSpot(h);
+      if (spot) teleportTo(spot, null, "tap teleport");
+    }
     return null;
   }
   if (tool === "measure") {
@@ -1463,8 +1754,49 @@ function toggleDoor(p) {
 /* "Hide doors" (Jack, 1 Nov): every door leaf and its glass out of sight and out of the walk, frames and linings kept;
    it carries across versions and Before/After until pressed again */
 let doorsHidden = false;
-function markDoorsHidden() {
-  if (V) for (const p of V.model.parts) if (isLeaf(p)) p.viewHidden = doorsHidden;
+/* Furnished / Unfurnished (round 8, Jack 2 Nov: "build it in a way I can switch between furnished and unfurnished so
+   I can see all the other details more clearly for review"; SIGNOFF.md, decision of 2 Nov). Unfurnished hides the
+   LOOSE layer: furniture, soft furnishings, decor, plants and the lived-in details, i.e. every node whose glTF extras
+   carry `furnishing: true`; for builds made before that extra existed, a part whose spec item (spec_id in the spec's
+   versions.*.items) is in one of those categories, or whose spec_kind already names one. Fixed fittings stay: joinery,
+   sanitaryware, radiators, lighting, appliances, switches and sockets, doors, windows, finishes; the garden setting
+   stays. The same mechanism as "No doors": p.viewHidden, so a hidden part is not drawn, not picked, and neither
+   blocks walking nor a teleport (applyStage drops it from the visible and solid masks). Remembered per device. */
+const LOOSE = new Set(["furniture", "soft_furnishing", "decor", "plant"]);
+let specCategory = new Map();                    // spec item id -> category (furniture, joinery, lighting...)
+let unfurnished = store.get("house-unfurnished-v1", "0") === "1";
+const isLoose = p => p.ud.furnishing === true || p.ud.lived_in === true || LOOSE.has(p.ud.spec_kind)
+  || LOOSE.has(p.ud.spec_category) || (p.ud.spec_id != null && LOOSE.has(specCategory.get(p.ud.spec_id)));
+function markDoorsHidden() {                      // (both rules: the door leaves when "No doors", the loose layer when Unfurnished)
+  if (!V) return;
+  let n = 0;
+  for (const p of V.model.parts) {
+    const loose = unfurnished && isLoose(p);
+    if (loose) n++;
+    p.viewHidden = (doorsHidden && isLeaf(p)) || loose;
+  }
+  V.looseHidden = n;
+}
+/* items, not mesh nodes: one sofa is several glTF nodes (lessons F1 / log row 197) */
+function looseCount() { return V ? new Set(V.model.parts.filter(isLoose).map(p => p.ud.spec_id || p.element || p.name)).size : 0; }
+function setUnfurnished(on) {
+  unfurnished = !!on;
+  store.set("house-unfurnished-v1", unfurnished ? "1" : "0");
+  markDoorsHidden();
+  if (V) applyStageNow();
+  if (target && target.part.viewHidden) setTarget(null);
+  if (hoverPart?.viewHidden) setHover(null);
+  const n = looseCount();
+  perf.note({ event: "furnished", on: !unfurnished, loose_parts: n });
+  toast(unfurnished ? (n ? `Unfurnished: ${n} loose item${n === 1 ? "" : "s"} hidden (furniture, soft furnishings, decor, plants)` : "Unfurnished: this build has no loose furniture yet")
+    : "Furnished");
+  furnishButtons();
+  baPanel.userData.draw();
+  refreshBoard();
+}
+function furnishButtons() {
+  const b = $("baFurnish");
+  if (b) { b.textContent = unfurnished ? "Unfurnished" : "Furnished"; b.setAttribute("aria-pressed", String(unfurnished)); }
 }
 function setDoorsHidden(on) {
   doorsHidden = on;
@@ -1491,7 +1823,7 @@ addEventListener("keydown", e => {
   keys.add(e.code);
   if (SIMPLE) {                                   // homeowners: walk, fly, Before / After, the frame HUD
     if (e.code === "KeyV") { if (flying) setFly(false); setWalk(!walk); }
-    if (e.code === "KeyF") setFly(!flying);
+    if (e.code === "KeyF" || e.code === "Space") { e.preventDefault(); setFly(!flying); }
     if (e.code === "KeyH") perf.toggle();
     if (e.code === "KeyB") beforeAfter(false);
     if (e.code === "KeyN") beforeAfter(true);
@@ -1597,6 +1929,7 @@ function setWalk(on) {
     camera.rotation.set(0, 0, 0);
     orbit.update();
   }
+  if (!on) freeMouse();
   camera.updateProjectionMatrix();
   $("walk").setAttribute("aria-pressed", String(on));
   $("walk").textContent = on ? "Overview" : "Walk";
@@ -1619,6 +1952,7 @@ function desktopWalk(dt) {
   if (keys.has("KeyS") || keys.has("ArrowDown")) f -= 1;
   if (keys.has("KeyA") || keys.has("ArrowLeft")) s -= 1;
   if (keys.has("KeyD") || keys.has("ArrowRight")) s += 1;
+  f -= touchMove.y; s += touchMove.x;              // the left thumb stick (phones): speed by how far it is pushed
   if (flying) {                                    // fly: no collision, Q / E down / up, Shift fast
     const v = (keys.has("ShiftLeft") ? FLY.fast : FLY.desk) * dt, yw = yawPitch.yaw;
     feet.x += (-Math.sin(yw) * f + Math.cos(yw) * s) * v;
@@ -1911,7 +2245,9 @@ const wristTab = createBoardTab();
    1 Nov): Before | After | Height / No doors | Go to | Fast / -1 in | +1 in | Mark (review only). Three columns so
    every label stays big enough to read in the headset (40 px on a 15 cm panel: about 9 mm letters). */
 let heightOffer = false;
-const WRIST_ROWS = [["before", "after", "height"], ["doors", "goto", "fast"], ["hdown", "hup", MODE.marks ? "mark" : null]];
+/* round 7c (Jack, 1 Nov): Turn (smooth / snap) and Comfort (blur / vignette / off) added: four rows of three */
+/* round 8: Furnished / Unfurnished next to No doors */
+const WRIST_ROWS = [["before", "after", "height"], ["doors", "furnish", "goto"], ["fast", "turn", "comfort"], ["hdown", "hup", MODE.marks ? "mark" : null]];
 const baPanel = (() => {
   const CWD = 210, RH = 150, X0 = 14, Y0 = 16, COLS = 3, ROWS = WRIST_ROWS.length;
   const W = X0 * 2 + COLS * CWD - 12, Hh = Y0 * 2 + ROWS * RH - 12;
@@ -1924,14 +2260,14 @@ const baPanel = (() => {
   mesh.renderOrder = 905; mesh.visible = false;
   mesh.position.set(0, 0.05, 0.075); mesh.rotation.set(-Math.PI / 2.6, 0, 0);          // on the back of the left wrist
   const LABEL = { before: "Before", after: "After", height: "Height", doors: "No doors", goto: "Go to", fast: "Fast",
-                  hdown: "−1 in", hup: "+1 in", mark: "Mark" };
-  const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden
+                  hdown: "−1 in", hup: "+1 in", mark: "Mark", turn: "Turn", comfort: "Comfort", furnish: "Furniture" };
+  const isOn = id => id === "after" ? afterShown() : id === "before" ? !afterShown() : id === "doors" ? doorsHidden : id === "furnish" ? unfurnished
     : id === "height" ? !!floorOffset : id === "fast" ? fastWalk : id === "goto" ? gotoMenu.isOpen : id === "mark" ? !!marks?.active : false;
   const sub = id => id === "height" ? ftInWords(personHeight) : id === "mark" && marks?.active ? MARK_KINDS[marks.kind].label
-    : id === "fast" ? (fastWalk ? "on" : "") : "";
+    : id === "fast" ? (fastWalk ? "on" : "") : id === "furnish" ? (unfurnished ? "hidden" : "shown") : id === "turn" ? turnMode : id === "comfort" ? COMFORT_LABEL[comfort] : "";
   let hov = null, key = "";
   const draw = () => {
-    const k = `${afterShown()}|${hov}|${floorOffset}|${doorsHidden}|${fastWalk}|${gotoMenu.isOpen}|${marks?.active}|${marks?.kind}|${personHeight}`;
+    const k = `${afterShown()}|${hov}|${floorOffset}|${doorsHidden}|${fastWalk}|${gotoMenu.isOpen}|${marks?.active}|${marks?.kind}|${personHeight}|${turnMode}|${comfort}|${unfurnished}`;
     if (k === key) return; key = k;
     c.clearRect(0, 0, W, Hh);
     c.fillStyle = "rgba(14,16,15,0.92)"; c.beginPath(); c.roundRect(3, 3, W - 6, Hh - 6, 28); c.fill();
@@ -1962,11 +2298,14 @@ const baPanel = (() => {
       if (!id) return null;
       if (id === "height") heightCheck();
       else if (id === "doors") setDoorsHidden(!doorsHidden);
+      else if (id === "furnish") setUnfurnished(!unfurnished);
       else if (id === "goto") gotoMenu.toggle();
       else if (id === "fast") setFastWalk(!fastWalk);
       else if (id === "hdown") setPersonHeight(personHeight - 0.0254);
       else if (id === "hup") setPersonHeight(personHeight + 0.0254);
       else if (id === "mark") marks?.toggle();
+      else if (id === "turn") setTurnMode(turnMode === "smooth" ? "snap" : "smooth");
+      else if (id === "comfort") setComfort(COMFORT[(COMFORT.indexOf(comfort) + 1) % COMFORT.length]);
       else beforeAfter(id === "after");
       draw();
       return id;
@@ -1993,6 +2332,46 @@ const afterShown = () => !!V && stageIndex(stageValue) >= stageN && V.def.kind =
  *  is pushed and stopping at once when it is let go (no slide). Fly
  *  speeds do not change. Remembered for the session.
  * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ *
+ *  Turning and comfort (round 7c, Jack 1 Nov). Homeowner and review:
+ *  the right stick turns SMOOTHLY (75 deg/s at full push, scaled by the
+ *  push, easing in and out over 0.15 s); "Turn" on the wrist switches
+ *  to the old 30 deg snap. COMFORT while turning or moving on the
+ *  sticks: "blur" (camera motion blur, src/house/motionblur.js; the
+ *  default), "vignette" (the dark ring, as before) or "off". Both are
+ *  remembered for the session. Builder, inspector and architect keep
+ *  snap turning and the vignette.
+ * ------------------------------------------------------------------ */
+const TURN = { rate: THREE.MathUtils.degToRad(75), ease: 0.15 };
+const COMFORT = ["blur", "vignette", "off"];
+const sessGet = (k, d, ok) => { try { const v = sessionStorage.getItem(k); return ok(v) ? v : d; } catch (_) { return d; } };
+const sessSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (_) {} };
+let turnMode = SIMPLE ? sessGet("house-turn", "smooth", v => v === "smooth" || v === "snap") : "snap";
+let comfort = SIMPLE ? sessGet("house-comfort", "blur", v => COMFORT.includes(v)) : "vignette";
+let turnVel = 0;                                // rad/s of the smooth turn now (eased)
+let blurFade = 0;                               // 0..1: the motion blur fading in while you move, out when you stop
+/* round 7d (Jack: "I don't like the blur, it's way too much"): a third of the r7c strength, only on genuinely fast
+   turns (normal looking and walking stay sharp), edges only, quick fades */
+const BLUR = { fade: 0.08, xrShutter: 0.33, deskShutter: 0.25, turnMin: 2.0, xrTurnFrac: 0.8, flyMin: 6 };
+const COMFORT_LABEL = { blur: "subtle blur", vignette: "vignette", off: "off" };
+/* the screen's Comfort button (phones get the short form so the bar stays one or two rows) */
+function comfortButton() {
+  const b = $("baComfort"); if (!b) return;
+  b.textContent = IS_TOUCH ? { blur: "Subtle blur", vignette: "Vignette", off: "Comfort off" }[comfort] : `Comfort: ${COMFORT_LABEL[comfort]}`;
+}
+function setTurnMode(m) {
+  turnMode = m; turnVel = 0; sessSet("house-turn", m);
+  perf.note({ event: "turn mode", mode: m });
+  toast(m === "smooth" ? "Turning: smooth (right stick)" : "Turning: snap, 30° steps");
+  baPanel.userData.draw();
+}
+function setComfort(m) {
+  comfort = m; sessSet("house-comfort", m);
+  perf.note({ event: "comfort", mode: m });
+  toast(m === "blur" ? "Comfort: subtle blur on fast turns" : m === "vignette" ? "Comfort: dark vignette while you turn or move" : "Comfort: off");
+  comfortButton();
+  baPanel.userData.draw();
+}
 const FAST = { vr: 3.0, ramp: 0.6, desk: 2 };
 let fastWalk = (() => { try { return sessionStorage.getItem("house-fast-walk") === "1"; } catch (_) { return false; } })();
 let walkBoost = 0;                              // 0..1: how far the fast speed has eased in since the stick was pushed
@@ -2066,6 +2445,7 @@ const headYaw = () => { const d = camera.getWorldDirection(new THREE.Vector3());
 /* put the feet at `to` (a short fade in the headset); yaw (radians, 0 = looking along -z) turns you to face that way */
 function teleportTo(to, yaw = null, why = "teleport") {
   perf.tag(why);
+  xrBlur.reset(); blurPass?.reset();
   if (inVR()) {
     fade.black(); fade.to(0, 0.35);
     flying = hovering = false; landing = null; tpAim = null; tpRing.visible = false;
@@ -2326,7 +2706,7 @@ const safeSurface = s => String(s || "surface").replace(/[^A-Za-z0-9_. -]/g, "_"
 const r3v = v => v.toArray().map(x => Math.round(x * 1000) / 1000);
 let markCardShown = false;
 const marks = MODE.marks ? createMarks({
-  scene, camera, renderer, siteKey: SITE, inXR: inVR, seeThrough: false, tagField: "parts",
+  scene, camera, renderer, siteKey: SITE, inXR: inVR, seeThrough: false, tagField: "parts", lockAim: true,
   hint: { draw: "Trigger draw · X kind · Y undo · Mark on the wrist: done", note: "Trigger types · hold A to talk · Delete removes it" },
   raycast(ray, far) {
     const h = pickRay(ray);
@@ -2447,8 +2827,8 @@ function showCard(title, lines, frac = null, seconds = 0) {
 const heightLine = where => `Height set to ${ftInWords(personHeight)}; change it under Height${where}.`;
 const howTo = () => SIMPLE
   ? [heightLine(" on your left wrist (−1 in / +1 in)"),
-     `LEFT WRIST (point the right controller, trigger): Before | After | Height | No doors | Go to | Fast${MODE.marks ? " | Mark" : ""}. B / A: Before / After.`,
-     "TRIGGER on a floor: jump there; on a door: open it. Left stick walks, right stick turns. Hold RIGHT grip + right stick to fly; LEFT grip lands."]
+     `LEFT WRIST (point the right controller, trigger): Before | After | Height | No doors | Furniture | Go to | Fast | Turn | Comfort${MODE.marks ? " | Mark" : ""}. B / A: Before / After.`,
+     "TRIGGER on a floor: jump there; on a door: open it. Left stick walks, right stick turns smoothly (Turn: snap). Hold RIGHT grip + right stick to fly; LEFT grip lands."]
   : [`${heightLine(" (Board → Tools)")} LEFT wrist up for the board (X pins, Y minimises). RIGHT controller + trigger picks: the board keeps it.`,
      "A / B: next / previous stage. Left stick walks, right stick turns; push it forward to teleport. Trigger on a door opens it.",
      "FLY: hold the RIGHT grip and steer with the right stick (point up to climb, push harder = faster); let go to hover; LEFT grip lands. Right stick click: frame HUD."];
@@ -2560,25 +2940,33 @@ function vrFrame(dt, now) {
   const grip = !!R && !!rb[1]?.pressed;
 
   const [rx, ry] = stick(ra).map(dead);
-  // right stick left / right: snap turn (not while the grip steers a flight)
-  if (!grip && Math.abs(rx) > 0.65 && Math.abs(ry) < 0.5) {
+  // right stick left / right: turn (not while the grip steers a flight). Smooth: the push sets the speed (75 deg/s
+  // full), reached and let go of over TURN.ease s; snap: 30 deg steps (builder / inspector / architect, or Turn: snap)
+  if (turnMode === "smooth") {
+    const want = !grip && Math.abs(ry) < 0.6 ? -rx * TURN.rate : 0;
+    const acc = TURN.rate / TURN.ease * dt;
+    turnVel += Math.max(-acc, Math.min(acc, want - turnVel));
+    if (Math.abs(turnVel) < 1e-3 && !want) turnVel = 0;
+    if (turnVel) rotateAroundHead(turnVel * dt);
+  } else if (!grip && Math.abs(rx) > 0.65 && Math.abs(ry) < 0.5) {
     if (!snapLatch) { rotateAroundHead(-Math.sign(rx) * Math.PI / 6); snapLatch = true; hapticPulse([R], 0.3, 15); }
   } else if (Math.abs(rx) < 0.3) snapLatch = false;
 
-  speedNow = 0;
+  speedNow = Math.abs(turnVel) / TURN.rate;
   if (grip) {
     /* fly: the right stick steers while the grip is held. Forward / back go along where the right controller points
        (its pitch too: point up and push forward to climb), left / right strafe level, and the harder you push the
        faster (1.5 up to 10 m/s). No collision. Let go of the grip and you HOVER where you are; the left grip lands. */
     if (!flying) { flying = true; hovering = false; landing = null; tpAim = null; tpRing.visible = false; perf.tag("fly"); }
     const mag = Math.min(1, Math.hypot(rx, ry));
+    flySpeed = mag > 0 ? FLY.base + (FLY.max - FLY.base) * mag * mag : 0;
     if (mag > 0) {
       const fwd = controllerRay(R).direction.clone();
       const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
       if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
       const v = fwd.multiplyScalar(-ry).addScaledVector(side.normalize(), rx);
       if (v.lengthSq() > 1e-9) player.position.addScaledVector(v.normalize(), (FLY.base + (FLY.max - FLY.base) * mag * mag) * dt);
-      speedNow = 1;
+      speedNow = Math.max(speedNow, 1);
     }
   } else if (flying) { flying = false; hovering = true; }   // let go: hold the position (Jack: no easing down)
   if (landing) {
@@ -2613,7 +3001,7 @@ function vrFrame(dt, now) {
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const mv = new THREE.Vector3().addScaledVector(fwd, -ly).addScaledVector(right, lx);
     if (mv.lengthSq() > 1) mv.normalize();
-    speedNow = mv.length() * (fastWalk ? 1.25 : 1);
+    speedNow = Math.max(speedNow, mv.length() * (fastWalk ? 1.25 : 1));
     walkBoost = fastWalk ? Math.min(1, walkBoost + dt / FAST.ramp) : 0;     // Fast eases in; letting go stops at once
     const sp = vrWalkSpeed();
     if (hovering) player.position.addScaledVector(mv, sp * dt);   // hovering: walk on the air at that height
@@ -2747,6 +3135,7 @@ camera.add(vignette);
 
 async function enterVR() {
   if (!navigator.xr) return;
+  freeMouse();
   try {
     const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor", "hand-tracking"] });
     const q = VRQ[vrQuality];
@@ -2799,13 +3188,14 @@ function toast(text) {
 }
 function updateHelp() {
   if (CUST) {
-    $("help").textContent = IS_TOUCH ? "Before / After · drag to look around · tap the ground to walk there · tap a door to open it · Go to a room"
-      : `Before / After (B / N) · drag to look around · W A S D or click the ground to walk (G fast, Shift faster) · click a door to open it · F to fly (Q / E down / up) · Go to a room${MODE.marks ? " · M mark" : ""}`;
+    $("help").textContent = IS_TOUCH ? `Left thumb moves · right thumb looks · tap a door to open it, or the floor to jump there · Go to a room${MODE.marks ? " · Mark, then draw with a finger" : ""}`
+      : lockRefused ? `Before / After (B / N) · drag to look around · W A S D or click the ground to walk (G fast, Shift faster) · click a door to open it · F to fly (Q / E down / up) · Go to a room${MODE.marks ? " · M mark" : ""}`
+      : `Click the view, then move the mouse to look (Esc frees it) · W A S D walk (G fast, Shift faster) · click: open a door or jump to the floor under the crosshair · F or Space fly (Q / E down / up) · B / N Before / After${MODE.marks ? " · M mark, hold the click to draw" : ""}`;
     $("baHelp").textContent = $("help").textContent;
     return;
   }
   const parts = [];
-  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : "W A S D walk · drag to look · Shift faster");
+  if (walk) parts.push(IS_TOUCH ? "drag to look · tap a floor twice to walk there" : lockRefused ? "W A S D walk · drag to look · Shift faster" : "click the view, then move the mouse to look (Esc frees it) · W A S D walk · Shift faster");
   else parts.push(IS_TOUCH ? "drag to turn · pinch to zoom · two fingers to pan" : "drag to turn · right-drag to pan · scroll to zoom");
   parts.push(tool === "measure" ? "click two points to measure · snaps to corners (pink) and edges (blue) · M done"
     : tool === "addwall" ? "click the two ends of the new wall · Esc cancels"
@@ -2831,6 +3221,8 @@ $("baBefore").addEventListener("click", () => beforeAfter(false));
 $("baAfter").addEventListener("click", () => beforeAfter(true));
 $("baFly").addEventListener("click", () => { setFly(!flying); $("baFly").setAttribute("aria-pressed", String(flying)); });
 $("baFast").addEventListener("click", () => setFastWalk(!fastWalk));
+$("baFurnish")?.addEventListener("click", () => setUnfurnished(!unfurnished));
+$("baComfort")?.addEventListener("click", () => setComfort(COMFORT[(COMFORT.indexOf(comfort) + 1) % COMFORT.length]));
 $("fastWalk").addEventListener("click", () => setFastWalk(!fastWalk));
 $("baGoto").addEventListener("change", e => { const pl = placesCache?.list[+e.target.value]; e.target.value = ""; e.target.blur(); if (pl) goToPlace(pl); });
 $("baMark").addEventListener("click", () => marks?.toggle());
@@ -2893,10 +3285,12 @@ async function boot() {
   [regs, sheets, mats, spec] = await Promise.all([loadRegs(BASE), fetchJSON(BASE + "sheets.json").catch(() => null), fetchJSON(BASE + "materials.json").catch(() => null),
     /* Go to's named cameras: the site's own spec; a preview copy of a site (<site>-wip / -preview / -fixture) has none, so
        it reads the spec of the site it previews */
-    SIMPLE ? fetchJSON(BASE + (manifest.spec || "spec/spec_v1.json")).catch(() => {
+    fetchJSON(BASE + (manifest.spec || "spec/spec_v1.json")).catch(() => {
       const m = SITE.match(/^(.+)-(wip|preview|fixture)$/);
       return m ? fetchJSON(`assets/sites/${m[1]}/spec/spec_v1.json`).catch(() => null) : null;
-    }) : null]);
+    })]);
+  /* Furnished / Unfurnished: the spec's item categories (the fallback for builds without the furnishing extra) */
+  specCategory = new Map(Object.values(spec?.versions || {}).flatMap(v => (v.items || []).map(it => [it.id, it.category])));
   specCameras = Array.isArray(spec?.cameras) ? spec.cameras : [];        // Go to: the spec's named cameras (eye_m / target_m, viewer frame)
   specWalk = spec?.walkthrough || null;
   setTiles(mats?.materials);                           // rebuilt walls get the baked walls' UVs
@@ -2917,6 +3311,8 @@ async function boot() {
   if (MODE.start.walk) spawnAt(CUST ? "Front of the house" : MODE.start.spawn);
   if (SIMPLE) { $("baBefore").setAttribute("aria-pressed", String(!afterShown())); $("baAfter").setAttribute("aria-pressed", String(afterShown())); }
   $("baFast").setAttribute("aria-pressed", String(fastWalk)); $("fastWalk").setAttribute("aria-pressed", String(fastWalk));
+  comfortButton();
+  furnishButtons();
   if (marks) { await marks.load(); marks.refreshVisibility(); }
   setXray(false);
   const lg = $("legend");
@@ -2930,7 +3326,7 @@ async function boot() {
   $("startDesktop").disabled = false;
   console.info(`house: ${V.model.parts.length} parts · house ${V.model.drawCalls()} batches + setting ${V.model.settingCalls()} · ${V.bvh.triangles} ray triangles · mode ${MODE.key}`);
   /* make the Before / After switch instant on a laptop; the Quest loads a version only when asked (memory) */
-  if (!IS_QUEST && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
+  if (!LITE && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
   dispatchEvent(new Event("house-ready"));
@@ -3017,7 +3413,23 @@ if (params.get("xrsim")) addEventListener("house-ready", () => sim.start(), { on
 /* ------------------------------------------------------------------ *
  *  Loop
  * ------------------------------------------------------------------ */
-let last = performance.now(), workPrev = 0;
+let renderMs = 0;
+/* the screen camera's own motion this frame: a turn or a move fast enough to blur; a jump (teleport, Go to) resets */
+const camPrev = { m: new THREE.Matrix4(), has: false };
+const _cq0 = new THREE.Quaternion(), _cq1 = new THREE.Quaternion(), _cp0 = new THREE.Vector3(), _cp1 = new THREE.Vector3(), _cs = new THREE.Vector3();
+function camMotion(dt) {
+  camera.updateMatrixWorld(true);
+  if (!camPrev.has) { camPrev.m.copy(camera.matrixWorld); camPrev.has = true; return { fast: false, moving: false }; }
+  camPrev.m.decompose(_cp0, _cq0, _cs); camera.matrixWorld.decompose(_cp1, _cq1, _cs);
+  camPrev.m.copy(camera.matrixWorld);
+  const ang = _cq0.angleTo(_cq1), dist = _cp0.distanceTo(_cp1);
+  if (ang > 0.5 || dist > 1.0) { blurPass?.reset(); return { fast: false, moving: false }; }
+  const w = ang / Math.max(dt, 1e-3), v = dist / Math.max(dt, 1e-3);
+  /* fast: above about 115 deg/s of turning or a 6 m/s flight (looking about and walking stay sharp);
+     moving: enough for the screen's vignette when Comfort is vignette */
+  return { fast: w > BLUR.turnMin || v > BLUR.flyMin, moving: w > 0.8 || v > 1.0 };
+}
+let last = performance.now(), workPrev = 0, lookUiTick = 0, deskMoving = false, flySpeed = 0;
 renderer.info.autoReset = false;               // the composer renders several passes a frame: count them all, reset once
 const SEND_PERF = IS_QUEST || params.has("perf");
 function loop(fakeNow) {
@@ -3037,6 +3449,7 @@ function loop(fakeNow) {
     if (tween.t >= 1) tween = null;
   }
   if (stageDirty) applyStageNow();
+  else V.cull?.prepare();                      // the wall holes are found once, on the first frame at the last stage (not on the first frame in the headset)
   if (V.doors?.moving) { V.doors.update(dt); perf.tag("doors"); if (hoverPart?.pose) { const h = hoverPart; hoverPart = null; setHover(h); } }
   if (inVR()) { if (SIM.on) simPose(); vrFrame(dt, now); }
   else if (walk) desktopWalk(dt);
@@ -3044,6 +3457,13 @@ function loop(fakeNow) {
   if (target && (playing || tween || target.part.pose)) updateHighlight();
   measure.update(camera);
   if (marks) { marks.update(dt); if (marksListDirty) renderMarksList(); }
+  /* mouse-look: the crosshair's colour, the capture hint; a mark's note box needs the mouse back to type and press Save */
+  if (!inVR()) {
+    if (STICKS && walk) touchLookStep(dt);
+    updateCrosshair(dt);
+    if (marks?.noteOpen && locked()) freeMouse();
+    if ((lookUiTick += dt) > 0.25) { lookUiTick = 0; updateLookUI(); layoutSticks(); }
+  }
   /* the board: content on one frame, its canvas on a later one (never both in one frame) */
   if (!flushBoard(now) && inVR()) {
     const t0 = performance.now();
@@ -3051,13 +3471,33 @@ function loop(fakeNow) {
     if (step) { const ms = performance.now() - t0; if (ms > 4) perf.tag(`board ${step} ${Math.round(ms)} ms`); }
   }
   fade.update(dt);
-  const vt = inVR() && speedNow > 0.05 ? (MODE.vr.locomotion === "teleport" && !flying ? 0.75 : 0.5) + (fastWalk && walkBoost > 0.3 && !flying ? 0.1 : 0) : 0;
+  adaptExposure(dt);
+  const vt = !inVR() && SIMPLE && comfort === "vignette" && deskMoving ? 0.45
+    : inVR() && comfort === "vignette" && speedNow > 0.05 ? (MODE.vr.locomotion === "teleport" && !flying ? 0.75 : 0.5) + (fastWalk && walkBoost > 0.3 && !flying ? 0.1 : 0) : 0;
   vignette.material.opacity += (vt - vignette.material.opacity) * Math.min(1, dt * 8);
   vignette.visible = vignette.material.opacity > 0.01;
-  if (renderer.xr.isPresenting || !composer) renderer.render(scene, camera);
-  else composer.render();
+  /* the headset draws with no post-processing; the simulated headset does the same, so its pictures match the Quest's
+     (the desktop GTAO pass drew the marks' label sprites as black quads in ?xrsim=1; the headset never runs it) */
+  /* motion blur (homeowner / review, Comfort: blur): fades in over 0.15 s while you turn or move, out when you stop */
+  /* the headset: a near-full smooth turn (or a fast flight); a screen: a fast mouse / thumb turn. Walking never blurs. */
+  const deskMove = !inVR() ? camMotion(dt) : null;
+  const moving = comfort === "blur" && (inVR() ? Math.abs(turnVel) > BLUR.xrTurnFrac * TURN.rate || (flying && flySpeed > BLUR.flyMin) : deskMove.fast);
+  blurFade = Math.max(0, Math.min(1, blurFade + (moving ? 1 : -1) * dt / BLUR.fade));
+  deskMoving = !inVR() && deskMove.moving;
+  if (renderer.xr.isPresenting || SIM.on || !composer) {
+    const t0 = performance.now();
+    const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
+    if (!blurred) renderer.render(scene, camera);
+    if (inVR()) { xrBlur.track(); if (blurred) perf.tag("motion blur"); }
+    renderMs = performance.now() - t0;
+    if (renderer.xr.isPresenting) blurGovernor(now, blurred);
+  } else {
+    if (blurPass) blurPass.amount = blurFade * BLUR.deskShutter;
+    composer.render();
+  }
   workPrev = performance.now() - now;
 }
+scene.onBeforeRender = (r, sc, cam) => { V?.cull?.update(cam, r); };      // after xr.updateCamera: the eyes are this frame
 renderer.setAnimationLoop(() => loop());
 
 /* a hook for tests from the console; not a user-facing API */
@@ -3074,9 +3514,78 @@ window.__house = {
   heightCheck, heightReset, setPersonHeight, parseHeight, rawEye, passBreakdown, get floorOffset() { return floorOffset; }, get personHeight() { return personHeight; },
   beforeAfter, baPanel, get heightOffer() { return heightOffer; }, SIMPLE,
   marks, gotoMenu, places, goToPlace, teleportTo, walkableSpot, setFastWalk, get fastWalk() { return fastWalk; }, vrWalkSpeed, get walkBoost() { return walkBoost; },
+  setTurnMode, setComfort, get turnMode() { return turnMode; }, get comfort() { return comfort; }, get turnVel() { return turnVel; },
+  get blurFade() { return blurFade; }, xrBlur, blurGovernor, sticks, touchMove, touchLook, layoutSticks, get locked() { return locked(); }, lockedClick, blurPass: () => blurPass, get renderMs() { return renderMs; }, vignette,
   specCameras: () => specCameras, lookAtMark, get autoHeightAt() { return autoHeightAt; }, howTo, showCard, card,
-  sim, hands, perf, heightInfo, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
+  sim, hands, perf, heightInfo, get cull() { return V?.cull; }, showHeights, setHover, toggleScaleCue, setFly, setAllDoors, setDoorsHidden, toggleDoor, loadVersion, versions, BODY, inVR, wristTab,
   get flying() { return flying; }, get hovering() { return hovering; }, get landing() { return landing; }, get boardMin() { return boardMin; }, get hoverPart() { return hoverPart; },
-  get seated() { return seated; }, get doorsHidden() { return doorsHidden; }, baPanel, get stageN() { return stageN; }, manifest: () => manifest, dropVersion,
+  get seated() { return seated; }, get doorsHidden() { return doorsHidden; }, setUnfurnished, get unfurnished() { return unfurnished; }, isLoose, looseCount, baPanel, get stageN() { return stageN; }, manifest: () => manifest, dropVersion,
   stats() { renderer.render(scene, camera); const i = renderer.info.render; return { calls: i.calls, triangles: i.triangles, houseBatches: V.model.drawCalls(), houseBatchesLive: V.model.liveCalls(), settingBatches: V.model.settingCalls(), parts: V.model.parts.length }; },
 };
+
+/* ------------------------------------------------------------------ *
+ *  The capture harness (?capture=1; PLAN S8, CORRECTIONS-LOG 237).
+ *  A hidden browser pane gets no animation frames, so a capture cannot go through the loop: captureAt sets the feet,
+ *  sets camera.rotation DIRECTLY (yawPitch alone does nothing without the loop), renders once and returns a JPEG data
+ *  URL. tools/review/sweep_driver.js runs the sweep; tools/review/sweep_tools.py rejects a set unless every direction's
+ *  hash differs and every eye point is inside its room polygon (or inside the site, outside).
+ *  ids:true returns the PART picture of the same view instead: every part flat-coloured with its index + 1 (24-bit),
+ *  nothing drawn magenta, no anti-aliasing (an unsmoothed render target), so the machine pass knows exactly which part
+ *  (and so which material) every pixel is: raw construction or a hole inside a room. partTable() maps index -> part.
+ * ------------------------------------------------------------------ */
+if (params.get("capture") === "1") {
+  const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i += 7) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); };
+  const cap = { w: 0, h: 0, rt: null, cv: null };
+  const idMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, fog: false });
+  const _c = new THREE.Color();
+  function render(post, w, h) {
+    if (cap.w !== w || cap.h !== h) { renderer.setPixelRatio(1); renderer.setSize(w, h, false); composer?.setSize(w, h); cap.w = w; cap.h = h; }
+    renderer.shadowMap.needsUpdate = true;
+    if (post && composer) { blurPass?.reset(); if (blurPass) blurPass.amount = 0; composer.render(); } else renderer.render(scene, camera);
+  }
+  function renderIds(w, h) {
+    const parts = V.model.parts.filter(p => p.batch), swaps = [];
+    for (const p of parts) { const n = p.index + 1; p.batch.setColorAt(p.instanceId, _c.setRGB(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, THREE.LinearSRGBColorSpace)); }
+    scene.traverse(o => { if ((o.isBatchedMesh || o.isMesh) && o !== sky && o.visible && o.material && !Array.isArray(o.material)) { swaps.push([o, o.material]); o.material = idMat; } });
+    if (!cap.rt || cap.rt.width !== w || cap.rt.height !== h) { cap.rt?.dispose(); cap.rt = new THREE.WebGLRenderTarget(w, h, { samples: 0, type: THREE.UnsignedByteType, magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter }); }
+    const bg = scene.background, skyVis = sky.visible, shadows = renderer.shadowMap.enabled, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
+    scene.background = null; sky.visible = false; renderer.shadowMap.enabled = false; renderer.setClearColor(0xff00ff, 1);
+    renderer.setRenderTarget(cap.rt); renderer.render(scene, camera); renderer.setRenderTarget(null);
+    const buf = new Uint8Array(w * h * 4); renderer.readRenderTargetPixels(cap.rt, 0, 0, w, h, buf);
+    for (const [o, m] of swaps) o.material = m;
+    for (const p of parts) p.batch.setColorAt(p.instanceId, _c.setRGB(1, 1, 1, THREE.LinearSRGBColorSpace));
+    scene.background = bg; sky.visible = skyVis; renderer.shadowMap.enabled = shadows; renderer.setClearColor(cc, ca);
+    cap.cv ||= document.createElement("canvas"); cap.cv.width = w; cap.cv.height = h;
+    const ctx = cap.cv.getContext("2d"), img = ctx.createImageData(w, h);
+    for (let y = 0; y < h; y++) img.data.set(buf.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+    ctx.putImageData(img, 0, 0);
+    return cap.cv.toDataURL("image/png");
+  }
+  Object.assign(window.__house, {
+    furnished(on) { if (on !== undefined) setUnfurnished(!on); return !unfurnished; },
+    captureState: () => ({ ready: !!V && sky.visible, sky: sky.visible, version: V?.def.id, parts: V?.model.parts.length, furnished: !unfurnished, stage: stageValue, stageN, walk }),
+    /* part index -> [element, material, group, storey, spec_id, label, bbox min x y z, max x y z (cm)] for the machine pass */
+    partTable: () => V.model.parts.map(p => [p.index, p.element, p.materialName, p.group, p.storey, p.ud.spec_id || "", String(p.ud.label || p.name || "").slice(0, 60),
+      ...[p.bbox.min, p.bbox.max].flatMap(v => [v.x, v.y, v.z].map(n => Math.round(n * 100)))]),
+    /* x, z: feet in the house frame (m); y: the floor under them (null: found by a ray from just above the ground); eye: eye height above the feet */
+    captureAt({ x, z, y = null, yawDeg = 0, pitchDeg = 0, eye = 1.6, fov = 60, w = 480, h = 270, quality = 0.82, post = false, ids = false } = {}) {
+      if (!V) throw new Error("captureAt: no version loaded");
+      if (!walk) setWalk(true);
+      if (stageDirty) applyStageNow();
+      const t0 = performance.now();
+      const floor = y ?? walker.floorAt(x, -0.45, z, 4) ?? -0.231;
+      feet.set(x, floor, z);
+      yawPitch.yaw = THREE.MathUtils.degToRad(yawDeg); yawPitch.pitch = THREE.MathUtils.degToRad(pitchDeg);
+      player.position.copy(feet); player.quaternion.identity();
+      camera.position.set(0, eye, 0);
+      camera.rotation.set(yawPitch.pitch, yawPitch.yaw, 0, "YXZ");
+      camera.fov = fov; camera.aspect = w / h; camera.updateProjectionMatrix();
+      player.updateMatrixWorld(true);
+      adaptExposure(0, true);
+      let url;
+      if (ids) url = renderIds(w, h);
+      else { render(post, w, h); url = renderer.domElement.toDataURL("image/jpeg", quality); }
+      return { url, hash: fnv(url), eye: [+feet.x.toFixed(3), +(feet.y + eye).toFixed(3), +feet.z.toFixed(3)], yawDeg, pitchDeg, ms: Math.round(performance.now() - t0) };
+    },
+  });
+}

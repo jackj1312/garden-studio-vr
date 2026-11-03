@@ -50,7 +50,14 @@ def recolour(rgb_srgb01, target_hex, keep=1.0):
     g = t + (g - t) * keep
     # the gain can push a channel past 1 where the source was bright: clip, then re-centre once
     g = np.clip(g, 0, 1); g *= (t / (g.reshape(-1, 3).mean(0) + 1e-6))
-    return srgb(np.clip(g, 0, 1))
+    g = np.clip(g, 0, 1)
+    if np.abs(srgb(g).reshape(-1, 3).mean(0) - np.asarray(hex2rgb(target_hex))).max() > 8 / 255:      # judged as seen (sRGB mean)
+        # a strongly tinted source (a yellow waffle weave) cannot be re-tinted per channel without clipping: take its
+        # luminance only and lay the target colour over it (CORRECTIONS-LOG: bed linen came out mint/yellow)
+        Y = (L * np.array([0.2126, 0.7152, 0.0722])).sum(-1, keepdims=True)
+        Y = Y / (Y.mean() + 1e-6); Y = 1 + (Y - 1) * keep
+        g = np.clip(t * Y, 0, 1); g *= (t / (g.reshape(-1, 3).mean(0) + 1e-6)); g = np.clip(g, 0, 1)
+    return srgb(g)
 
 
 def load(p, mode="RGB"): return np.asarray(Image.open(p).convert(mode).resize((a.px, a.px), Image.LANCZOS), np.float64) / 255.0

@@ -274,7 +274,8 @@ for r in ROOMS:
                     cells -= 1                                          # the cell stands inside a breast / pier / stair: not open space
                 elif h is None:
                     F["b"].append(dict(room=r["id"], kind="no ceiling (sky)", at=[round(x, 2), round(z, 2)]))
-                elif RAW.match(h["mat"]) and not over_stair(x, z) and not over_stair_v(x, z):
+                elif (RAW.match(h["mat"]) or h["part"]["group"] in ("roof_cover", "roof_layer")) and not over_stair(x, z) and not over_stair_v(x, z):
+                    # (a roof's underside is never a ceiling: the outshot's felt roof, exported as black_upvc, passed as a "bulkhead")
                     F["b"].append(dict(room=r["id"], kind="raw ceiling", mat=h["mat"], part=h["part"]["name"][:50], y=round(h["at"].z, 3), at=[round(x, 2), round(z, 2)]))
                 elif h["n"].z > 0.2:
                     F["b"].append(dict(room=r["id"], kind="ceiling seen from behind (open)", part=h["part"]["name"][:50], at=[round(x, 2), round(z, 2)]))

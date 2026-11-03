@@ -134,6 +134,38 @@ its 1024-px canvas.
   session in every mode (eyes at 1.14 m; the first card says "Height set to 4 ft; change it under Height"), adjustable (wrist −1 in / +1 in, board Tools) and remembered under
   `house-person-height-v2` (the bump drops older stored values once). Logged as `height check` with `auto: true`.
 
+**Round 7c (Jack, 1 Nov): smooth turning and motion blur (homeowner and review; the other modes keep snap + vignette).**
+- Right stick left / right turns SMOOTHLY: 75°/s at full push, scaled by the push, easing in and out over 0.15 s; the
+  stick-forward teleport stays. Wrist "Turn" switches smooth / snap (30°); remembered for the session (`house-turn`).
+- Wrist "Comfort": blur (default) / vignette / off, for the session (`house-comfort`). `src/house/motionblur.js`: a
+  depth-free camera motion blur (each pixel's view ray, a point 2.5 m along it, re-projected with last frame's camera,
+  8 taps along the difference). Screen: a pass in the composer after GTAO; any camera turn or move fast enough fades
+  it in over 0.15 s. Headset: only while turning or moving on the sticks, each eye is drawn into an 8-bit sRGB offscreen
+  target at 70 % of the eye buffer, then the shader writes the eye buffer blurring the OUTER part of each eye only;
+  only the rig's motion counts, never real head motion; at rest the headset renders exactly as before. A governor
+  times the blurred frames: under 68 fps (and slower than without it) the copy drops to 60 %, 50 %, then Comfort
+  switches itself to the vignette for the visit (frame log: `motion blur fps`). GTAO no longer draws sprites (the marks'
+  labels were black boxes); the simulated headset renders without the desktop post, like the Quest.
+- Wrist panel, four rows: Before | After | Height / No doors | Go to | Fast / Turn | Comfort | Mark (review) / −1 in | +1 in.
+
+**Round 7d (Jack, 1 Nov): mouse-look, phone thumb sticks, blur toned down.**
+- Screen with a mouse (walking, any mode): click the view once to capture the mouse (Pointer Lock; hint "Click to look
+  around · Esc to free the mouse"), then moving it looks (0.13°/count, no inverted Y); W A S D walk, Shift / Fast, F or
+  Space fly (homeowner / review). A centre crosshair (yellow over a door, green over a floor you can jump to); a left
+  click opens / shuts a door or jumps to the floor (homeowner / review; walls, roofs, worktops refused), or picks /
+  measures in the other modes; in Mark mode hold the click and look to draw. A mark's note frees the mouse to type.
+  Esc frees it. Refused capture: "click again" (browsers refuse within ~1 s of Esc); twice and never granted: drag-to-look.
+- Phones / tablets (homeowner / review): two thumb sticks, each resting faintly in its bottom corner and jumping to where
+  the thumb lands in its half of the lower 58 % of the screen. Left moves (speed by push, Fast respected), right looks
+  (eased, a light curve for fine aim), both at once. A quick tap anywhere (also in a stick zone) opens a door or jumps
+  to the floor; dragging in the upper view still looks. In Mark mode the sticks step aside and the finger draws. The
+  buttons move to a compact bar at the top (safe-area insets; one row in landscape).
+- Motion blur toned down (Jack: "way too much"): a third of the strength, only on genuinely fast turns (screens over
+  about 115°/s; the headset only on a near-full stick turn or a fast flight; walking never), edges only (headset: the
+  middle 70 % of each eye sharp; screens: a light sideways smear at the sides), 0.08 s fades. Comfort is "subtle blur /
+  vignette / off" (default subtle blur) on the wrist and on the screen's bar (vignette on screens darkens the edges
+  while turning or moving).
+
 **Homeowner mode, simplified (round 6c, Jack 1 Nov; this REPLACES the key-stages design below):** just Before /
 After and Fly. Before = the proposal's stage 1 (the house before the works, no porch), After = its last stage
 (finished, with the front garden); it opens on After. Screen and phone: two big buttons (Before / After, keys B / N)

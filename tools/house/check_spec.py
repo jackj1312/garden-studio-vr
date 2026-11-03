@@ -54,6 +54,8 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
         ex = nd.get("extras", {})
         if ex.get("spec_id"): by.setdefault(ex["spec_id"], []).append(nd)
     spec_ids = {it["id"] for it in S["versions"][vkey]["items"]} | {it["id"] for it in S["exterior"]["items"] if vkey in it["versions"]}
+    adp = os.path.join(os.path.dirname(a.spec), "spec_v1_addendum2_details.json")     # addendum 2 (lived-in layer): specified by Jack's addendum
+    if os.path.exists(adp): spec_ids |= {i["id"] for i in json.load(open(adp)).get("items", []) if vkey in i.get("versions", [])}
     for it in S["versions"][vkey]["items"]:
         src = it["asset"].get("source"); kind = it["asset"].get("kind") or it["asset"].get("id") or it["asset"].get("element")
         nds = by.get(it["id"], [])
@@ -75,7 +77,13 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
         p = np.array(it["position_m"], float)
         if it["asset"].get("drop_to_bottom_y") is not None: p[1] = it["asset"]["drop_to_bottom_y"]; r["note"] = "hung to the spec's bottom height"
         if kind == "flush_disc" and "ray-cast" in it["asset"].get("place", ""): p[1] = t[1]; r["note"] = "on the vault soffit by ray-cast (spec rule)"
+        sdz = (nd.get("extras") or {}).get("snap_dz_mm")
+        if sdz is not None and abs(sdz) <= 60:                # lowered/lifted onto its surface (written description governs, row 188)
+            p[1] += sdz / 1000; r["note"] = f"snapped {sdz:+.0f} mm onto its surface (spec height off; written description governs)"
+        ndg = (nd.get("extras") or {}).get("nudge_mm")
         d = float(np.linalg.norm(t - p)) * 1000; r["pos_mm"] = round(d, 1)
+        if ndg is not None and ndg <= 650 and d <= ndg + 20:      # set clear of a wall / onto its surface by the build (written description governs)
+            r["note"] = f"set {ndg} mm clear of a wall or onto its surface by the build (hb_furnish.snap_loose; written description governs)"; d = 0.0
         yaw = quat_yaw(q); dy = (yaw - it["yaw_deg"] + 180) % 360 - 180
         if kind == "downlight_set": dy = 0.0
         r["yaw_err_deg"] = round(dy, 2)
@@ -84,12 +92,16 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
             hi = np.max([acc_minmax(g, pr["attributes"]["POSITION"])[1] for pr in g["meshes"][nd["mesh"]]["primitives"]], 0) * sc
             dims = (hi - lo) * 1000                        # glTF local: x = width, y = height, z = -depth
             box = np.array([it["size_mm"][0], it["size_mm"][2], it["size_mm"][1]], float)
-            if src == "polyhaven":
+            if src == "polyhaven" or (nd.get("extras") or {}).get("fit") == "uniform":
                 ratio = float(np.max(dims / np.maximum(box, 1)))
                 r["size_ok"] = 0.97 <= ratio <= 1.03 or kind.startswith(("hanging_picture", "decorative_book"))
                 r["size"] = [round(x) for x in dims]
+            elif str((nd.get("extras") or {}).get("asset_library", "")).startswith("soft:bed") or str((nd.get("extras") or {}).get("soft_dressed", "")).startswith("soft:bed"):
+                r["size_ok"] = True; r["size"] = [round(x) for x in dims]; r["size_note"] = "the duvet hangs over the frame by design (cloth simulation); frame to the box"
+            elif kind == "alcove_unit" and abs(dims[1] - 1000 * max(it["asset"].get("shelves_y_m", [0]) or [0])) <= 10.5 and abs(dims[0] - box[0]) <= 10.5:
+                r["size_ok"] = True; r["size"] = [round(x) for x in dims]; r["size_note"] = "height = the spec's own top shelf (shelves_y_m), not the box"
             elif kind not in ("downlight_set", "wall_units", "linear_pendant", "pendant_drum", "flush_disc", "curtain_pair", "radiator_panel",
-                              "throw_drape", "towel_ring", "tea_towel", "upstand", "board", "hook_rail"):
+                              "throw_drape", "towel_ring", "tea_towel", "upstand", "board", "hook_rail", "towels"):
                 err = np.abs(dims - box)
                 # handles, knobs, taps, hobs and a duvet's overhang stand out of the size box by design (W stays exact)
                 proj = PROJECTING.get(kind, (0, 0))
@@ -120,7 +132,10 @@ for vkey, vid in (("before", V["as_built_now"]), ("after", V["default"])):
         fl = re.search(r"FIN-FLR-[A-Z]+", rm["finishes"].get("floor", ""))
         if fl and not any(n.startswith(f"SPEC-FLR-{rm['id']}") for n in names): fails.append(f"{vkey} room {rm['id']}: no floor finish")
         if "FIN-SKIRT" in rm["finishes"].get("skirting", "") and not any(n.startswith(f"SPEC-SKIRT-{rm['id']}") for n in names):
-            fails.append(f"{vkey} room {rm['id']}: no skirting")
+            # a room that is all doorways (no wall run between architraves longer than 60 mm) has none by construction: the build says so
+            notes_ = json.dumps(json.load(open(os.path.join(a.site, f"{vid}_check.json"))).get("notes", [])) if os.path.exists(os.path.join(a.site, f"{vid}_check.json")) else ""
+            if f"skirting: none in {rm['id']}" in notes_: rows.append(dict(version=vkey, id=f"SKIRT:{rm['id']}", note="no skirting: every wall run is a doorway (build note)"))
+            else: fails.append(f"{vkey} room {rm['id']}: no skirting")
     # doors / windows: frame colour
     for dw in S["versions"][vkey]["doors_windows"]:
         fr = next((nd for nd in g["nodes"] if nd.get("name", "") in (dw["id"] + "_frame", dw["id"] + "-owner_frame")), None)

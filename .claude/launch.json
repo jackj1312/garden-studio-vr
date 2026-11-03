@@ -10,15 +10,6 @@
         "8771"
       ],
       "port": 8771
-    },
-    {
-      "name": "house-blaster",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-c",
-        "import http.server as h\nclass H(h.SimpleHTTPRequestHandler):\n  def end_headers(s):\n    s.send_header('Cache-Control','no-store'); super().end_headers()\nh.ThreadingHTTPServer(('',8782),H).serve_forever()"
-      ],
-      "port": 8782
     }
   ]
 }

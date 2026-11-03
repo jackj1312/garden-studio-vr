@@ -3,7 +3,7 @@
 Jack, 31 Oct 2026: "these are all the sort of details we need to look for in new projects too because its the
 details that matter most." Every project checks every line at G3 (inventory) and again at G6 (matched views).
 Each line came from a mistake on Jack's garden (CORRECTIONS-LOG row in brackets). Add a line whenever a new
-detail is found.
+detail is found. New lines from review findings are added by tools/review/lessons.py at the end, each tagged with its log row.
 
 ## Edges, kerbs and junctions
 - Each kerb is a **run as it was laid**: its unit (setts, roll-top, timber, steel), rows, flush or **upstand**
@@ -159,3 +159,42 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
       cushions and curtains get real shape from Blender cloth simulation (draped over the rail, folded, plumped) or a
       scanned/library model, and a fabric material with weave normal, sheen and roughness variation (terry for towels);
       in Unreal the cloth shading model adds the soft sheen. Each passes the close-up test sheet before placement.
+
+## Learned from review findings (tools/review/lessons.py; check on every project)
+- Unfurnished toast count equals the number of distinct loose items (row 197)
+- Look up at the underside of every stair flight from the hall and the under-stair cupboard: a plastered soffit, never stepped blocks (row 199)
+- From inside every room under a two-storey part, no roof surface below the ceiling (row 201)
+- Conservatory (and any bare-by-spec room): its walls read as their spec material, no plaster patches (row 202)
+- Look into the under-stair cupboard at floor level: floor finish all the way under the stair (row 203)
+- Front and rear facades from the road and garden: brick and render only, no white plaster patches (row 205)
+- Look along every new ceiling at a low angle: flat board, no ribs (row 206)
+- Every joist field's z_bottom equals the top of the ceiling lining under it (row 207)
+- After any finish change, re-run an upward ray sweep over each storey's rooms (row 209)
+- Ceilings and painted walls read flat at 2-4 m; no stripes (row 211)
+- From the landing and inside bedroom 3 (After): no rafter, joist or plate shows below or through the ceiling (row 213)
+- Where two ceilings of different heights meet: a clean boxed step, no member ends or lines (row 214)
+- Every Go-to place opens looking into the room it names, not at a wall or door edge (row 235)
+- A viewer fault sheet for every room exists and every item on it is fixed or accepted by Jack before the build is shown (row 236)
+- Review captures: every direction differs and every eye point is inside its room, checked before review (row 237)
+- PLAN.md exists, was shown to Jack, and is re-read at every stage (the brief for each stage names it) (row 238)
+- Questions form: each question is one plain-words decision with its consequence and a recommendation (row 239)
+- Part-ID sweep of each room (sweep_tools.py check): zero raw-material pixels from any standing point, in the layer the viewer shows by default (row 240)
+- From each wall base in the sweep a skirting edge is visible (18 mm proud, 150 mm high), checked on the built GLB (row 242)
+- Sweep mean blue-minus-red indoors at or below +0.03 and the ceiling reads warm white in the up frames (row 244)
+- No frame of the sweep has more than 8 percent near-black pixels (row 245)
+- Every framed print in the sweep shows a print inside its frame (row 246)
+- Open every door: nothing fixed to the leaf is left behind (row 297)
+- Lounge close-up: the stove reads as a log burner with logs behind glass and a flue (row 251)
+- SIGNOFF.md dated decision; item gone from spec_v1 and the furnishing plan (row 254)
+- SIGNOFF.md dated decision; KA-DEC-10 gone from spec_v1 (row 262)
+- SIGNOFF.md dated decision; no AB-X-porch-cctv in the GLB (row 294)
+- Lounge: both prints show artwork (row 257)
+- Kitchen rear window clear below a stacked blind (row 265)
+- check_spec: leaf material oak; SIGNOFF.md decision (row 271)
+- Hall, landing and stair clear widths match a tape measurement on site within 20 mm (row 298)
+- Lounge shelf close-up: frame face and book spines toward the room (row 249)
+- Lounge shelf close-up: frame face and book spines toward the room (row 250)
+- SIGNOFF.md; LIV-PLANT-1 gone (row 252)
+- Front garden: border blocks grey, same block as the path, flush with it (row 287)
+- house-wip only ever changes through the gated publish script (row 300)
+- Every placed item: front faces the room, base touches its host surface within 5 mm, no penetration, built to its catalogue size (row 301)

@@ -5,15 +5,18 @@ exterior materials. CC0 only; each fetch is listed in <root>/fetched.json for CR
 
     python3 tools/house/fetch_spec_assets.py assets/sites/house/spec/spec_v1.json [--res 1k]
 
-Models land in master/polyhaven/<id>/, texture sets in master/polyhaven/tex/<id>/ (skipped when already there)."""
+Models land in master/polyhaven/<id>/, texture sets in master/polyhaven/tex/<id>/ (skipped when already there).
+Extra ids not named by the spec (a furnishing plan's library picks): --models id,id --textures id,id (spec "-" to skip the spec).
+--library <asset-library dir> also mirrors each fetched set into <library>/polyhaven/models|textures/<id>/ with asset.json."""
 import json, os, sys, argparse, urllib.request
 
 ap = argparse.ArgumentParser()
 ap.add_argument("spec"); ap.add_argument("--res", default="1k")
+ap.add_argument("--models", default=""); ap.add_argument("--textures", default=""); ap.add_argument("--library", default="")
 ap.add_argument("--root", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "master", "polyhaven"))
 a = ap.parse_args()
 UA = {"User-Agent": "garden-studio-vr/1.0 (Poly Haven CC0 fetch)"}
-S = json.load(open(a.spec))
+S = json.load(open(a.spec)) if a.spec != "-" else {"versions": {}, "finishes": []}
 
 
 def fetch(url): return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60)
@@ -35,6 +38,7 @@ for f in S["finishes"]:
     if f["asset"].get("source") == "polyhaven": texsets.add(f["asset"]["id"])
     fb = f["asset"].get("fallback_texture", "")
     if fb.startswith("polyhaven "): texsets.add(fb.split()[1])
+models |= {x for x in a.models.split(",") if x}; texsets |= {x for x in a.textures.split(",") if x}
 log = {}
 for m in sorted(models):
     folder = os.path.join(a.root, m)
@@ -60,6 +64,14 @@ for t in sorted(texsets):
         n += get(e["url"], os.path.join(folder, os.path.basename(e["url"])))
     log[t] = dict(kind="texture", url=f"https://polyhaven.com/a/{t}", licence="CC0", res=a.res, bytes=n)
     print(f"texture {t}: {n // 1024} KB new")
+if a.library:                                             # mirror into the studio asset library (README: every build looks there first)
+    import shutil
+    for k, v in log.items():
+        src = os.path.join(a.root, k) if v["kind"] == "model" else os.path.join(a.root, "tex", k)
+        dst = os.path.join(a.library, "polyhaven", "models" if v["kind"] == "model" else "textures", k)
+        if not os.path.isdir(dst): shutil.copytree(src, dst)
+        json.dump(dict(id=k, source="Poly Haven", page=v["url"], licence="CC0 1.0", web_ok=True, stream_ok=True, render_ok=True, res=v["res"]),
+                  open(os.path.join(dst, "asset.json"), "w"), indent=1)
 lp = os.path.join(a.root, "fetched.json")
 old = json.load(open(lp)) if os.path.exists(lp) else {}
 old.update(log); json.dump(old, open(lp, "w"), indent=1)

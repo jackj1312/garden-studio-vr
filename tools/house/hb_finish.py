@@ -11,7 +11,7 @@ their brick. Skins are merged per (lifetime, finish) to keep the draw calls down
 
 Also: ceilings and vault linings (CL-*) take FIN-CEIL; the stair (ST-stair) takes FIN-STAIR (oak treads, white risers and
 strings)."""
-import math, re
+import math, re, os, json
 import bpy, bmesh
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
@@ -146,6 +146,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             if ob.type != "MESH": continue
             pr = p["props"]
             if (pr.get("stage_out") or 99) <= N or pr.get("element") in replaced: continue
+            if (ob.name.startswith("SPEC-") and not ob.name.startswith(("SPEC-FLR", "SPEC-SKIRT"))) or ob.name.startswith("JN-"): continue   # furniture is not the shell
             out_.append((ob, p))
         return out_
     def make_tree(lp):
@@ -179,6 +180,21 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free(); me.materials.append(mat)
         return me
 
+    def prism_mesh(name, quad, z0, z1, mat, tile=(1.5, 1.5)):
+        """a closed prism over a plan quad (any orientation), outward normals, box-projected UVs"""
+        bm = bmesh.new(); uv = bm.loops.layers.uv.new("UVMap")
+        Q = _ccw2(list(quad))
+        vs = [bm.verts.new((x, y, z0)) for x, y in Q] + [bm.verts.new((x, y, z1)) for x, y in Q]
+        n = len(Q)
+        for f in [tuple(range(n))[::-1], tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]:
+            fa = bm.faces.new([vs[i] for i in f])
+            for l in fa.loops:
+                c = l.vert.co; nn = fa.normal
+                l[uv].uv = ((c.x / tile[0], c.y / tile[1]) if abs(nn.z) > 0.7 else ((c.x if abs(nn.y) > abs(nn.x) else c.y) / tile[0], c.z / tile[1]))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free(); me.materials.append(mat)
+        return me
+
     # ---- 1. steels and timber beams seen from a finished room are boxed in plasterboard, painted (Jack, 1 Nov: "every steel is
     #         boxed"; typical: 12.5 mm board on 15 mm battens, 27.5 mm round the member), meeting the ceiling above
     ceil_of = {}
@@ -209,10 +225,217 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         life = (pr.get("stage_in", 1), pr.get("seq", 0.0) or 0.0, pr.get("stage_out"), pr.get("seq_out")) if (cat in ("existing", "demolition") or N == 1) \
             else (max(N, pr.get("stage_in", 1)), finish_seq, pr.get("stage_out"), pr.get("seq_out"))
         boxes.append(dict(lo=lo, hi=hi, top=top, life=life, names=[ob.name]))
+    # ---- 1b. kept roof members over a new room (CORRECTIONS-LOG 213): the part of a rafter, hip or valley that hangs below a
+    #          room's ceiling lining (a ray down from it meets no lining before the floor, a ray up meets one) is boxed as a
+    #          bulkhead; members of one roof plane run on as one box while it stays inside the room; a box within 0.35 m of a
+    #          wall runs on to it. Painting a member is never a finish.
+    def rect_inside(P, x0, y0, x1, y1, st=0.04):
+        nx_, ny_ = max(2, int((x1 - x0) / st) + 1), max(2, int((y1 - y0) / st) + 1)
+        return all(_in_poly(x0 + (x1 - x0) * i / (nx_ - 1), y0 + (y1 - y0) * j / (ny_ - 1), P) for i in range(nx_) for j in range(ny_))
+    lin_parts = [(ob, p) for ob, p in live_parts() if ob.name.startswith(("CL-", "XC-")) and p["props"].get("group") in ("ceiling_joist", "deck")]
+    lin_tree = make_tree(lin_parts) if lin_parts else None
+    UP, DN = Vector((0, 0, 1)), Vector((0, 0, -1))
+    nroof = 0
+    for r in spec_rooms:
+        if BARE_ROOMS.search(r["id"]) or lin_tree is None: continue
+        P = [(x, -z) for (x, z) in r["polygon"]]; Pin = _grow(P, -0.004) if len(P) >= 3 else P
+        pxs = [q_[0] for q_ in P]; pys = [q_[1] for q_ in P]; fy = r["floor_y"]
+        def hanging(q):
+            if not _in_poly(q.x, q.y, Pin) or q.z < fy + 1.2 or q.z > fy + 4.0: return False
+            up = lin_tree.ray_cast(q + UP * 0.001, UP, 1.5)
+            if up[0] is None: return False
+            dn = lin_tree.ray_cast(q - UP * 0.001, DN, q.z - fy - 0.3)
+            return dn[0] is None
+        mem = []
+        for ob, p in live_parts():
+            pr = p["props"]
+            if pr.get("group") not in ("rafter", "hip", "valley") or ob.name.startswith(("SC-", "FS-")): continue
+            M = ob.matrix_world; vs = [M @ v.co for v in ob.data.vertices]
+            if not vs or max(v.x for v in vs) < min(pxs) or min(v.x for v in vs) > max(pxs) or max(v.y for v in vs) < min(pys) or min(v.y for v in vs) > max(pys): continue
+            if min(v.z for v in vs) > fy + 4.0 or max(v.z for v in vs) < fy + 1.2: continue
+            pts = []
+            for ed in ob.data.edges:
+                a_, b_ = vs[ed.vertices[0]], vs[ed.vertices[1]]
+                for k_ in range(41):
+                    q = a_.lerp(b_, k_ / 40)
+                    if hanging(q): pts.append(q)
+            if len(pts) < 2: continue
+            lo = Vector((min(q.x for q in pts), min(q.y for q in pts), min(q.z for q in pts)))
+            hi = Vector((max(q.x for q in pts), max(q.y for q in pts), max(q.z for q in pts)))
+            mem.append(dict(lo=lo, hi=hi, names=[ob.name], plane=ob.name.rsplit("-", 1)[0].rstrip("-"), life=(pr.get("stage_in", 1), pr.get("seq", 0.0) or 0.0, pr.get("stage_out"), pr.get("seq_out"))))
+        merged_ = True
+        while merged_:
+            merged_ = False
+            for i in range(len(mem)):
+                for j in range(i + 1, len(mem)):
+                    a_, b_ = mem[i], mem[j]
+                    if a_["plane"] != b_["plane"]: continue
+                    gx = max(a_["lo"].x, b_["lo"].x) - min(a_["hi"].x, b_["hi"].x); gy = max(a_["lo"].y, b_["lo"].y) - min(a_["hi"].y, b_["hi"].y)
+                    if max(gx, gy) > 0.45: continue
+                    lo = Vector((min(a_["lo"].x, b_["lo"].x), min(a_["lo"].y, b_["lo"].y), min(a_["lo"].z, b_["lo"].z)))
+                    hi = Vector((max(a_["hi"].x, b_["hi"].x), max(a_["hi"].y, b_["hi"].y), max(a_["hi"].z, b_["hi"].z)))
+                    if not rect_inside(Pin, lo.x, lo.y, hi.x, hi.y): continue
+                    mem[i] = dict(lo=lo, hi=hi, names=a_["names"] + b_["names"], plane=a_["plane"], life=a_["life"]); mem.pop(j); merged_ = True; break
+                if merged_: break
+        e = 0.0275
+        for bx_ in mem:
+            x0, y0, x1, y1 = bx_["lo"].x - e, bx_["lo"].y - e, bx_["hi"].x + e, bx_["hi"].y + e
+            while x0 < x1 and not rect_inside(Pin, x0, y0, x0 + 0.002, y1): x0 += 0.002
+            while x1 > x0 and not rect_inside(Pin, x1 - 0.002, y0, x1, y1): x1 -= 0.002
+            while y0 < y1 and not rect_inside(Pin, x0, y0, x1, y0 + 0.002): y0 += 0.002
+            while y1 > y0 and not rect_inside(Pin, x0, y1 - 0.002, x1, y1): y1 -= 0.002
+            for side in range(4):
+                for step in range(1, 176):
+                    d_ = step * 0.002
+                    t = [x0 - d_ if side == 0 else x0, y0 - d_ if side == 2 else y0, x1 + d_ if side == 1 else x1, y1 + d_ if side == 3 else y1]
+                    if not rect_inside(Pin, *t):
+                        if step > 1:
+                            if side == 0: x0 -= (step - 1) * 0.002
+                            elif side == 1: x1 += (step - 1) * 0.002
+                            elif side == 2: y0 -= (step - 1) * 0.002
+                            else: y1 += (step - 1) * 0.002
+                        break
+            if x1 - x0 < 0.01 or y1 - y0 < 0.01: continue
+            tops = []
+            for i in range(5):
+                for j in range(5):
+                    q = Vector((x0 + (x1 - x0) * (i + 0.5) / 5, y0 + (y1 - y0) * (j + 0.5) / 5, bx_["lo"].z))
+                    h = lin_tree.ray_cast(q, UP, 1.5)
+                    if h[0] is not None: tops.append(h[0].z)
+            if not tops: continue
+            top = max(tops) + 0.002
+            name = f"FS-boxing-{bx_['names'][0][:34]}-{r['id'][4:14]}"
+            me = box_mesh(name, x0, y0, bx_["lo"].z - e, x1, y1, top, fin.get("FIN-CEIL"))
+            life = bx_["life"] if N == 1 else (max(N, bx_["life"][0]), finish_seq, bx_["life"][2], bx_["life"][3])
+            extra.append(new_obj(name, me, "FIN-CEIL", life, f"plasterboard bulkhead boxing the kept roof members {', '.join(bx_['names'][:6])} below the "
+                                 f"{r['id']} ceiling (row 213; typical)"))
+            nroof += 1
+    if nroof: log(f"finish: {nroof} bulkheads round kept roof members below a room ceiling (row 213)")
+    # ---- 1b2. a wall that stops short of the ceiling it meets leaves a slot into the roof or the next space (row 213: the old
+    #           rear wall's top at 4.62 under the bedroom 3 ceiling at 5.08 showed the plate and rafter feet): the slot over the
+    #           wall head is closed with a stud-and-board head infill up to the ceiling lining, finished as the wall
+    shell_lp = [(ob, p) for ob, p in live_parts() if not (ob.name.startswith("SPEC-") and not ob.name.startswith(("SPEC-FLR", "SPEC-SKIRT")))
+                and not p["props"].get("door_leaf") and not ob.name.startswith("FS-skin")]
+    s_tree = make_tree(shell_lp)
+    s_grp = [p["props"].get("group", "") for ob, p in shell_lp for pl in ob.data.polygons]
+    MEMBER = ("rafter", "hip", "valley", "wall_plate", "joist", "ceiling_joist", "timber_beam", "steel")
+    # spaces open to a room that are not spec rooms (the stairwell under its own ceiling deck) are closed the same way
+    pseudo = []
+    for ob, p in live_parts():
+        if ob.name.startswith("XC-") and "stairwell" in ob.name:
+            bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+            x0, x1 = min(v.x for v in bb), max(v.x for v in bb); y0, y1 = min(v.y for v in bb), max(v.y for v in bb); zc = min(v.z for v in bb)
+            pseudo.append(dict(id="R-stairwell-" + ob.name[3:20], polygon=[(x0, -y0), (x1, -y0), (x1, -y1), (x0, -y1)], floor_y=zc - 2.405, ceiling_y=zc))
+    ninf = 0
+    for r in list(spec_rooms) + pseudo:
+        if BARE_ROOMS.search(r["id"]) or lin_tree is None or r["floor_y"] < 1.0: continue
+        P = _ccw2([(x, -z) for (x, z) in r["polygon"]]); fy = r["floor_y"]
+        for i in range(len(P)):
+            (ax, ay), (bx2, by2) = P[i], P[(i + 1) % len(P)]
+            L_ = math.hypot(bx2 - ax, by2 - ay)
+            if L_ < 0.2: continue
+            tx, ty = (bx2 - ax) / L_, (by2 - ay) / L_; nx_, ny_ = ty, -tx          # outward normal of a ccw polygon
+            segs = []
+            for k in range(int(L_ / 0.1)):
+                s = (k + 0.5) * L_ / int(L_ / 0.1)
+                px, py = ax + tx * s, ay + ty * s
+                base = Vector((px - nx_ * 0.05, py - ny_ * 0.05, 0))
+                up_h = lin_tree.ray_cast(Vector((base.x, base.y, fy + 1.0)), UP, 3.5)
+                if up_h[0] is None: continue
+                up2 = s_tree.ray_cast(Vector((base.x, base.y, fy + 1.0)), UP, 3.5)      # a bulkhead under the ceiling: up to its soffit
+                ctop = min(up_h[0].z, up2[0].z) if (up2[0] is not None and up2[0].z > fy + 1.6) else up_h[0].z   # a stair below is not a soffit
+                col = []
+                z = fy + 1.5
+                while z < ctop - 0.008 and len(col) < 200:          # bounded (row: the hung slot scan)
+                    h = s_tree.ray_cast(Vector((base.x, base.y, z)), Vector((nx_, ny_, 0)), 0.40)
+                    col.append((z, h[0] is not None and s_grp[h[2]] not in MEMBER)); z += 0.02      # a roof member is never a wall face
+                if len(col) < 3: continue
+                if os.environ.get("HB_DEBUG_INFILL"): log(f"infill-dbg {r['id'][:18]} e{i} s{s:.2f} ({px:.2f},{py:.2f}) ctop {ctop:.3f} " + "".join("#" if ok else "." for zz, ok in col))
+                # the highest open run with wall below it, reaching to within 60 mm of the ceiling (a plate may close the top)
+                oi = [k_ for k_, (zz, ok) in enumerate(col) if not ok]
+                if not oi or ctop - col[oi[-1]][0] > 0.07: continue
+                k_ = oi[-1]
+                while k_ - 1 >= 0 and not col[k_ - 1][1]: k_ -= 1
+                if k_ == 0: continue                                      # nothing below: an open side (stair, balustrade)
+                zt_ = col[oi[-1]][0]; zb = col[k_][0] - 0.01
+                if zt_ - zb < 0.04: continue
+                segs.append((s, zb, ctop))
+            # merge neighbouring samples with the same span into one board
+            runs = []
+            for s, zb, zt in segs:
+                if runs and abs(runs[-1]["s1"] - (s - 0.05)) < 0.06 and abs(runs[-1]["zb"] - zb) < 0.03 and abs(runs[-1]["zt"] - zt) < 0.03:
+                    runs[-1]["s1"] = s + 0.05; runs[-1]["zb"] = min(runs[-1]["zb"], zb); runs[-1]["zt"] = max(runs[-1]["zt"], zt)
+                else: runs.append(dict(s0=s - 0.05, s1=s + 0.05, zb=zb, zt=zt))
+            for rn in runs:
+                o0, o1 = (0.002, 0.027) if not r["id"].startswith("R-stairwell") else (-0.016, -0.003)   # a stairwell's board is laid over the face (members cut flush in it)
+                p0 = (ax + tx * rn["s0"] + nx_ * o0, ay + ty * rn["s0"] + ny_ * o0); p1 = (ax + tx * rn["s1"] + nx_ * o0, ay + ty * rn["s1"] + ny_ * o0)
+                q0 = (ax + tx * rn["s0"] + nx_ * o1, ay + ty * rn["s0"] + ny_ * o1); q1 = (ax + tx * rn["s1"] + nx_ * o1, ay + ty * rn["s1"] + ny_ * o1)
+                name = f"FS-headinfill-{r['id'][4:20]}-{i}-{int(rn['s0'] * 100)}"
+                me = prism_mesh(name, [p0, p1, q1, q0], rn["zb"] - 0.01, rn["zt"] + 0.016, fin.get("FIN-WALL"))
+                life = (N, finish_seq, None, None)
+                extra.append(new_obj(name, me, "FIN-WALL", life, f"stud and plasterboard head infill closing the slot between the wall head and the "
+                                     f"{r['id']} ceiling (row 213; typical)"))
+                ninf += 1
+    if ninf: log(f"finish: {ninf} wall-head infills closing slots under a ceiling (row 213)")
+    # ---- 1b3. a wall lining that stops a few cm under the ceiling above it (the drawn 5.05 head under a 5.081 ceiling) leaves
+    #           a slit showing the plate and rafter seats: the lining runs on up to the ceiling's underside (row 213)
+    nrun = 0
+    if lin_tree is not None:
+        for ob, p in live_parts():
+            pr = p["props"]
+            if pr.get("group") != "wall_lining" or ob.name.startswith(("FS-", "SPEC-")): continue
+            bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+            lo = Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb))); hi = Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
+            if min(hi.x - lo.x, hi.y - lo.y) > 0.03 or hi.z - lo.z < 1.0: continue
+            along_x = (hi.x - lo.x) >= (hi.y - lo.y)
+            L_ = (hi.x - lo.x) if along_x else (hi.y - lo.y)
+            hits = []
+            for k in range(max(3, int(L_ / 0.25))):
+                f = (k + 0.5) / max(3, int(L_ / 0.25))
+                q = Vector((lo.x + (hi.x - lo.x) * f if along_x else (lo.x + hi.x) / 2, (lo.y + hi.y) / 2 if along_x else lo.y + (hi.y - lo.y) * f, hi.z + 0.001))
+                h = lin_tree.ray_cast(q, UP, 0.06)
+                hits.append(h[0].z if h[0] is not None else None)
+            if not hits or any(hz is None for hz in hits): continue
+            ztop = min(hits)
+            if ztop - hi.z < 0.004: continue
+            name = f"FS-liningrun-{ob.name[:40]}"
+            ins = 0.0008                                    # inset from the lining's faces: never coplanar with a board edge
+            if along_x: me = box_mesh(name, lo.x, lo.y + ins, hi.z, hi.x, hi.y - ins, ztop - 0.004, fin.get("FIN-WALL"))
+            else: me = box_mesh(name, lo.x + ins, lo.y, hi.z, hi.x - ins, hi.y, ztop - 0.004, fin.get("FIN-WALL"))
+            life = (pr.get("stage_in", 1), pr.get("seq", 0.0) or 0.0, pr.get("stage_out"), pr.get("seq_out")) if N == 1 else \
+                (max(N, pr.get("stage_in", 1)), finish_seq, pr.get("stage_out"), pr.get("seq_out"))
+            extra.append(new_obj(name, me, "FIN-WALL", life, f"wall lining run on {1000 * (ztop - hi.z):.0f} mm up to the ceiling over {ob.name} (row 213; typical)"))
+            nrun += 1
+    if nrun: log(f"finish: {nrun} wall linings run on to the ceiling above them (row 213)")
+    # ---- 1c. ceilings at different heights meet at a boxed step (CORRECTIONS-LOG 214): a beam's boxing beside a ceiling lining
+    #          comes down past that lining's underside and laps its edge, so no member, joist side or slot shows between them
+    linings = []
+    for ob, p in live_parts():
+        if ob.name.startswith("CL-") and p["props"].get("group") == "ceiling_joist":
+            bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
+            linings.append((ob.name, Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb))), Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))))
+    for bx_ in boxes:
+        e = 0.0275
+        x0, y0, z0, x1, y1 = bx_["lo"].x - e, bx_["lo"].y - e, bx_["lo"].z - e, bx_["hi"].x + e, bx_["hi"].y + e
+        for nm_, llo, lhi in linings:
+            if abs(llo.z - z0) > 0.10: continue
+            ovx = min(x1, lhi.x) - max(x0, llo.x); ovy = min(y1, lhi.y) - max(y0, llo.y)
+            near = False
+            if ovy > 0.05:
+                if 0 <= llo.x - x1 <= 0.06: x1 = llo.x + 0.01; near = True
+                elif 0 <= x0 - lhi.x <= 0.06: x0 = lhi.x - 0.01; near = True
+            if ovx > 0.05:
+                if 0 <= llo.y - y1 <= 0.06: y1 = llo.y + 0.01; near = True
+                elif 0 <= y0 - lhi.y <= 0.06: y0 = lhi.y - 0.01; near = True
+            if near and llo.z - 0.005 < z0:
+                z0 = llo.z - 0.005; bx_.setdefault("step", []).append(nm_)
+        bx_["final"] = (x0, y0, z0, x1, y1)
     for bx_ in boxes:
         e = 0.0275; lo, hi = bx_["lo"], bx_["hi"]
         name = f"FS-boxing-{bx_['names'][0][:40]}"
-        me = box_mesh(name, lo.x - e, lo.y - e, lo.z - e, hi.x + e, hi.y + e, bx_["top"], fin.get("FIN-CEIL"))
+        x0, y0, z0, x1, y1 = bx_["final"]
+        if bx_.get("step"): log(f"finish: {name} made a boxed step with {bx_['step']} (row 214)")
+        me = box_mesh(name, x0, y0, z0, x1, y1, bx_["top"], fin.get("FIN-CEIL"))
         extra.append(new_obj(name, me, "FIN-CEIL", bx_["life"], f"plasterboard boxing round {', '.join(bx_['names'])} (12.5 mm board on battens, painted FIN-CEIL; typical)"))
         nbox += 1
     tree = make_tree(live_parts())
@@ -229,11 +452,12 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
     lp_shell = [(ob, p) for ob, p in live_parts() if not (ob.name.startswith("SPEC-") and not ob.name.startswith(("SPEC-FLR", "SPEC-SKIRT")))
                 and not p["props"].get("door_leaf")]
     tree_shell = make_tree(lp_shell)
-    mat_shell = []
+    mat_shell, grp_shell = [], []
     for ob, p in lp_shell:
         for pl in ob.data.polygons:
             m_ = ob.data.materials[pl.material_index] if pl.material_index < len(ob.data.materials) else None
-            mat_shell.append(m_.name if m_ else "")
+            mat_shell.append(m_.name if m_ else ""); grp_shell.append(p["props"].get("group", ""))
+    filled = {}                     # one world grid for every room: two rooms' bands never lay boards over each other
     for r in spec_rooms:
         if BARE_ROOMS.search(r["id"]): continue
         if isinstance(r["ceiling_y"], (int, float)): cy = float(r["ceiling_y"])
@@ -243,29 +467,66 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             cy = r["floor_y"] + float(mm_.group(1))
         P = [(x, -z) for (x, z) in r["polygon"]]
         xs = [q[0] for q in P]; ys = [q[1] for q in P]; st = 0.05
-        nx_, ny_ = int((max(xs) - min(xs)) / st) + 1, int((max(ys) - min(ys)) / st) + 1
-        need = set()
+        ox = math.floor((min(xs) - 0.15) / st) * st; oy = math.floor((min(ys) - 0.15) / st) * st
+        gi0, gj0 = int(round(ox / st)), int(round(oy / st)); lvl = round(r["floor_y"], 1)      # per storey
+        nx_, ny_ = int((max(xs) + 0.15 - ox) / st) + 1, int((max(ys) + 0.15 - oy) / st) + 1
+        need = {}                   # cell -> the board's top: the drawn height, or just under a flat roof that sits lower
+        ceiled = set()              # cells under an existing ceiling at the drawn height (the boards lap under these)
         for i in range(nx_):
             for j in range(ny_):
-                x = min(xs) + (i + 0.5) * st; y = min(ys) + (j + 0.5) * st
-                if not _in_poly(x, y, P) or (r["floor_y"] < 1.0 and any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in stair_bb)): continue
+                if (gi0 + i, gj0 + j, lvl) in filled: continue
+                x = ox + (i + 0.5) * st; y = oy + (j + 0.5) * st
+                # the room and a 200 mm band round it: a wall the scheme takes out leaves its footprint between two rooms
+                # with no ceiling over it (row 191 walk inspection: the After landing showed the roof void through it)
+                inside = _in_poly(x, y, P)
+                if not (inside or _dist_edge(x, y, P) < 0.2) or (r["floor_y"] < 1.0 and any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in stair_bb)): continue
+                if not inside:              # a band cell counts only where it is open to the room (no wall, lining or cavity)
+                    best_ = None
+                    for k_ in range(len(P)):
+                        (ax, ay), (bx, by) = P[k_], P[(k_ + 1) % len(P)]
+                        L2 = (bx - ax) ** 2 + (by - ay) ** 2 or 1e-12
+                        t_ = max(0.0, min(1.0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / L2))
+                        qx, qy = ax + t_ * (bx - ax), ay + t_ * (by - ay); dd = math.hypot(qx - x, qy - y)
+                        if best_ is None or dd < best_[0]: best_ = (dd, qx, qy)
+                    dv = Vector((best_[1] - x, best_[2] - y, 0))
+                    if dv.length < 1e-6: continue
+                    dv.normalize(); o_ = Vector((x, y, r["floor_y"] + 1.2))
+                    if tree_shell.ray_cast(o_, dv, best_[0] + 0.05)[0] is not None or tree_shell.ray_cast(o_, -dv, 0.02)[0] is not None: continue
                 for (ox_, oy_) in ((0, 0), (-0.45, -0.45), (0.45, -0.45), (0.45, 0.45), (-0.45, 0.45)):
                     h = tree_shell.ray_cast(Vector((x + ox_ * st, y + oy_ * st, r["floor_y"] + 1.2)), Vector((0, 0, 1)), 8.0)
-                    if h[0] is None or h[0].z > cy + 0.02 or (h[0].z > cy - 0.03 and RAW.match(mat_shell[h[2]])): need.add((i, j)); break
-        # greedy rectangles
+                    if h[0] is None or h[0].z > cy + 0.02 or (h[0].z > cy - 0.03 and RAW.match(mat_shell[h[2]])):
+                        need[(i, j)] = min(need.get((i, j), cy), cy); break
+                    # a flat roof lower than the drawn ceiling (the old outshot's felt roof at 2.16 under a drawn 2.43): its
+                    # underside showed in the rooms below. The ceiling goes on under the roof instead (row 191, walk inspection)
+                    if abs(h[0].z - cy) <= 0.02 and h[1].z < -0.7 and ox_ == 0 and oy_ == 0: ceiled.add((i, j))
+                    if inside and h[0].z <= cy - 0.03 and h[1].z < -0.9 and grp_shell[h[2]] in ("roof_cover", "roof_layer"):
+                        need[(i, j)] = min(need.get((i, j), cy), round(h[0].z, 4))
+        # greedy rectangles, one height at a time
+        allneed = dict(need)
+        for (i_, j_), hz_ in need.items(): filled[(gi0 + i_, gj0 + j_, lvl)] = hz_
         while need:
-            i0, j0 = min(need)
+            i0, j0 = min(need); hz = need[(i0, j0)]
             i1 = i0
-            while (i1 + 1, j0) in need: i1 += 1
+            while need.get((i1 + 1, j0)) == hz: i1 += 1
             j1 = j0
-            while all((ii, j1 + 1) in need for ii in range(i0, i1 + 1)): j1 += 1
+            while all(need.get((ii, j1 + 1)) == hz for ii in range(i0, i1 + 1)): j1 += 1
             for ii in range(i0, i1 + 1):
-                for jj in range(j0, j1 + 1): need.discard((ii, jj))
-            x0 = min(xs) + i0 * st; x1 = min(xs) + (i1 + 1) * st; y0 = min(ys) + j0 * st; y1 = min(ys) + (j1 + 1) * st
+                for jj in range(j0, j1 + 1): need.pop((ii, jj), None)
+            x0 = ox + i0 * st; x1 = ox + (i1 + 1) * st; y0 = oy + j0 * st; y1 = oy + (j1 + 1) * st
+            # boards lap 10 mm under the ceilings they meet: butted on the 50 mm grid they left slits the roof void showed
+            # through (row 191 walk inspection: After landing)
+            # (only on edges that meet something else, never over the next fill board: coplanar laps z-fight)
+            lap = lambda cells: any(c_ in ceiled for c_ in cells) and not any(c_ in allneed for c_ in cells)
+            if lap([(i0 - 1, jj) for jj in range(j0, j1 + 1)]): x0 -= 0.01      # toward an existing ceiling only, never
+            if lap([(i1 + 1, jj) for jj in range(j0, j1 + 1)]): x1 += 0.01      # over the next fill board (coplanar laps
+            if lap([(ii, j0 - 1) for ii in range(i0, i1 + 1)]): y0 -= 0.01      # z-fight)
+            if lap([(ii, j1 + 1) for ii in range(i0, i1 + 1)]): y1 += 0.01
             name = f"FS-ceiling-{r['id']}-{nfill}"
-            me = box_mesh(name, x0, y0, cy - 0.004, x1, y1, cy - 0.0008, fin.get("FIN-CEIL"))
+            me = box_mesh(name, x0, y0, hz - 0.0133, x1, y1, hz - 0.0008, fin.get("FIN-CEIL")) if hz < cy - 0.001 else \
+                 box_mesh(name, x0, y0, cy - 0.004, x1, y1, cy - 0.0008, fin.get("FIN-CEIL"))
             life = (1, 0.0, None, None) if N == 1 else (N, finish_seq, None, None)
-            extra.append(new_obj(name, me, "FIN-CEIL", life, f"plasterboard ceiling at the drawn height {cy} ({r['id']}; spec FIN-CEIL; row 191)"))
+            what = f"at the drawn height {cy}" if hz >= cy - 0.001 else f"under the flat roof at {hz:.3f} (lower than the drawn {cy})"
+            extra.append(new_obj(name, me, "FIN-CEIL", life, f"plasterboard ceiling {what} ({r['id']}; spec FIN-CEIL; row 191)"))
             nfill += 1
     # floors: wherever a room has no floor at its level (a gap at a threshold, under a cupboard), a floor in the room's finish
     nfl = 0
@@ -297,12 +558,92 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             life = (1, 0.0, None, None) if N == 1 else (N, 0.7, None, None)
             extra.append(new_obj(name, me, fm_.group(0), life, f"floor in {fm_.group(0)} where the room had none at its level ({r['id']}; row 191)"))
             nfl += 1
+    # under the ground-floor stair (the void under flight 1, open to the cupboard once the soffit closes it): the treads stood
+    # over the bare ground (walk inspection, 1 Nov: lawn seen through the cupboard door). The cupboard's floor runs under it.
+    cup = next((r for r in spec_rooms if re.search(r"under.?stair", r["id"], re.I)), None)
+    cfm_ = re.search(r"FIN-FLR-[A-Z]+", cup["finishes"].get("floor", "")) if cup else None
+    for (bx0, by0, bx1, by1) in stair_bb:
+        if not cfm_: break
+        fy = cup["floor_y"]; st = 0.05
+        nx_, ny_ = int((bx1 - bx0) / st) + 1, int((by1 - by0) / st) + 1
+        need = set()
+        for i in range(nx_):
+            for j in range(ny_):
+                x = bx0 + (i + 0.5) * st; y = by0 + (j + 0.5) * st
+                h = tree_shell.ray_cast(Vector((x, y, fy + 0.05)), Vector((0, 0, -1)), 3.0)
+                if h[0] is not None and h[1].z < -0.2: continue                      # inside the first tread / a wall
+                if h[0] is None or h[0].z < fy - 0.03: need.add((i, j))
+        rects = []
+        while need:
+            i0, j0 = min(need); i1 = i0
+            while (i1 + 1, j0) in need: i1 += 1
+            j1 = j0
+            while all((ii, j1 + 1) in need for ii in range(i0, i1 + 1)): j1 += 1
+            for ii in range(i0, i1 + 1):
+                for jj in range(j0, j1 + 1): need.discard((ii, jj))
+            rects.append((bx0 + i0 * st, by0 + j0 * st, bx0 + (i1 + 1) * st, by0 + (j1 + 1) * st))
+        if rects:                                   # one object (Quest batches, row 187)
+            fm = fin.get(cfm_.group(0)); tile = fin.tile.get(fm.name, (1, 1)); z0, z1 = fy - 0.03, fy - 0.001
+            bm = bmesh.new(); uv = bm.loops.layers.uv.new("UVMap")
+            for (x0, y0, x1, y1) in rects:
+                vs = [bm.verts.new(v) for v in ((x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1))]
+                for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+                    fa = bm.faces.new([vs[i] for i in f])
+                    for l in fa.loops:
+                        c = l.vert.co; nn = fa.normal
+                        l[uv].uv = ((c.x / tile[0], c.y / tile[1]) if abs(nn.z) > 0.7 else ((c.x if abs(nn.y) > abs(nn.x) else c.y) / tile[0], c.z / tile[1]))
+            name = f"FS-floor-under-stair-{nfl}"
+            me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free(); me.materials.append(fm)
+            life = (1, 0.0, None, None) if N == 1 else (N, 0.7, None, None)
+            extra.append(new_obj(name, me, cfm_.group(0), life, f"floor in {cfm_.group(0)} under the stair, as the cupboard ({cup['id']}; row 191)"))
+            nfl += 1
     if nfl: log(f"finish: {nfl} floor patches where a room had no floor at its level")
     if nfill or nfl: tree = make_tree(live_parts())
     log(f"finish: {nbox} beams boxed, {nfill} ceiling boards where a room's ceiling was missing or higher than drawn")
 
+    bare_rooms = []                                  # (rooms_blender leaves the bare rooms out)
+    for r_ in spec_rooms:
+        if not BARE_ROOMS.search(r_["id"]): continue
+        P_ = [(x, -z) for (x, z) in r_["polygon"]]; xs_ = [q[0] for q in P_]; ys_ = [q[1] for q in P_]
+        bare_rooms.append((r_["id"], P_, r_["floor_y"] - 0.05, r_["floor_y"] + 3.9, (min(xs_), min(ys_), max(xs_), max(ys_))))
+
+    def in_bare(q):
+        """a point in a room the spec keeps bare (the conservatory: face brick and dwarf walls), seen from anywhere"""
+        for (rid, P, z0, z1, bb) in bare_rooms:
+            if bb[0] <= q.x <= bb[2] and bb[1] <= q.y <= bb[3] and z0 - 0.3 < q.z < z1 + 0.3 and _in_poly(q.x, q.y, P): return True
+        return False
+
+    H8 = [Vector((math.cos(a_ * math.pi / 4), math.sin(a_ * math.pi / 4), 0.0)) for a_ in range(8)]
+
+    def outdoors(q, n=None):
+        """out in the open (the garden, the street): two of eight level rays escape within 8 m, or a wall face looks straight out. Interior skins never
+        go on an outside wall face seen through an open doorway (row 191 walk inspection: No.21's and No.23's front walls
+        took the porch's plaster as white patches)"""
+        if sum(1 for d_ in H8 if tree.ray_cast(q, d_, 8.0)[0] is None) >= 2: return True     # (leaves and glass: closed)
+        if n is not None and abs(n.z) < 0.3:        # a wall face looking straight out into the open
+            return tree.ray_cast(q, Vector((n.x, n.y, 0)).normalized(), 8.0)[0] is None
+        return False
+
+    def close_to_room(q, tol=0.22):        # (unused now: the skins test outdoors instead)
+        """in a finished room, or within tol of one in plan (a reveal, a slot, a wall end): never a face out in the garden
+        or the street seen through an open doorway (row 191 walk inspection: No.21's front wall got the porch's plaster)"""
+        for (bx0, by0, bx1, by1) in stair_bb:            # the stairwell is a finished space too (no room of its own)
+            if bx0 - tol <= q.x <= bx1 + tol and by0 - tol <= q.y <= by1 + tol and -0.1 < q.z < 5.3: return True
+        for (rid, P, z0, z1, bb) in rooms:
+            if BARE_ROOMS.search(rid) or not (z0 - 0.3 < q.z < z1 + 0.3): continue
+            if not (bb[0] - tol <= q.x <= bb[2] + tol and bb[1] - tol <= q.y <= bb[3] + tol): continue
+            if _in_poly(q.x, q.y, P): return True
+            n_ = len(P)
+            for i_ in range(n_):
+                (ax, ay), (bx, by) = P[i_], P[(i_ + 1) % n_]
+                L2 = (bx - ax) ** 2 + (by - ay) ** 2 or 1e-12
+                t_ = max(0.0, min(1.0, ((q.x - ax) * (bx - ax) + (q.y - ay) * (by - ay)) / L2))
+                if math.hypot(ax + t_ * (bx - ax) - q.x, ay + t_ * (by - ay) - q.y) < tol: return True
+        return False
+
     def room_at(q):
         for (rid, P, z0, z1, bb) in rooms:
+            if BARE_ROOMS.search(rid): continue          # the spec keeps it bare (conservatory: face brick, dwarf walls): no skins
             if bb[0] <= q.x <= bb[2] and bb[1] <= q.y <= bb[3] and z0 < q.z < z1 and _in_poly(q.x, q.y, P): return rid
         return None
 
@@ -344,7 +685,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         return None
 
     groups = {}                     # (stage_in, seq, stage_out, seq_out, finish) -> list of (verts, src name)
-    n_faces = 0; per_room = {}
+    n_faces = 0; n_outside = 0; n_buried = 0; per_room = {}
     done = set()
     faces = {}                      # (ob name, poly) -> dict(ob, p, rid, cells: set or None (whole face), frame)
     CELL = 0.25
@@ -361,9 +702,21 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
         return dict(o=o, u=u, v=v, n=n, u0=min(us), u1=max(us), v0=min(ws), v1=max(ws),
                     nu=max(1, int(math.ceil((max(us) - min(us)) / CELL))), nv=max(1, int(math.ceil((max(ws) - min(ws)) / CELL))),
                     poly2=[(a_, b_) for a_, b_ in zip(us, ws)])
+    lin_ = [(o_, p_) for o_, p_ in live_parts() if o_.name.startswith(("CL-", "XC-"))]
+    lining_tree = make_tree(lin_) if lin_ else None
+
+    def over_lining(ob, k):
+        """a joist face resting on (or through) a ceiling lining is above the ceiling, not in the room: its skin (grown 20 mm
+        past its edges) hung below the lining as white ribs (row 191 walk inspection: kitchen-diner and bedroom 3 ceilings)"""
+        if lining_tree is None: return False
+        M = ob.matrix_world; vs = [M @ ob.data.vertices[i].co for i in ob.data.polygons[k].vertices]
+        c = sum(vs, Vector()) / len(vs); zmin = min(v.z for v in vs)
+        return lining_tree.ray_cast(Vector((c.x, c.y, zmin + 0.002)), Vector((0, 0, -1)), 0.004)[0] is not None   # resting on it (+-2 mm)
+
     def add_face(ob, p, k, rid, at=None):
         """mark a face (small: whole) or the cells of a large face that are seen (at: a hit point; None: run the cell test)"""
         key = (ob.name, k)
+        if p["props"].get("group") in ("ceiling_joist", "joist") and not ob.name.startswith(("CL-", "XC-")) and over_lining(ob, k): return
         pl = ob.data.polygons[k]
         if (ob.matrix_world.to_3x3() @ pl.normal).normalized().z > 0.7 and p["props"].get("group") in ("deck", "slab_layer", "floor_finish", "joist"): return
         area = pl.area * (ob.matrix_world.to_3x3().determinant() ** (2 / 3) if ob.matrix_world.to_3x3().determinant() > 0 else 1)
@@ -372,10 +725,12 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             if area <= 0.3:
                 nn_ = (ob.matrix_world.to_3x3() @ pl.normal).normalized()
                 if not under_cover(ob.matrix_world @ pl.center + nn_ * 0.008): return
+                if in_bare(ob.matrix_world @ pl.center + nn_ * 0.05) or outdoors(ob.matrix_world @ pl.center + nn_ * 0.05, nn_): return
             rec = faces[key] = dict(ob=ob, p=p, rid=rid, cells=None if area <= 0.3 else set(), fr=None if area <= 0.3 else frame_of(ob, k))
         if rec["cells"] is None: return
         fr = rec["fr"]
         if at is not None:
+            if in_bare(at + fr["n"] * 0.05) or outdoors(at + fr["n"] * 0.05, fr["n"]): return
             d_ = at - fr["o"]; i = int((d_.dot(fr["u"]) - fr["u0"]) / CELL); j = int((d_.dot(fr["v"]) - fr["v0"]) / CELL)
             i, j = min(max(i, 0), fr["nu"] - 1), min(max(j, 0), fr["nv"] - 1)
             if (i, j) in rec["cells"]: return
@@ -385,7 +740,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
                     ii, jj = i + di, j + dj
                     if (ii, jj) in rec["cells"] or not (0 <= ii < fr["nu"] and 0 <= jj < fr["nv"]): continue
                     cc = fr["o"] + fr["u"] * (fr["u0"] + (ii + 0.5) * CELL) + fr["v"] * (fr["v0"] + (jj + 0.5) * CELL)
-                    if room_at(cc + fr["n"] * 0.06) and under_cover(cc + fr["n"] * 0.06): rec["cells"].add((ii, jj))
+                    if room_at(cc + fr["n"] * 0.06) and under_cover(cc + fr["n"] * 0.06) and not in_bare(cc + fr["n"] * 0.06): rec["cells"].add((ii, jj))
             return
         for i in range(fr["nu"]):
             for j in range(fr["nv"]):
@@ -394,15 +749,37 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
                 cc = fr["o"] + fr["u"] * ((ua + ub) / 2) + fr["v"] * ((va + vb) / 2)
                 if not _in_poly((ua + ub) / 2, (va + vb) / 2, fr["poly2"]): continue
                 smp = [cc] + [fr["o"] + fr["u"] * (ua + (ub - ua) * a_) + fr["v"] * (va + (vb - va) * b_) for a_, b_ in ((0.2, 0.2), (0.8, 0.2), (0.8, 0.8), (0.2, 0.8))]
-                if under_cover(cc + fr["n"] * 0.05) and seen(smp, fr["n"]): rec["cells"].add((i, j))
+                if under_cover(cc + fr["n"] * 0.05) and not in_bare(cc + fr["n"] * 0.05) and seen(smp, fr["n"]): rec["cells"].add((i, j))
+    _seam = {}
+    def seam_tree(asb):
+        if asb not in _seam:
+            it_ = [(o_, p_) for o_, p_ in objs if o_.type == "MESH" and not p_.get("context") and not o_.name.startswith(("FS-", "SPEC-", "XFD-", "JN-"))
+                   and o_.name.startswith("AB-") == asb and p_["props"].get("group") in ("wall_outer", "wall_inner", "wall_cavity", "wall_insulation", "foundation", "lintel", "steel", "timber_beam", "wall_lining")]
+            _seam[asb] = make_tree(it_) if it_ else None
+        return _seam[asb]
     def emit():
-        nonlocal n_faces
+        nonlocal n_faces, n_outside, n_buried
         for key, rec in faces.items():
             ob, p = rec["ob"], rec["p"]; k = key[1]
             pr = p["props"]; g = pr.get("group", "")
             M = ob.matrix_world; R = M.to_3x3().normalized(); pl = ob.data.polygons[k]
             n = (R @ pl.normal).normalized(); c = M @ pl.center
             down = n.z < -0.7
+            # Jack's walk 2 (F99, row 295): a skin is a room's plaster, never an outer face. A wall face that looks straight out into the
+            # open (nothing within 8 m along its horizontal normal) is an outside face: the front, party, porch and wing walls, the
+            # porch step. It keeps its brick/render. (Large faces were never tested once their cells were gathered.)
+            # (the 8 m 'looks straight out' ray veto was dropped: it also stripped the plaster from faces looking through the porch's open front and
+            #  the stair void: 16 raw faces back in the shell gate. Wall CELLS are now filtered by 'a finished room is on the normal side' in emit's cell branch.)
+            # a face buried against a neighbouring solid of its own layer (the seam between two wall lifts, a lintel's end in the
+            # wall): not an exposed surface at all, and its skin (grown 4-20 mm past the face's edge) poked out of the wall as white
+            # patches and strips on the outer brick (walk 2: the porch, the party wall, the wing). Start 0.4 mm out along the normal: if
+            # that point is inside a solid, the first surface met looks along the ray (a front face), not back at it.
+            if g != "ground" and not rec.get("exact"):
+                st_ = seam_tree(ob.name.startswith("AB-"))
+                if st_ is not None:
+                    h_ = st_.ray_cast(c + n * 0.0004, n, 3.0)
+                    if h_[0] is not None and h_[1] is not None and h_[1].dot(n) > 0.2:
+                        n_buried += 1; continue
             finish = "FIN-CEIL" if down and (g in DOWN_CEIL_GROUPS or c.z > 2.0) else "FIN-WALL"
             if g == "ground": finish = "c:#26231F:0.95:0"                    # under-floor void: dark, as seen through a slot
             cat = pr.get("category")
@@ -413,6 +790,18 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
                 life = (max(N, pr.get("stage_in", 1)), finish_seq, pr.get("stage_out"), pr.get("seq_out"))
             off = 0.004 if g in ("roof_layer",) else (0.001 if life[0] <= 1 else 0.0025)
             area_w = pl.area
+            if rec.get("exact"):
+                vs0 = [M @ ob.data.vertices[i].co for i in pl.vertices]
+                m0 = len(vs0); sg0 = 1 if sum(((vs0[(i + 1) % m0] - vs0[i]).cross(vs0[(i + 2) % m0] - vs0[(i + 1) % m0])).dot(n) for i in range(m0)) >= 0 else -1
+                outs0 = [((vs0[(i + 1) % m0] - vs0[i]).cross(n).normalized() * sg0 if (vs0[(i + 1) % m0] - vs0[i]).length > 1e-9 else Vector((0, 0, 0))) for i in range(m0)]
+                vg = []
+                for i in range(m0):                                   # 4 mm in-plane growth: neighbouring skins meet at the corners (no hairline of brick), no wrap onto the next surface
+                    bis0 = outs0[i - 1] + outs0[i]
+                    if bis0.length < 1e-6: vg.append(vs0[i]); continue
+                    bis0.normalize(); vg.append(vs0[i] + bis0 * (0.004 / max(0.35, bis0.dot(outs0[i]))))
+                groups.setdefault(life + (finish,), []).append(([v + n * off for v in vg], ob.name))
+                n_faces += 1; per_room[rec["rid"]] = per_room.get(rec["rid"], 0) + 1
+                continue
             if rec["cells"] is None and g != "ground" and (area_w < 0.05 or g in ("rafter", "valley", "hip")):
                 # a sliver (a ledge in a reveal, a rafter's edge at a ceiling junction) is finished in its own material: no skin
                 # for a grazing ray to slip under. (A new part's sliver shows finished from its own stage on: noted.)
@@ -444,6 +833,13 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             else:
                 if not rec["cells"]: continue
                 fr = rec["fr"]; need = set(rec["cells"])
+                if abs(n.z) < 0.3:       # row 295: a wall cell is a room's plaster only if the room is on its normal side (10 cm in front of it is inside a finished room)
+                    keep_ = set()
+                    for (ci_, cj_) in need:
+                        cc_ = fr["o"] + fr["u"] * (fr["u0"] + (ci_ + 0.5) * CELL) + fr["v"] * (fr["v0"] + (cj_ + 0.5) * CELL)
+                        if room_at(cc_ + fr["n"] * 0.10) is not None: keep_.add((ci_, cj_))
+                        else: n_outside += 1
+                    need = keep_
                 while need:                                  # greedy rectangles of seen cells, clipped to the face's extent
                     i0, j0 = min(need); i1 = i0
                     while (i1 + 1, j0) in need: i1 += 1
@@ -479,6 +875,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             if not near_room(c): continue
             if m.name.startswith(("existing_floor", "floor_finish")) and n.z > -0.5: continue      # floors: only their undersides
             vs = [M @ ob.data.vertices[i].co for i in pl.vertices]
+            if in_bare(c + n * 0.05): continue                # a face of the conservatory (face brick): seen through a door, still bare
             samples = [c] + [c + (v - c) * 0.7 for v in vs[:4]]
             rid = seen(samples, n)
             if rid is None: continue
@@ -518,6 +915,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             if p.get("context") or pr.get("spec_id") or ob.name.startswith(("SPEC-", "XFD-", "FS-")) or pr.get("group") in ("ground", "window", "door", "rooflight", "glass", "roof_cover", "ridge"): continue
             back_ok = pr.get("group") in ("rafter", "valley", "hip", "timber_beam", "joist", "ceiling_joist")   # a cut member seen through its open end
             if m and RAW.match(m.name) and (h[1].dot(h[0] - o) < 0 or back_ok):          # the face is seen from its front (a back face is the integrity's "missing face")
+                if in_bare(h[0] - (h[0] - o).normalized() * 0.05): continue            # seen through the doors into the conservatory: bare by spec
                 add_face(ob, p, k, rid, at=h[0]); nview += 1
     log(f"finish: {nview} raw hits from standing points covered")
     # a roof member seen from a room (an old rafter foot left inside the new bedroom) is finished all over, like a boxed member
@@ -530,6 +928,68 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             m = mats[pl.material_index] if pl.material_index < len(mats) else None
             if m and RAW.match(m.name) and (nm_, pl.index) not in faces:
                 faces[(nm_, pl.index)] = dict(ob=ob, p=rec["p"], rid=rec["rid"], cells=None, fr=None)
+    # ---- 4. the reveal sweep (round-1 sweep, PLAN S3 "every reveal plastered, head and sill"). Passes 1-3 test what a ray sees in
+    #         the LIVE tree, which keeps only the as-built records and drops the drawn parts they replace; the viewer shows the DRAWN
+    #         layer unless As built is switched on, so the drawn wall's reveals (head, one jamb) and wall ends were never tested and
+    #         stayed raw brick, block or insulation. Here every small raw face INSIDE THE WALL THICKNESS of a finished room (within
+    #         22 cm of its wall line, not pointing away from the room, not out in the open, not in a room kept bare) is finished,
+    #         drawn and as-built layers alike, whether or not a sampled ray saw it.
+    def _nearest(x, y, P):
+        best, bp = 9e9, (x, y)
+        for i_ in range(len(P)):
+            (x1, y1), (x2, y2) = P[i_], P[(i_ + 1) % len(P)]
+            dx, dy = x2 - x1, y2 - y1; L2 = dx * dx + dy * dy or 1e-12
+            t_ = max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / L2))
+            qx, qy = x1 + t_ * dx, y1 + t_ * dy; d_ = math.hypot(x - qx, y - qy)
+            if d_ < best: best, bp = d_, (qx, qy)
+        return best, bp
+
+    def wall_zone(c, n, reach=0.22):
+        for (rid, P, z0, z1, bb) in rooms:
+            if not (z0 < c.z < z1) or not (bb[0] <= c.x <= bb[2] and bb[1] <= c.y <= bb[3]): continue
+            if _in_poly(c.x, c.y, P): continue                    # inside the room: passes 1-3 own it
+            d_, (qx, qy) = _nearest(c.x, c.y, P)
+            if d_ > reach: continue
+            nh = Vector((n.x, n.y, 0.0))
+            if nh.length > 0.3 and nh.normalized().dot(Vector((qx - c.x, qy - c.y, 0.0)).normalized()) < -0.15: continue   # facing away from the room (row 295: was -0.5, which let outer-leaf ends and steps through)
+            return rid
+        return None
+    lin_cover = make_tree([(o_, p_) for o_, p_ in live_parts() if p_["props"].get("group") == "wall_lining"])
+    SOLID_GROUPS = {"wall_inner", "wall_outer", "wall_cavity", "wall_insulation", "foundation", "lintel", "steel", "timber_beam"}
+    nrev = 0; _dbg_rev = []
+    for ob, p in objs:
+        if ob.type != "MESH" or ob.name.startswith(("FS-", "SPEC-", "XFD-", "JN-")): continue
+        pr = p["props"]; g = pr.get("group", "")
+        if p.get("context") or pr.get("spec_id") or g in ("ground", "window", "door", "rooflight", "fitting", "glass", "roof_cover", "ridge", "finish_skin"): continue
+        if (pr.get("stage_out") or 99) <= N: continue
+        mats = ob.data.materials
+        if not mats or not any(m and RAW.match(m.name) for m in mats): continue
+        M = ob.matrix_world; R = M.to_3x3().normalized()
+        for pl in ob.data.polygons:
+            m = mats[pl.material_index] if pl.material_index < len(mats) else None
+            if not m or not RAW.match(m.name) or (ob.name, pl.index) in faces: continue
+            if pl.area > 0.6 or pl.area < 1e-5: continue
+            c = M @ pl.center; n = (R @ pl.normal).normalized()
+            if m.name.startswith(("existing_floor", "floor_finish")) and n.z > -0.5: continue
+            rid = wall_zone(c, n)
+            if rid is None or in_bare(c + n * 0.05) or outdoors(c + n * 0.05, n): continue
+            if lin_cover.ray_cast(c + n * 0.0003, n, 0.002)[0] is not None: continue       # a lining's own face stands within 2 mm in front of it (flush): a second skin would z-fight with it
+            if pl.area > 0.3:                                  # a full-height wall end (0.3-0.6 m2): the whole face, as an exact skin (the cell test is for big flat faces)
+                faces[(ob.name, pl.index)] = dict(ob=ob, p=p, rid=rid, cells=None, fr=None, exact=True); nrev += 1
+                if os.environ.get("HB_DEBUG_REVEAL"): _dbg_rev.append((ob.name, g, rid, round(pl.area, 3), [round(x, 2) for x in c], [round(x, 2) for x in n]))
+                continue
+            add_face(ob, p, pl.index, rid)
+            if (ob.name, pl.index) in faces and g in SOLID_GROUPS: faces[(ob.name, pl.index)]["exact"] = True    # a closed wall solid keeps its own faces: the finish is a separate skin, never a material swap on the solid (it split the part into two primitives: integrity open_shell)
+            if os.environ.get("HB_DEBUG_REVEAL"): _dbg_rev.append((ob.name, g, rid, round(pl.area, 3), [round(x, 2) for x in c], [round(x, 2) for x in n]))
+            nrev += 1
+    log(f"finish: {nrev} raw faces inside the wall thickness of finished rooms (reveals, wall ends, heads, both layers) covered")
+    if os.environ.get("HB_DEBUG_REVEAL"):
+        _all = []
+        for (nm_, k_), rec in faces.items():
+            o_ = rec["ob"]; pl_ = o_.data.polygons[k_]; M_ = o_.matrix_world
+            c_ = M_ @ pl_.center; n_ = (M_.to_3x3().normalized() @ pl_.normal).normalized()
+            _all.append((nm_, rec["p"]["props"].get("group", ""), rec["rid"], round(pl_.area, 3), [round(x, 2) for x in c_], [round(x, 2) for x in n_], 1 if rec.get("cells") is not None and rec.get("fr") else 0))
+        json.dump(dict(rev=_dbg_rev, all=_all), open(os.environ["HB_DEBUG_REVEAL"], "w"))
     emit()
     out = list(extra)
     for k, (life, faces) in enumerate(sorted(groups.items(), key=lambda kv: str(kv[0]))):
@@ -563,7 +1023,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
             if vv is not None: ob[kk] = vv
         coll.objects.link(ob)
         out.append((ob, dict(props=props, spec=True, atom=dict(id=name, kind="skin", meta=props, provenance="typical"))))
-    log(f"finish skins: {n_faces} construction faces seen from finished rooms covered, {len(out)} merged objects; by room {per_room}")
+    log(f"finish skins: {n_outside} outside-looking and {n_buried} buried (seam) faces left unskinned (row 295); {n_faces} construction faces seen from finished rooms covered, {len(out)} merged objects; by room {per_room}")
     return out
 
 

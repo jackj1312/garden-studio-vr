@@ -9,7 +9,7 @@
 Centre frame: eye 1.55 m above the floor at the room's centroid (pulled inside if the centroid falls outside the polygon),
 looking at the farthest corner (the longest view across the room), 16 mm lens (wide, as a person turning sees it).
 Doorway frame: eye 0.35 m outside each door opening that leads into the room, looking through it at the room's centre."""
-import sys, os, json, math, argparse
+import sys, os, json, math, argparse, re
 
 ap = argparse.ArgumentParser()
 ap.add_argument("mode"); ap.add_argument("--site", default="assets/sites/house"); ap.add_argument("--version", default="approved_2b")
@@ -57,8 +57,11 @@ def cams():
             if in_poly(ex_, ez_, P): break
             ex_, ez_ = ex_ + (cx - ex_) * 0.2, ez_ + (cz - ez_) * 0.2
         tid = r["id"].replace("R-", "").replace("-", "_")[:40]
-        C.append(dict(name=f"{tid}__centre", room=r["id"], eye=[round(ex_, 3), round(fy + 1.55, 3), round(ez_, 3)],
-                      target=[pb[0], fy + 1.0, pb[1]], lens=14, aspect=0.5625))
+        # a cupboard under the stair is lower than a standing eye: at 1.55 m the camera sat inside the treads (walk inspection,
+        # 1 Nov); there the eye is 0.95 m, a person stooping at the door
+        eh = 0.95 if re.search(r"under.?stair", r["id"] + " " + r.get("name", ""), re.I) else 1.55
+        C.append(dict(name=f"{tid}__centre", room=r["id"], eye=[round(ex_, 3), round(fy + eh, 3), round(ez_, 3)],
+                      target=[pb[0], fy + min(1.0, eh - 0.3), pb[1]], lens=14, aspect=0.5625))
         k = 0
         for (did, ox, oz, nx, nz, st) in doors:
             if abs((0.0 if st == "ground" else 2.6755) - fy) > 0.5: continue
@@ -66,8 +69,8 @@ def cams():
                 ix, iz = ox + nx * sg * 0.4, oz + nz * sg * 0.4
                 if in_poly(ix, iz, P):
                     ex_, ez_ = ox - nx * sg * 0.35, oz - nz * sg * 0.35
-                    C.append(dict(name=f"{tid}__door{k}", room=r["id"], door=did, eye=[round(ex_, 3), round(fy + 1.55, 3), round(ez_, 3)],
-                                  target=[round(cx, 3), fy + 1.2, round(cz, 3)], lens=16, aspect=0.5625))
+                    C.append(dict(name=f"{tid}__door{k}", room=r["id"], door=did, eye=[round(ex_, 3), round(fy + eh, 3), round(ez_, 3)],
+                                  target=[round(cx, 3), fy + min(1.2, eh - 0.3), round(cz, 3)], lens=16, aspect=0.5625))
                     k += 1
                     break
             if k >= 1: break

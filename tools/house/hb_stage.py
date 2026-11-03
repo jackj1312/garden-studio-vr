@@ -840,8 +840,8 @@ def fixture_parts(a):
         frame_mat = ("anthracite_upvc" if ("7016" in t_ or "anthracite" in t_) else "upvc_white" if ("9016" in t_ or "white upvc" in t_)
                      else "joinery" if "fin-door" in t_ else frame_mat)
         a = dict(a, sill_mat=frame_mat)
-        if a.get("leaf_mat") or kind in ("door", "bifold"): a = dict(a, leaf_mat=frame_mat if not a.get("internal") else "joinery")
-    leaf_mat = a.get("leaf_mat") or ("joinery" if a.get("internal") else ("aluminium" if kind == "bifold" else "upvc_white"))
+        if a.get("leaf_mat") or kind in ("door", "bifold"): a = dict(a, leaf_mat=frame_mat if not a.get("internal") else "door_oak")
+    leaf_mat = a.get("leaf_mat") or ("door_oak" if a.get("internal") else ("aluminium" if kind == "bifold" else "upvc_white"))
     props = contract_props(a, part="frame")
     res = [dict(name=a["id"] + "_frame", mat=frame_mat, props=props, mesh=merge_meshes(fr), uv=None)]
     if a.get("_joinery"):

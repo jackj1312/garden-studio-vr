@@ -1,0 +1,14 @@
+# Stage 0 inputs sheet: 23 Battle Road, first three spaces (2 Nov 2026)
+
+Per PLAN.md §2. Scope for this round: the new kitchen-diner (After), the front garden, the lounge (Before and After).
+
+| Input | What we have | Where | Gaps / notes |
+|---|---|---|---|
+| Drawings | BDS 4915.1 general plan, 4915.2 (approved 2B) general plan, the planning set (2022-04-13) and final set (2022-10-27), structural calcs; traced data `house_drawn.json`, build data `build_versions.json`, element JSON per version | `~/Desktop/garden-scans/front-garden/architect/` (`*.pdf`, `*_150dpi.png`, `planning-2022-04-13/`, `final-2022-10-27/`, `sheets/`); `assets/sites/house/*_elements.json` | Porch as built differs from the drawings (decided: porch as built). Loft is Jack's own conversion, not drawn (out of scope this round). |
+| Photos | Walk videos `20458.mp4`, `20494.mp4`; front-garden photos `205xx.jpg`; dated phone photos Mar–May 2026 (front garden, elevations, close-ups of brick, paving, hedge); the solved camera poses `refs.json` | `~/Desktop/garden-scans/` (videos, photos), `~/Desktop/garden-scans/front-garden/` (dated photos, solve), `assets/sites/front-garden-model/` | No interior photos of the lounge or the old kitchen in the folder (`closeups/`, `house-scan/` are empty). Not blocking: Before interiors are styled (decided 1 Nov); finishes come from the spec. |
+| Levels | Floor and ceiling levels per room in the spec; ground levels from the garden solve | `assets/sites/house/spec/spec_v1.json` (rooms: `floor_y`, `ceiling_y`); `assets/sites/front-garden-model/` | LiDAR (G1b) not yet fetched; the front garden is level enough that the solve covers it. |
+| Style | Modern-warm board approved (spec decision D1): engineered oak floors, warm-white walls with clay accents, oatmeal bouclé, linen, terracotta and sage, white 4-panel shaker doors, matt black ironmongery | `assets/sites/house/spec/spec_v1.json` (`finishes`, `open_decisions` D1), `SIGNOFF.md` | The Airbnb frames are the look reference (`AIRBNB-METHOD.md` §6). |
+| Products | Available assets for this test (Jack, 2 Nov): the studio library, Poly Haven, BlendKit, Sketchfab CC0 | `~/Desktop/garden-scans/asset-library/`, `assets/sites/house/spec/furnishing_plan.json` | The real buyable product list comes later; the product rule applies from the next round. |
+| Decisions | Before = today, After = 2B finished; sunny afternoon default plus morning/sunset/night presets and lamp switches; Unreal £10 (stills only); first spaces as above; Max 5x; price ~£800 + £200 VR | `SIGNOFF.md` (1–2 Nov decisions), `PLAN.md` §7 | Sun position: reuse the garden's solved sun (from Jack's own shadows, CORRECTIONS-LOG 14) for the afternoon preset. |
+
+Done check (PLAN §2): every input listed with its path; the gaps above are the only ones, and none blocks the three spaces.

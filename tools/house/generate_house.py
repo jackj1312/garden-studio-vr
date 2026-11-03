@@ -451,6 +451,7 @@ class VersionBuild:
                 for k_ in range(1, 41):
                     if not in_wall(G.add(mid, G.mul(inw, k_ * 0.001 - 0.0005))): break
                     of = k_ * 0.001
+                of += SKIRT_LINING_T          # the wall stack's footprint ends 10 mm short of the lined face the room sees: the board stood 8 mm proud of the plaster, not 18 (round-1 sweep: skirting invisible)
                 steps = max(2, int(L / 0.01)); ok = []; door_ = []
                 for k in range(steps):
                     u = (k + 0.5) * L / steps
@@ -627,7 +628,8 @@ class VersionBuild:
                          "", "assumed", "Floor through the doorway", True)
                 meta.update(stage_in=si, stage_out=so, seq=round(sq, 4), seq_out=sqo, category="existing" if si == 1 else "new")
                 th = atom(f"TH-{slug(W.id)}-{slug(o['id'])}", "prism", "existing", meta, sig=None, poly=P, z0=o["z0"] - 0.0185, z1=o["z0"],   # 1.5 mm over the wall lowered 20 mm under it (was 3 mm: row 179)
-                          mat="buff_concrete" if ext else "existing_floor", cat=meta["category"])
+                          mat="buff_concrete" if ext else ("spec_FIN-FLR-OAK" if (SPEC_V1_MAP.get(self.v["id"]) and not args.no_items) else "existing_floor"), cat=meta["category"])
+                if not ext and SPEC_V1_MAP.get(self.v["id"]) and not args.no_items: SPEC_MATS.add("FIN-FLR-OAK")      # round-1 sweep: the internal threshold is a hardwood strip in the spec oak, not the raw 'existing_floor' tone
                 th["_th_bb"] = bb; th["_th_z"] = round(o["z0"], 4)
                 out.append(th)
         return out
@@ -1291,7 +1293,8 @@ ALLOW += [("timber_beam", "wall_plate", "beam end notched into the wall plate wh
 
 
 # joinery to the bar (hb_joinery; row 183/191): trims are scribed into what they meet, as fitted on site
-ALLOW_NAMES += [("PC-", "_wall_", "party wall end: the closer is bonded into the party wall leaves"), ("PC-", "N21-", "party wall end meets No.21's facade"),
+ALLOW_NAMES += [("ST-soffit", "_wall_lining", "the stair soffit's plasterboard is scribed 5 mm into the wall lining each side (row 191)"),
+                ("PC-", "_wall_", "party wall end: the closer is bonded into the party wall leaves"), ("PC-", "N21-", "party wall end meets No.21's facade"),
                 ("_architraves", "_wall_", "architrave cut / scribed to a return wall beside the opening (<= 35 mm, typical)"),
                 ("_architraves", "-studs", "architrave cut to a stud partition beside the opening"),
                 ("_architraves", "_architraves", "two doors at a corner: their architraves are cut to each other (typical)"),
@@ -1490,6 +1493,46 @@ def bearing_allowed(y, x):
 
 
 LEAF_BLOCKERS = {"wall_outer", "wall_inner", "wall_lining", "fitting", "door", "window", "steel", "lintel", "prop", "slab_layer", "deck"}
+
+
+HW_NAME = re.compile(r"door-furniture|_handle$|letter|lever|knocker", re.I)
+
+
+def tag_leaf_hardware(objs):
+    """Everything fixed to a door leaf swings with it (Jack's walk 2, F101: the front door's handle and letter plate stayed put when
+    the leaf opened). A hardware part (handle, lever, letter plate, knocker, the as-built 'door furniture') that is not itself a leaf
+    but sits on one (its centre inside the leaf's box, grown 6 cm, in a stage where both exist) takes that leaf's door_group,
+    leaf_index, hinge, axis and swing, and door_leaf=True / part='handle', exactly as the internal doors' levers already do.
+    Hinges stay on the frame (their knuckle is on the axis); a bell or camera beside the door is not in the leaf's box."""
+    leaves = [(ob, p) for ob, p in objs if p["props"].get("door_leaf") and p["props"].get("part") in ("leaf",)]
+    n_tag = 0; tagged = []
+    for ob, p in objs:
+        pr = p["props"]
+        if pr.get("door_leaf") or pr.get("group") not in ("door", "fitting") or not HW_NAME.search(ob.name): continue
+        V, T = mesh_world(ob)
+        if not V: continue
+        P = np.array([tuple(v) for v in V]); c = (P.min(0) + P.max(0)) / 2
+        best = None
+        for lob, lp in leaves:
+            lpr = lp["props"]
+            if min(lpr.get("stage_out") or 99, pr.get("stage_out") or 99) <= max(lpr.get("stage_in", 1), pr.get("stage_in", 1)): continue
+            LV, _ = mesh_world(lob)
+            LP = np.array([tuple(v) for v in LV]); lo, hi = LP.min(0) - 0.12, LP.max(0) + 0.12      # a lever stands 6-7 cm proud of the leaf: boxes overlap, not centres
+            if np.all(P.max(0) >= lo) and np.all(P.min(0) <= hi):
+                vol = float(np.prod(hi - lo)) * (1.0 if lob.name.startswith("AB-") == ob.name.startswith("AB-") else 4.0)   # the same layer's leaf first
+                if best is None or vol < best[0]: best = (vol, lob, lp)
+        if best is None:
+            near = sorted(((float(np.linalg.norm(c - (np.array([tuple(v) for v in mesh_world(lob)[0]]).min(0) + np.array([tuple(v) for v in mesh_world(lob)[0]]).max(0)) / 2)), lob.name) for lob, _ in leaves))[:2]
+            print("door hardware not on any leaf:", ob.name, [round(float(x), 3) for x in c], near, "stage", pr.get("stage_in"), pr.get("stage_out"))
+            continue
+        _, lob, lp = best; lpr = lp["props"]
+        upd = dict(door_leaf=True, part="handle", door_group=lpr["door_group"], leaf_index=lpr.get("leaf_index", 0), hinge=list(lpr["hinge"]),
+                   hinge_axis=list(lpr.get("hinge_axis", [0.0, 1.0, 0.0])), swing_deg=float(lpr["swing_deg"]))
+        for k, v in upd.items():
+            pr[k] = v; ob[k] = v
+        n_tag += 1; tagged.append(ob.name)
+    return tagged
+
 
 
 def leaf_swing_check(vb, objs):
@@ -1971,7 +2014,7 @@ def main():
         vkey = SPEC_V1_MAP.get(vs["id"]) if not args.no_items else None
         FIN = None
         if vkey:
-            import hb_items as HI
+            import hb_items as HI; HI.HF.OUT_DIR = OUT
             HI._MAT.clear(); HI._PH_CACHE.clear()          # the previous version's materials and meshes were freed
             FIN = HI.Finishes(SPEC_V1, args.spec_tex, log)
             for fid in sorted(SPEC_MATS):
@@ -1981,9 +2024,10 @@ def main():
             for k_ in ("plaster", "plasterboard"):
                 MAT[k_] = FIN.get("FIN-WALL"); TILE[k_] = FIN.tile[MAT[k_].name]
             MAT["joinery"] = FIN.get("FIN-DOOR"); TILE["joinery"] = (1.0, 1.0)          # internal doors, frames, linings: white satin
+            MAT["door_oak"] = FIN.get("WOOD-OAK-FURN"); TILE["door_oak"] = FIN.tile[MAT["door_oak"].name]   # Jack, 2 Nov 2026 (walk 2, F75): internal door LEAVES are oak; frames, linings and stops stay white satin
             MAT["trim"] = FIN.get("FIN-SKIRT"); MAT["wboard"] = FIN.get("FIN-WBOARD"); MAT["ironmongery"] = FIN.get("METAL-BLACK")   # spec: architraves FIN-SKIRT, boards FIN-WBOARD, black levers
         else:
-            MAT.update(MAT_BASE)
+            MAT.update(MAT_BASE); MAT["door_oak"] = MAT["joinery"]
             for k_ in ("plaster", "plasterboard"): TILE[k_] = TILE_BASE[k_]
         objs = build_blender(vb, MAT, coll)
         objs += ground_objects(vb, MAT, coll)
@@ -2015,6 +2059,8 @@ def main():
             views_ = [("walk", pt[0:1] + [pt[1] + SPEC_V1["walkthrough"]["eye_height_m"]] + pt[2:3]) for nm_, pt in SPEC_V1["walkthrough"].get(vkey, [])]
             views_ += [("camera", c_["eye_m"]) for c_ in SPEC_V1["cameras"] if vkey in c_["versions"] and isinstance(c_["eye_m"], list)]
             objs += HF.apply(objs, SPEC_V1["versions"][vkey]["rooms"], FIN, vb.N, log, views=views_)
+            import hb_services as HS
+            objs += HS.services(objs, SPEC_V1["versions"][vkey]["rooms"], FIN, vb.N, log, spec_items=SPEC_V1["versions"][vkey]["items"])
         if moved: log(vs["id"], f"planting moved clear of solids (row 179): {len(moved)} plants, up to {max(m[1] for m in moved) * 1000:.0f} mm")
         vb.notes.extend(f"planting {n} moved {d * 1000:.0f} mm clear of {s_}" for n, d, s_ in moved)
         log(vs["id"], f"{len(objs)} parts")
@@ -2022,6 +2068,8 @@ def main():
         bearing = []
         door_swings = []
         bears = {}
+        hw_tagged = tag_leaf_hardware([o for o in objs if not o[1].get("context") and not o[1].get("spec")])
+        log(vs["id"], f"door hardware fixed to a leaf swings with it: {len(hw_tagged)} parts {hw_tagged[:6]}")
         if not args.no_check:
             # the garden model's ground carries what stands on it (meter box, downpipe) where it is shown; it is not itself checked
             floating, clashes = run_checks(vb, [o for o in objs if not o[1].get("spec") and (not o[1].get("context") or o[1]["props"].get("group") == "ground")])
@@ -2145,6 +2193,7 @@ FAULTS = []
 SPEC_V1 = json.load(open(args.spec_v1)) if os.path.exists(args.spec_v1) else None
 SPEC_V1_MAP = {"as_built_now": "before", SPEC.get("default", "approved_2b"): "after"} if SPEC_V1 else {}
 SPEC_MATS = set()
+SKIRT_LINING_T = 0.010       # measured on the built GLB (party wall, living rear wall): skirting back 10 mm inside the lining face
 SKIRTING_HELD = False    # Jack 1 Nov: skirting, architraves, window boards to the joinery bar: moulded profiles (hb_joinery), proved on the joinery test sheet
 NOTES_MANIFOLD = []      # wall parts whose cells could not weld into one shell (kept as separate closed cells)
 SETTING_IMAGES = set()        # the garden's own textures: kept at the garden test's size in the Quest GLB too (log 162)

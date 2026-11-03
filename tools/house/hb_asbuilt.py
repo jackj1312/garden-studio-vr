@@ -486,6 +486,7 @@ def as_built(vb, spec, notes):
             pm = meta_for(F.a, "drain", lab, "Rain-water pipe")
             out.append(ab(atom("AB-X-porch-downpipe", "mesh", "existing", pm, sig=None, mesh=pipe_v(F, u, ground, ztop, 0.06), mat="black_upvc"), []))
         elif fid == "cctv_camera":
+            continue                                   # Jack, walk 2 (F98): the porch CCTV camera is not wanted; removed (spec decision, SIGNOFF.md)
             h = face_for("porch_front", x=f["x"], z=1.0)
             if not h: continue
             F = h[1]; fc = h[2]; u = F.u((X(f["x"]), fc))

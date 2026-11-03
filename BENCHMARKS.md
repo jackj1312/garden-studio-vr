@@ -160,3 +160,12 @@ show the services (every pipe and wire), animated it with sound, all running in 
 - "Does it feel like the Airbnb capture?" is the question for the existing garden.
 - The first real test is Jack's own garden: captured to the Airbnb bar, designed to the
   SE Landscapes bar, walked in the Quest 3.
+
+## Checked, not a benchmark: @sorenxet "Full office in 3D with Opus 5.5" (1–2 Nov 2026)
+Posts x.com/sorenxet/status/2116912025825616083 (Blender) and 2117338696831865248 (3ds Max), both 40 s videos, studied
+2 Nov frame by frame. **The photoreal footage is the reference, not the result:** it is labelled "SOURCE REFERENCE · UNREAL
+ENGINE" / "TARGET ROOM · ORIGINAL REFERENCE" (a ready-made Unreal office scene), and the videos open with "a researched
+reconstruction of the workflow" / "preview visualisation, reconstructed from video". What the AI made is shown only as a grey
+Blender or 3ds Max viewport with a dense clutter layer (1,876 objects). Useful method points (already in PLAN.md or added):
+one camera locked to the reference; shell → big furniture → one zone of clutter at a time; spend detail where the camera
+looks; materials, then light; side-by-side with the reference; one fix per prompt; name the renderer up front.

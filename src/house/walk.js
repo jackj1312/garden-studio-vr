@@ -6,7 +6,7 @@ import * as THREE from "three";
  *  Collision is the collide:true parts of the current stage (the
  *  model's `solid` mask): a wall not built yet doesn't stop you, a
  *  demolished one stops stopping you once it has come out; a closed
- *  door stops you, an open one doesn't. Body: a 25 cm radius, probed
+ *  door stops you, an open one doesn't. Body: an 18 cm radius (a person turning slightly sideways; was 25 cm, CORRECTIONS-LOG 298), probed
  *  by horizontal rays at knee, waist, chest and head height; the move
  *  slides along whatever it meets.
  *
@@ -27,7 +27,7 @@ import * as THREE from "three";
 /* foot: the sole (a 12 cm ring: you stand on the highest floor under it, so a gap narrower than ~24 cm — the
    stair-top gap, a doorway with no floor of its own — is stepped over); edge: the 22 cm ring that keeps you on a
    floor edge until you are clearly over a drop */
-export const BODY = { radius: 0.25, step: 0.36, dropGuard: 0.6, foot: 0.12, edge: 0.22, heights: [0.5, 1.0, 1.45, 1.8] };
+export const BODY = { radius: 0.18, step: 0.36, dropGuard: 0.6, foot: 0.12, edge: 0.22, heights: [0.5, 1.0, 1.45, 1.8] };
 const DIRS = [...Array(8)].map((_, i) => new THREE.Vector3(Math.cos(i * Math.PI / 4), 0, Math.sin(i * Math.PI / 4)));
 const SOLE = DIRS.map(d => [d.x * BODY.foot, d.z * BODY.foot]);
 const EDGE = DIRS.map(d => [d.x * BODY.edge, d.z * BODY.edge]);

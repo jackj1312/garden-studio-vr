@@ -14,7 +14,7 @@ import * as THREE from "three";
  *  marks module polls for the text and shows it when it lands.
  * ------------------------------------------------------------------ */
 
-const CW = 1024, CH = 800;                  // canvas pixels
+const CW = 1024, CH = 920;                  // canvas pixels (h31: taller for the preset row)
 const PW = 0.9;                             // panel width in metres
 const KIND_CSS = { correction: "#ff5a1f", proposal: "#1fd8ff" };
 
@@ -24,20 +24,26 @@ function roundRect(c, x, y, w, h, r) {
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
 
+/* the preset reasons (Jack, 2 Nov 2026): one tap fills the note; typing or talking can still add to it */
+export const PRESETS = ["Visual bug", "Missing item", "Hole in wall", "Missing texture", "Clipping", "Wrong way round", "Don't like item"];
+
 /* the keyboard, in canvas pixels */
 const KEYS = [];
 {
   const KW = 92, KH = 85, G = 6, X0 = 25;
   const row = (chars, y, x0) => [...chars].forEach((ch, i) => KEYS.push({ x: x0 + i * (KW + G), y, w: KW, h: KH, label: ch.toUpperCase(), act: ch }));
-  row("1234567890", 300, X0);
-  row("qwertyuiop", 393, X0);
-  row("asdfghjkl", 486, X0 + 49);
-  row("zxcvbnm", 579, X0 + 98);
-  KEYS.push({ x: X0 + 98 + 7 * (KW + G), y: 579, w: 2 * KW + G, h: KH, label: "⌫", act: "back" });
+  const PWD = 236, PH = 64, PG = 8;            // presets: two rows of four above the keyboard
+  PRESETS.forEach((p, i) => KEYS.push({ x: X0 + (i % 4) * (PWD + PG), y: 300 + Math.floor(i / 4) * (PH + PG), w: PWD, h: PH, label: p, act: "preset", preset: p }));
+  const Y = 452;
+  row("1234567890", Y, X0);
+  row("qwertyuiop", Y + 93, X0);
+  row("asdfghjkl", Y + 186, X0 + 49);
+  row("zxcvbnm", Y + 279, X0 + 98);
+  KEYS.push({ x: X0 + 98 + 7 * (KW + G), y: Y + 279, w: 2 * KW + G, h: KH, label: "⌫", act: "back" });
   let x = X0;
-  for (const ch of [",", ".", "?"]) { KEYS.push({ x, y: 672, w: KW, h: KH, label: ch, act: ch }); x += KW + G; }
-  KEYS.push({ x, y: 672, w: 488, h: KH, label: "space", act: " " }); x += 488 + G;
-  for (const ch of ["'", "-"]) { KEYS.push({ x, y: 672, w: KW, h: KH, label: ch, act: ch }); x += KW + G; }
+  for (const ch of [",", ".", "?"]) { KEYS.push({ x, y: Y + 372, w: KW, h: KH, label: ch, act: ch }); x += KW + G; }
+  KEYS.push({ x, y: Y + 372, w: 488, h: KH, label: "space", act: " " }); x += 488 + G;
+  for (const ch of ["'", "-"]) { KEYS.push({ x, y: Y + 372, w: KW, h: KH, label: ch, act: ch }); x += KW + G; }
   KEYS.push({ x: 25, y: 205, w: 470, h: 80, label: "Hold to talk", act: "talk" });
   KEYS.push({ x: 510, y: 205, w: 220, h: 80, label: "Skip", act: "skip" });
   KEYS.push({ x: 745, y: 205, w: 254, h: 80, label: "Save", act: "save" });
@@ -99,7 +105,7 @@ export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
     ctx.fillStyle = k; ctx.font = "700 40px system-ui, sans-serif"; ctx.textAlign = "left";
     ctx.fillText(`NOTE · ${stroke?.kind === "proposal" ? "Proposal" : "Correction"}`, 40, 46);
     ctx.fillStyle = "#b9bcb2"; ctx.font = "28px system-ui, sans-serif"; ctx.textAlign = "right";
-    ctx.fillText(status || "trigger types · hold A to talk", CW - 28, 46);
+    ctx.fillText(status || "tap a reason · trigger types · hold A to talk", CW - 28, 46);
     // the text so far
     ctx.fillStyle = "rgba(255,255,255,0.07)"; roundRect(ctx, 25, 80, CW - 50, 110, 16); ctx.fill();
     ctx.textAlign = "left"; ctx.font = "36px system-ui, sans-serif";
@@ -119,9 +125,10 @@ export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
       }
       if (key.act === "save") { fill = on ? "#9cc98a" : "#7aa86a"; ink = "#11140f"; }
       if (key.act === "delete") { fill = on ? "#b0453c" : "rgba(216,52,43,0.55)"; }
+      if (key.act === "preset") { const sel = (text || "").startsWith(key.preset); fill = sel ? "#c98a3a" : on ? "rgba(255,170,80,0.42)" : "rgba(255,170,80,0.2)"; ink = sel ? "#11140f" : "#ffe3c2"; }
       ctx.fillStyle = fill; roundRect(ctx, key.x, key.y, key.w, key.h, 14); ctx.fill();
       ctx.fillStyle = ink; ctx.textAlign = "center";
-      ctx.font = key.act === "talk" || key.act === "save" || key.act === "skip" || key.act === "delete" ? "600 34px system-ui, sans-serif" : "600 38px system-ui, sans-serif";
+      ctx.font = key.act === "preset" ? "600 28px system-ui, sans-serif" : key.act === "talk" || key.act === "save" || key.act === "skip" || key.act === "delete" ? "600 34px system-ui, sans-serif" : "600 38px system-ui, sans-serif";
       if (key.act === "talk" && recording) ctx.font = "600 27px system-ui, sans-serif";
       ctx.fillText(label, key.x + key.w / 2, key.y + key.h / 2 + 2);
     }
@@ -263,8 +270,21 @@ export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
     const x = uv.x * CW, y = (1 - uv.y) * CH;
     return keys().find(k => x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h) || null;
   }
+  /* a preset reason: becomes the note, or its first words; the rest of what was typed stays */
+  function applyPreset(p) {
+    if (!stroke) return;
+    const cur = (headset() || !box ? text : boxText.value) || "";
+    const old = PRESETS.find(q => cur.startsWith(q));
+    const rest = old ? cur.slice(old.length).replace(/^[:\s]+/, "") : cur;
+    text = rest ? `${p}: ${rest}` : p;
+    if (box && !headset()) boxText.value = text;
+    stroke.extra = { ...(stroke.extra || {}), preset: p };
+    if (status && !recording && !status.startsWith("transcribing")) status = "";
+    dirty = true; if (!headset()) draw();
+  }
   function press(key) {
     if (!key) return;
+    if (key.act === "preset") { applyPreset(key.preset); return; }
     if (key.act === "save") { finish(true); return; }
     if (key.act === "skip") { finish(false); return; }
     if (key.act === "delete") { del(); return; }
@@ -302,6 +322,7 @@ export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
     document.getElementById("noteSave").addEventListener("click", () => finish(true));
     document.getElementById("noteSkip").addEventListener("click", () => finish(false));
     boxDel?.addEventListener("click", del);
+    box.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => applyPreset(b.dataset.preset)));
   }
 
   return {
@@ -310,7 +331,7 @@ export function createNotes({ scene, camera, renderer, siteKey, inXR = null }) {
     get text() { return text; },
     get status() { return status; },
     get recording() { return !!recording; },
-    open, refresh, updateXR,
+    open, refresh, updateXR, applyPreset, _canvas: canvas,
     save: () => finish(true), skip: () => finish(false),
     /* stroke removed (undo): drop the panel without saving */
     forget(s) { if (stroke === s) close(); },

@@ -215,6 +215,28 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 1 Nov 2026: an as-built layer (CONTRACT §6) from the photo survey sits over the drawn front: walls re-cut where the survey puts the frames, the real anthracite frames, stone/concrete surrounds, lead strip, the soldier course from Jack's own cut bricks, dish, meter box, lights, mirror and plaque. Depths stay drawn; where the survey's face depth differs (bay 255 mm) it is a question, not geometry.
 - 1 Nov 2026: Jack's roof photos read median (153,126,109) in sun and (107,88,82) in shade, against the garden model's flat (156,138,120). The tile texture base was set darker and browner (148,116,100) because the sunlit front slope renders lighter than the photo under the look-render sun.
 
+- 2026-11-02 · house furnishing · BlendKit through Jack's live Blender, scripted: requests the public search API for
+  `asset_base_id:<id>`, `blenderkit.search.parse_result(result)`, then `blenderkit.download.start_download(ad, model_location=..,
+  model_rotation=.., resolution='resolution_1K')`; a bpy.app.timers queue starts the next when `download.download_tasks` is empty
+  and clears the appended objects. 28 models in ~10 min; files land in ~/blenderkit_data/models/<slug>_<id>/*.blend with
+  textures packed. Copy each to asset-library/blendkit/<KEY>/source.blend + asset.json (licence flags) and quit the GUI.
+- 2026-11-02 · house furnishing · Library models: link, then `view_layer.update()` BEFORE reading child matrix_world (FBX-style
+  rotated parent empties), or they come in lying on their backs. BlendKit fronts face -Y (turn 180 to the +Y item frame),
+  except some (the wall-hung WC faces +Y): the close-up sheet (tools/library/test_sheet.py) shows it at once. A test-sheet scene
+  must delete the factory cube.
+- 2026-11-02 · house furnishing · ADAPT by stretch zones (hb_furnish._remap2: keep_lo/keep_hi fractions per axis kept at size,
+  middle stretched) and whole seat modules removed for sofas (islands inside the cut slab deleted, the frame closes up):
+  Burrard 3-seat -> 2-seat 1600/1700 reads right. Beds: keep the bottom 55 % (mattress, bedding) and stretch only the headboard.
+- 2026-11-02 · house furnishing · Cloth sims headless are fast (tools/library/cloth_soft.py): 20x40 grids, 60-70 frames, ~1 s
+  each on the M1; colliders for every bar/frame/floor (else a duvet falls to -0.5 m), no subdivision (Quest), solidify for
+  thickness, smooth shading. Save in the spec item's own frame and never re-pivot on load.
+- 2026-11-02 · house furnishing · A furnished GLB renders at ~65-80 s per Eevee frame on the Mac (shader compile for the library
+  materials): budget ~35 min for both versions' room frames; furnished After ~850k tris / 52 MB quest GLB before meshopt.
+- 2026-11-02 · house furnishing · Every scan loop in a build script needs a hard bound (e.g. `while ... and len(col) < 200`):
+  one scripted edit put a step after an inline comment, the loop never advanced and the build swapped 7.5 GB on the 8 GB Mac (F37).
+- 2026-11-02 · house furnishing · A shell fix is closed only by a matched close-up frame from the camera that saw the fault.
+  The stairwell wall head (F34) passed every gate twice and still showed rafter ends from the landing.
+
 ## Lighting and look (G5, G7)
 - 2026-10-31 · front garden · Sun direction and height from the client's own frames (shadows, sun in shot); for
   Jack's garden: ~22° up, from the street side and the west.
@@ -284,3 +306,69 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   prep, depth visibility, robust projection, material fallback) -> packed .blend. Same idea as our measured model + photo
   textures; worth borrowing its hybrid projection tools for "today" surfaces (brick, paving, garden) after the first build.
   Review the code before installing it as a skill (external code).
+- 2026-11-01 · viewer · The Quest browser cannot use screen post effects in VR: a VR motion blur is drawn per eye off-screen at reduced
+  resolution, only while the sticks move (never for real head motion), periphery only, behind a frame-rate check that steps
+  resolution down then falls back to the vignette (src/house/motionblur.js). Smooth turn 75 deg/s, eased 0.15 s.
+- 2026-11-01 · viewer · Effect strengths (blur, vignette, speeds) are judged by Jack on the device before they become defaults, tuned
+  from subtle upward in small steps. Desktop = pointer-lock mouse-look with a crosshair; phones = twin thumb sticks (h22).
+- 2026-11-01 · viewer · Phones use the headset's light path (meshopt quest GLB, 2k sky, 1024 shadows, no screen post, pixel ratio <= 1.25, one
+  version in memory): LITE in src/house/viewer.js (h23). The desktop browser's quality = full textures + GTAO + MSAA; the Quest can't run that live,
+  and there is no Mac-to-Quest PC-VR streaming route (Link, Air Link, Steam Link, ALVR all need Windows/Linux). Close the gap with baked light/AO + KTX2.
+- 2026-11-01 · process · Lessons loop: every headset mark and every self-found fix becomes a finding (tools/review/lessons.py) with root
+  cause, rule and check before it is fixed; FIRST-PASS.md is what every reviewer reads first; lessons.py gate before Jack sees anything.
+- 2026-11-02 · process · Wait loops must wait on a PID or a done-file, never on `pgrep -f <script name>` (the loop's own command line
+  matches, so it never ends: two stuck loops in the shell round).
+- 2026-11-02 · viewer · Check every build IN THE VIEWER, not only in Blender frames: furniture rendered black in three (vertexColors
+  + texCoord 1 lost in batching) while Blender looked right. A hidden browser pane doesn't redraw: render manually and POST the
+  canvas to a local receiver to see true frames.
+- 2026-11-02 · review · Jack: one capture per room misses most faults; planned audit = 360 sweep at a grid of points in every nook
+  and outside, machine material-ID check first, cheap model on contact sheets, main model only on flagged frames (WORKFLOW G6).
+- 2026-11-02 · plan · The Airbnb benchmark studied from its primary sources (write-up + video): AIRBNB-METHOD.md. The look is light
+  (low warm sun, hard plant shadows, god rays + dust, bounce, emissive lamps, warm grade), true-scale textures, shop-density styling,
+  simple clean geometry, a film camera, 849 self-check screenshots, 5 blunt feedback rounds on fixed cameras, real buyable products.
+  PLAN.md written from it; it is the anchor for the house build (re-read every stage / fix round / compaction / report).
+- 2026-11-02 · process · Jack's first three spaces for the plan: new kitchen-diner, front garden, lounge, then he checks. Questions to him must
+  be one idea each in plain words with the consequence; he didn't understand 'hero rooms', 'anchor', 'presets' (row 239).
+- 2026-11-02 · business · Jack: Max 5x; price per house ~£800 + £200 for VR. Unreal cap stays £10 for this house (stills only; the
+  checking loop runs in the free web viewer). Available assets for this test; buyable product list later. First spaces: new
+  kitchen-diner, front garden, lounge; then he checks. Usage card at 70% of the week after ~2 days: work in small checkable steps.
+- 2026-11-02 · process · Standing rule: tell Jack when to change the session model and to which, one line at the top of the reply
+  (Model: switch to … now). Fable = plan/verdict, Opus = build/fix, Sonnet = run/read, Haiku = count.
+- 2026-11-02 · usage · Jack keeps 10% of the week for website work: house work stops when the usage card reads 90% (week resets
+  Fri 7 Nov). Check the card before every heavy step and when an agent reports; stop an agent at ~88% so it can report.
+- 2026-11-02 · sweep (G6/S8) · The capture harness works: `?capture=1` gives `__house.captureAt` (feet, yaw, pitch, eye; JPEG, or the PART
+  picture with ids:true), 14 to 50 frames a second in a hidden pane; a whole room sweep (800 to 1,500 frames, both furnishings, both
+  eyes) takes 20 to 60 s, so the cost is reading, never capturing. The PART picture (every part flat-coloured with its index + 1, no
+  anti-aliasing) names the part and material of every pixel: raw construction, holes and the root-cause part list come from numbers,
+  not eyes (tools/review/sweep_tools.py check / parts). Read only the machine-flagged sheets and one point per room.
+- 2026-11-02 · sweep · The integrity gate's raw_surface count was 0 while the viewer showed 117,000 px of raw brick: the finish pass
+  tests the as-built layer's ray tree, the viewer shows the DRAWN layer unless As built is on (and check_house_export forbids
+  as_built_default). Any gate that tests one layer must test the layer the viewer shows by default, or both.
+- 2026-11-02 · generator · The wall stack's footprint (hb_walls full=True) ends 10 mm short of the lined face the room sees, so
+  anything fixed to the plaster from the footprint (skirting) ends 10 mm too deep; measure joinery on the built GLB. Material swaps
+  made in place on a closed wall solid (hb_finish sliver path) split it and fail the integrity open_shell test: finish a solid with a
+  separate skin. A skin grown 20 mm wraps onto neighbours; 4 mm closes corner hairlines.
+- 2026-11-02 · viewer look (G7) · The blue interior came from a pure-blue-sky environment used as the whole fill, no ground bounce
+  for downward faces, and glass casting a solid shadow (no sun inside). Fixed in the LOOK block: sun bearing 234 / elevation 25 at
+  5000 K (spec afternoon), warm hemisphere and a bounce from below, env 0.28, glass casts no shadow, and eye adaptation (exposure 1.5
+  with a roof overhead, 0.6 in the open) because one exposure cannot serve a sun of 9 and a room fill of 1. Mean blue-minus-red of a
+  sweep is the cheap number: +0.09 before, -0.03 to -0.05 after. Not yet measured on the Quest.
+- 2026-11-02 · round 1 · Three spaces swept (7,208 frames, hash-checked) and fixed at the cause: reveals (row 240, the gate had tested
+  the wrong layer), thresholds, skirting, pendants; viewer LOOK block (SW afternoon sun, warm fill, eye adaptation). Blue cast gone;
+  still pale and flat next to the Airbnb: the live web viewer can't do bounce/bloom/god rays, so the look is judged in Unreal.
+- 2026-11-02 · references · @sorenxet's 'full office' posts: the photoreal shots are the Unreal REFERENCE scene (labelled), not the
+  AI's output; the output is a grey viewport. Check labels and captions frame by frame before treating any video as a bar.
+- 2026-11-02 · viewer · Marking tool presets (h31): Visual bug, Missing item, Hole in wall, Missing texture, Clipping, Wrong way round,
+  Don't like item; one tap fills the note (saved as extra 'preset'); lessons.py intake tags the gate; 'Don't like item' = design change.
+- 2026-11-02 · viewer perf (h33) · Quest draw calls are per INSTANCE if WEBGL_multi_draw is missing (perf note 'gl caps' now logs it): cull instances,
+  not just batches. Room culling = cells (rooms+outside) + portals (openings, wall gaps and slab voids found by BVH rays, never trusted from
+  openings alone: a knocked-through wall has none) + wedge test per cell; prove every change with tools/review/cull_test.js at 60 and 105 deg FOV.
+- 2026-11-03 · benchmark · Codex (Astar, max) built a far better INTERIOR: GTAO contact shadow, window-daylight lights from real
+  openings, finishes owned per room face at build time, one coherent furniture language, branded loader. Exterior weaker (scale).
+  It burned ~180% of a ChatGPT week on over-heavy evidence (3,912 cube faces planned) and didn't finish. CODEX-COMPARISON.md.
+- 2026-11-03 · assets · Codex's better interior came from a parametric furniture KIT (46 kinds in furnishings.py: sofa to toilet, oven,
+  washing machine), one axis convention, exact sizes, real-metre UVs, one reviewed CC0 material set, support/seating built in, NOT
+  from better downloads (it used 3 Poly Haven plants). Our 103-row library is mixed downloads; adopt the kit approach (row 301).
+  Jack: its brickwork was too bright and buggy; the work stays here, but match Codex's interior quality.
+- 2026-11-03 · product · Jack wants to furnish rooms himself in the viewer (desktop, phone, Quest) plus a per-room bird's-eye view;
+  needs furniture placed at runtime from one shared layout file (not baked into the GLB). In PLAN.md change log; after the reset.

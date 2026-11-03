@@ -105,6 +105,38 @@ for ob in list(bpy.data.objects):
         for v in bm.verts: v.co.z -= 0.02
     bm.transform(ob.matrix_world.inverted()); bm.to_mesh(me); bm.free()
     if not me.polygons: bpy.data.objects.remove(ob)
+# Jack, walk 2 (F91): the border blocks are the main paving's own block in grey, laid flush with the path (not raised sett
+# upstands). Every edging part is clamped to the paving level (world z) and wears a grey desaturated copy of the paving block.
+import numpy as _np
+EDGING = ("G2_edge_", "G2_hedge_bed_edging", "G2_house_bed_edging", "G2_wing_bed_edging", "G2_step_edging", "G2_fence_edging",
+          "G2_bed_border", "G2_bed_upstand", "G2_lawn_kerb", "G2_border_foot_to_fence")
+pav = bpy.data.materials.get("FG2_paving_units_gltf")
+grey_mat = None
+if pav is not None and pav.use_nodes:
+    tex = next((n for n in pav.node_tree.nodes if n.type == "TEX_IMAGE" and n.image is not None), None)
+    if tex is not None:
+        im = tex.image; w_, h_ = im.size
+        px = _np.array(im.pixels[:], dtype=_np.float32).reshape(-1, 4)
+        lum = (px[:, 0] * 0.299 + px[:, 1] * 0.587 + px[:, 2] * 0.114)
+        g = _np.clip(lum * 1.25 + 0.06, 0, 1)                      # warm red block -> mid-light grey with the same joints and wear
+        px2 = px.copy(); px2[:, 0] = g * 0.98; px2[:, 1] = g; px2[:, 2] = g * 1.02
+        im2 = bpy.data.images.new("FG2_paving_grey_border", w_, h_, alpha=False)
+        im2.pixels = px2.ravel().tolist(); im2.pack(); im2.colorspace_settings.name = im.colorspace_settings.name
+        grey_mat = pav.copy(); grey_mat.name = "FG2_paving_grey_border"
+        next(n for n in grey_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image is not None).image = im2
+nflush = 0
+for ob in list(bpy.data.objects):
+    if ob.type != "MESH" or not ob.name.startswith(EDGING): continue
+    me = ob.data
+    if me.users > 1: ob.data = me = me.copy()
+    mw = ob.matrix_world.copy(); lvl = args.shift[2] + 0.006      # 6 mm above the paving (garden y 0 + shift z): reads flush, and does not z-fight the paving's own surface
+    for v in me.vertices:
+        wco = mw @ v.co
+        if wco.z > lvl: wco.z = lvl; v.co = mw.inverted() @ wco
+    me.update(); nflush += 1
+    if grey_mat is not None:
+        for i_ in range(len(ob.material_slots)): ob.material_slots[i_].material = grey_mat
+print("setting: border blocks flush with the path and grey:", nflush, "parts")
 # Quest draw calls: look-alike materials of the garden share one (round 6: 47 -> ~27 batches)
 MERGE = [("FG2_timber_pale_v", "FG2_timber_pale"), ("FG2_bin_grey_face", "FG2_bin_grey"), ("FG2_bin_brown_face", "FG2_bin_brown"),
          ("FG2_anthracite", "FG_gutter_black"), ("FG2_dark_grey", "FG_gutter_black"), ("FG_wheel", "FG_gutter_black"),

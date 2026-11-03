@@ -114,19 +114,31 @@ for v in V["versions"]:
         if os.path.getmtime(files[k]) + 120 < t_glb: fails.append(f"{v['id']}: {k} older than the GLB (stale)")
     g = glb_json(files["glb"])
     mats = g.get("materials", [])
-    leaves = bad_leaf = notex = 0
+    leaves = bad_leaf = notex = 0; loose_hw = []
     for nd in g["nodes"]:
         ex = nd.get("extras", {})
         if ex.get("door_leaf"):
             leaves += 1
             if not (isinstance(ex.get("hinge"), list) and "swing_deg" in ex): bad_leaf += 1
+        if re.search(r"door-furniture|_leaf_handle$|letter", nd.get("name", ""), re.I) and not ex.get("door_leaf"): loose_hw.append(nd.get("name"))   # row 297 (F101): hardware on a leaf swings with it
         if "mesh" not in nd: continue
         for pr in g["meshes"][nd["mesh"]]["primitives"]:
             m = mats[pr.get("material", 0)] if mats else {}
             if m.get("pbrMetallicRoughness", {}).get("baseColorTexture") and "TEXCOORD_0" not in pr["attributes"]: notex += 1
+    if loose_hw: fails.append(f"{v['id']}: door hardware without the leaf's hinge/door_leaf extras (it would stay put when the door opens): {loose_hw[:4]}")
     if bad_leaf: fails.append(f"{v['id']}: {bad_leaf}/{leaves} door leaves without hinge/swing_deg")
     if notex: fails.append(f"{v['id']}: {notex} textured primitives without TEXCOORD_0")
     q = glb_json(files["glb_quest"])
+    # the meshopt twin is what phones and the Quest load: it must be rebuilt from this quest GLB (CORRECTIONS-LOG 198)
+    mo_file = os.path.join(site, v["glb_quest"].replace("_quest.glb", "_quest_mo.glb"))
+    if os.path.exists(mo_file) and not v.get("glb_quest_meshopt"):
+        fails.append(f"{v['id']}: {os.path.basename(mo_file)} exists but versions.json does not list glb_quest_meshopt (196)")
+    if v.get("glb_quest_meshopt"):
+        mo = glb_json(files["glb_quest_meshopt"])
+        if os.path.getmtime(files["glb_quest_meshopt"]) + 5 < os.path.getmtime(files["glb_quest"]):
+            fails.append(f"{v['id']}: meshopt twin older than its quest GLB (stale: run tools/house/quest_meshopt.py)")
+        if len(mo.get("nodes", [])) != len(q.get("nodes", [])):
+            fails.append(f"{v['id']}: meshopt twin has {len(mo.get('nodes', []))} nodes, quest GLB {len(q.get('nodes', []))} (stale)")
     c = json.load(open(files["check"]))
     clashes = [x for x in c.get("clashes", []) if not x.get("allowed")]
     bearing = [x for x in c.get("bearing", []) if not x.get("allowed")]

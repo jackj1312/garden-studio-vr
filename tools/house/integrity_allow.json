@@ -216,6 +216,122 @@
    ],
    "version": "approved_2b",
    "reason": "row 191 (G5b): the utility door's architrave bridges a 2.5-3.4 mm step in the stud lining at mid-height (the lining's upper lift is set back); a decorator's caulk line. Next fix: the lining lifts flush."
+  },
+  {
+   "category": "missing_face",
+   "match": [
+    "SPEC-BD1-BED"
+   ],
+   "reason": "furnishing job 2 Nov: the library bed's bedding (BlendKit Ultima: sheet, blanket, pillows) is open single-surface cloth, exported double-sided (doubleSided material); rays meet the cloth's reverse in its folds. A cloth property, not a hole in the house; the loose layer is hidden in the Unfurnished view."
+  },
+  {
+   "category": "missing_face",
+   "match": [
+    "SPEC-B3A-BED"
+   ],
+   "reason": "furnishing job 2 Nov: the library bed's bedding (BlendKit Ultima: sheet, blanket, pillows) is open single-surface cloth, exported double-sided (doubleSided material); rays meet the cloth's reverse in its folds. A cloth property, not a hole in the house; the loose layer is hidden in the Unfurnished view."
+  },
+  {
+   "category": "missing_face",
+   "match": [
+    "SPEC-CON-ARM"
+   ],
+   "reason": "furnishing job 2 Nov: the library rattan lounge chair (BlendKit Lenco) is woven wicker: open single-surface strands exported double-sided; rays meet their reverse through the weave. A material property, not a hole in the house; hidden with the loose layer in Unfurnished."
+  },
+  {
+   "category": "foliage_in_solid",
+   "match": [
+    "SPEC-B3A-PLANT",
+    "FS-skin-FIN-WALL"
+   ],
+   "reason": "furnishing job 2 Nov: the 'solid' is an open paint skin on first-floor joist faces 80-160 mm BELOW the bedroom 3 floor (inside the floor zone, hidden); the plant stands on the floor above it. The open skin is read as a solid by the parity test. Next fix: no skins on faces inside a floor zone (hb_finish)."
+  },
+  {
+   "category": "z_fight",
+   "match": [
+    "FS-liningrun-F-cpd2side",
+    "XC-F-bedroom-2"
+   ],
+   "reason": "furnishing job 2 Nov (row 213 fix): the landing cupboard partition's lining was run on 27 mm to close a slit under the ceiling; its top meets a bedroom-2 ceiling board edge in one plane over 38 cm2 inside the cupboard at 5.08 m. Next fix: stop the run-on strip at the board edge."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "FT-F-wardrobe-",
+    "SPEC-SKIRT-R-f-bedroom-3-rear-new"
+   ],
+   "reason": "round-1 (row 242): the skirting now stands its full 18 mm proud of the plaster, so the bedroom 3 run ends 12-16 mm short of the built-in wardrobe's side (the wardrobe was set to the plaster). First floor, outside the round-1 spaces; next fix: run the skirting end to the wardrobe side in scribe_skirting."
+  },
+  {
+   "category": "gap",
+   "version": "approved_2b",
+   "match": [
+    "F-F-bed1-bedroom-1-door_architraves",
+    "SPEC-SKIRT-R-f-landing-"
+   ],
+   "reason": "round-1 (row 242): the landing skirting end now sits 2-3 mm off the bedroom 1 door architrave (skirting 10 mm further proud since the lining fix). A decorator's caulk line; next fix: scribe_skirting squares the end to the architrave at the new depth."
+  },
+  {
+   "category": "missing_face",
+   "version": "approved_2b",
+   "match": [
+    "SPEC-BD2-BED"
+   ],
+   "reason": "furnishing job 2 Nov: the library bed's bedding (BlendKit Ultima: sheet, blanket, pillows) is open single-surface cloth, exported double-sided; 3 rays meet the cloth's reverse in its folds. A cloth property, not a hole in the house; the loose layer is hidden in the Unfurnished view."
+  },
+  {
+   "category": "gap",
+   "version": "as_built_now",
+   "match": [
+    "F-F-rbedDoorWall-rear-bedroom-door_architraves",
+    "SPEC-SKIRT-R-f-hall-landing-"
+   ],
+   "reason": "round-1 (row 242): the skirting now stands its full 18 mm proud of the plaster (it was 10 mm buried), so a first-floor skirting end sits 12-13 mm off of its door architrave. A decorator's caulk line at floor level, outside the round-1 spaces; next fix: scribe_skirting squares each end to the architrave at the new depth."
+  },
+  {
+   "category": "gap",
+   "version": "as_built_now",
+   "match": [
+    "F-F-bed1-bedroom-1-door_architraves",
+    "SPEC-SKIRT-R-f-hall-landing-"
+   ],
+   "reason": "round-1 (row 242): the skirting now stands its full 18 mm proud of the plaster (it was 10 mm buried), so a first-floor skirting end sits 2-3 mm off of its door architrave. A decorator's caulk line at floor level, outside the round-1 spaces; next fix: scribe_skirting squares each end to the architrave at the new depth."
+  },
+  {
+   "category": "gap",
+   "version": "as_built_now",
+   "match": [
+    "F-F-rbedDoorWall-rear-bedroom-door_architraves",
+    "SPEC-SKIRT-R-f-bedroom-3-rear-wing-"
+   ],
+   "reason": "round-1 (row 242): the skirting now stands its full 18 mm proud of the plaster (it was 10 mm buried), so a first-floor skirting end sits 2-3 mm off of its door architrave. A decorator's caulk line at floor level, outside the round-1 spaces; next fix: scribe_skirting squares each end to the architrave at the new depth."
+  },
+  {
+   "category": "missing_face",
+   "version": "as_built_now",
+   "match": [
+    "SPEC-BD2-BED"
+   ],
+   "reason": "furnishing job 2 Nov: the library bed's bedding (BlendKit Ultima: sheet, blanket, pillows) is open single-surface cloth, exported double-sided; 3 rays meet the cloth's reverse in its folds. A cloth property, not a hole in the house; the loose layer is hidden in the Unfurnished view."
+  },
+  {
+   "category": "z_fight",
+   "version": "approved_2b",
+   "match": [
+    "FS-skin-FIN-WALL-s1-",
+    "G-livHall_L0_wall_lining_lift0"
+   ],
+   "reason": "round-1 reveal sweep (row 240): the 4 mm in-plane growth of the finish skin on the end of the hall partition's brick (G-livHall) overlaps the lining's own flush end face over 79 cm2 at the lounge rear corner. Both are the same FIN-WALL paint, so nothing can flicker. Next fix: no growth on an edge where a lining ends flush with the face."
+  },
+  {
+   "category": "z_fight",
+   "version": "as_built_now",
+   "match": [
+    "FS-skin-FIN-WALL-s1-",
+    "G-livHall_L0_wall_lining_lift0"
+   ],
+   "reason": "round-1 reveal sweep (row 240): the 4 mm in-plane growth of the finish skin on the end of the hall partition's brick (G-livHall) overlaps the lining's own flush end face (about 79 cm2) at the lounge rear corner. Both are the same FIN-WALL paint, so nothing can flicker. Next fix: no growth on an edge where a lining ends flush with the face."
   }
  ]
 }

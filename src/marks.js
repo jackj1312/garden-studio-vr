@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { hapticPulse } from "./presence.js?v=f383e46-1642";
 import { buildCollision } from "./surface.js?v=f383e46-1642";
-import { createNotes } from "./notes.js?v=h19";   // h19: inXR + Delete (the house review); the garden is unchanged by it
+import { createNotes } from "./notes.js?v=h31";   // h22: inXR + Delete (the house review); the garden is unchanged by it
 
 /* ------------------------------------------------------------------ *
  *  Marking: draw on the garden the way you draw the Quest's Guardian.
@@ -144,7 +144,8 @@ function makeLabel(line1, line2, css) {
 const CORE = new Set(["id", "kind", "closed", "points", "points3d", "normals", "surface", "length_m", "area_m2", "created", "note", "audio", "note_status"]);
 
 export function createMarks({ scene, camera, renderer, siteKey, onActive, raycast = null, meta = null, annotate = null,
-                              visible = null, inXR = null, onChange = null, hint: hintText = null, seeThrough = true, tagField = "elements" }) {
+                              visible = null, inXR = null, onChange = null, hint: hintText = null, seeThrough = true, tagField = "elements",
+                              lockAim = false }) {
   const xr = inXR || (() => renderer.xr.isPresenting);
   const shown = s => !visible || visible(s);
   const changed = () => { try { onChange?.(); } catch (err) { console.warn("marks: onChange", err); } };
@@ -535,7 +536,7 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive, raycas
     if (active && !was) onActive?.(true);
     if (!active) { if (live) end(); if (notes.isOpen) notes.save(); cursor.visible = false; ray.visible = false; setHoverLabel(null); }
     hint.visible = active;
-    if (active && !xr() && document.pointerLockElement) document.exitPointerLock();
+    if (active && !xr() && document.pointerLockElement && !lockAim) document.exitPointerLock();
     drawHint();
     changed();
   }
@@ -616,9 +617,11 @@ export function createMarks({ scene, camera, renderer, siteKey, onActive, raycas
   /* ---------------- desktop ---------------- */
   const canvas = renderer.domElement;
   const ndc = new THREE.Vector2();
+  /* lockAim (the house viewer's mouse-look): with the mouse captured, the stroke follows the centre crosshair */
   function aimAt(e) {
     const r = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    if (lockAim && document.pointerLockElement === canvas) ndc.set(0, 0);
+    else ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     camera.updateMatrixWorld();
     raycaster.setFromCamera(ndc, camera);
   }

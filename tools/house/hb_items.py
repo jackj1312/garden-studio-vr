@@ -13,7 +13,14 @@ import bpy, bmesh
 from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
+import hb_furnish as HF
 QUESTIONS = []          # spec gaps found while building (id, what, evidence)
+SPEC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "assets", "sites", "house", "spec", "spec_v1.json")
+PLAN = HF.load_plan(SPEC_PATH)
+# studio-made soft items from Blender cloth simulation (tools/library/cloth_soft.py -> asset-library/soft/<name>/source.blend)
+SOFT_FOR = {"towels": "soft:towel_pair_rail", "towel_ring": "soft:hand_towel_ring", "tea_towel": "soft:tea_towel_handle",
+            "throw_drape": "soft:throw_arm"}
+SOFT_FOR_ITEM = {"BD2-BED": "soft:bed_BD2-BED", "B3B-BED": "soft:bed_B3B-BED"}
 NOTES = []              # interpretations made from the spec's own words (for the report)
 _MAT = {}
 _PH_CACHE = {}
@@ -246,8 +253,17 @@ def k_flush_disc(mb, W, D, H, it):
     mb.cyl(0, 0, -H, -H * 0.4, r * 0.92, WHITE, 32)
 
 
+PENDANT_MIN_BOTTOM = 2.0       # (CORRECTIONS-LOG, round-1 sweep) the lowest point of a pendant hung over open floor is never below 2.0 m above its floor
+FLOOR_LEVELS = (0.0, 2.6755)   # the spec frame's two floors (ground FFL 0, first-floor FFL 2.6755)
+
+
 def k_pendant_drum(mb, W, D, H, it):
-    a = it["asset"]; drop = a.get("drop_mm", 600) / 1000; r = W / 2
+    a = it["asset"]; r = W / 2
+    # the spec's 'drop_mm' 600 hung a 250 mm shade with its bottom at 1.58 m: head height, filling the frame at standing eye height
+    # (review-1 V-04 to V-08, round-1 sweep). The flex is shortened so the bottom stays >= PENDANT_MIN_BOTTOM above the floor the item hangs over.
+    y0 = (it.get("position_m") or [0, 2.43, 0])[1]
+    floor = max(f for f in FLOOR_LEVELS if f <= y0 - 1.5)
+    drop = max(0.12, min(a.get("drop_mm", 600) / 1000, (y0 - floor) - PENDANT_MIN_BOTTOM - H))
     mb.cyl(0, 0, -0.02, 0, 0.05, "METAL-BLACK", 20)
     mb.cyl(0, 0, -drop, -0.02, 0.003, "METAL-BLACK", 6)
     mb.cyl(0, 0, -drop - 0.03, -drop, 0.02, "METAL-BLACK", 10)
@@ -281,15 +297,44 @@ def k_framed_print(mb, W, D, H, it):
     mb.box(-W / 2 + t, W / 2 - t, -D / 2, D / 2 - 0.006, t, H - t, WHITE)            # the white mount
     motif = a.get("motif", "")
     cols = [v for k, v in ART.items() if k in motif]
-    if cols:                                                # the print in the motif's own named colours (spec finishes)
+    pal_w_ = a.get("palette") or it.get("print_palette")
+    if not cols and pal_w_ != "sage_sand":                                            # errata 3: the style-board palette where the motif names no colour
+        pal_w = a.get("palette") or it.get("print_palette") or (re.search(r"style board: (\w+)", str(it.get("errata", ""))) or [None, ""])[1]
+        pal = {"sage": ["FAB-CUSH-SAGE", "FAB-CUSH-CREAM"], "charcoal": ["c:#3A3A3C:0.8:0", "FAB-CUSH-CREAM"]}.get(pal_w)
+        if pal: cols = pal; NOTES.append(f"{it['id']}: print in the errata-3 palette '{a.get('palette')}' ({pal})")
+    if pal_w_ == "sage_sand":                                # Jack, walk 2 (R1-20): the second print is a sage-and-sand abstract like the first
+        x0, x1, z0, z1 = -W / 2 + t + mount, W / 2 - t - mount, t + mount, H - t - mount
+        dx, dz = x1 - x0, z1 - z0; SAND = "c:#D9C8A6:0.85:0"
+        mb.box(x0, x1, -D / 2, D / 2 - 0.004, z0, z1, SAND)
+        mb.box(x0 + dx * 0.10, x0 + dx * 0.55, -D / 2, D / 2 - 0.0045, z0 + dz * 0.08, z0 + dz * 0.62, "FAB-CUSH-SAGE")     # tall sage block
+        mb.box(x0 + dx * 0.50, x0 + dx * 0.90, -D / 2, D / 2 - 0.0046, z0 + dz * 0.40, z0 + dz * 0.78, "FAB-CUSH-CREAM")   # cream block overlapping
+        mb.box(x0 + dx * 0.20, x0 + dx * 0.80, -D / 2, D / 2 - 0.0047, z0 + dz * 0.84, z0 + dz * 0.865, "FAB-CUSH-SAGE")   # a fine sage line
+        mb.box(x0 + dx * 0.58, x0 + dx * 0.78, -D / 2, D / 2 - 0.0048, z0 + dz * 0.46, z0 + dz * 0.66, SAND)               # sand window in the cream
+        NOTES.append(f"{it['id']}: print is the sage-and-sand abstract (walk 2)")
+    elif cols:                                              # the print in the motif's own named colours (spec finishes)
         x0, x1, z0, z1 = -W / 2 + t + mount, W / 2 - t - mount, t + mount, H - t - mount
         if len(cols) == 1: mb.box(x0, x1, -D / 2, D / 2 - 0.004, z0, z1, cols[0])
         else:
             zm = z0 + (z1 - z0) * 0.55
             mb.box(x0, x1, -D / 2, D / 2 - 0.004, z0, zm, cols[0]); mb.box(x0, x1, -D / 2, D / 2 - 0.004, zm, z1, cols[1])
     else:
-        QUESTIONS.append(dict(id=it["id"], what="print artwork: the motif names no colour/image the build can use; the frame and white mount are built, the print area is left as the mount",
+        QUESTIONS.append(dict(id=it["id"], what=f"print artwork: the motif '{motif}' and palette '{a.get('palette', '')}' name no colour the spec defines (no 'sand' hex): frame and white mount built, print area left as the mount",
                               evidence=motif))
+
+
+def k_dining_chair(mb, W, D, H, it):
+    """dining chair: oak legs and back posts, oatmeal fabric seat and back pad (Jack, walk 2). Front is +Y (hb_items frame)."""
+    up = mats_for(it, "upholstery") or "FAB-SOFA"; lg = mats_for(it, "legs") or "WOOD-OAK-FURN"
+    sh = 0.46                                                                              # seat height
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x = sx * (W / 2 - 0.022); y = sy * (D / 2 - 0.022)
+            top = H if sy < 0 else sh - 0.07                                               # back posts run up to the top rail
+            mb.box(x - 0.021, x + 0.021, y - 0.021, y + 0.021, 0, top, lg, 0.004)
+    mb.box(-W / 2 + 0.02, W / 2 - 0.02, -D / 2, D / 2, sh - 0.07, sh - 0.03, lg, 0.004)  # seat frame
+    mb.box(-W / 2 + 0.012, W / 2 - 0.012, -D / 2 + 0.03, D / 2 - 0.005, sh - 0.03, sh + 0.04, up, 0.018)   # seat pad
+    mb.box(-W / 2 + 0.02, W / 2 - 0.02, -D / 2 - 0.0, -D / 2 + 0.04, H - 0.32, H - 0.03, up, 0.016)       # back pad
+    mb.box(-W / 2 + 0.02, W / 2 - 0.02, -D / 2 - 0.0, -D / 2 + 0.04, H - 0.03, H, lg, 0.004)               # top rail
 
 
 def k_sofa(mb, W, D, H, it):
@@ -333,10 +378,21 @@ def k_throw_drape(mb, W, D, H, it):
 
 
 def k_stove(mb, W, D, H, it):
+    """a wood-burning stove (Jack, walk 2: 'the stove should be a log burner'), built INSIDE the spec box (450 x 380 x 600): short feet,
+    a cast-iron firebox, a glazed door in a black frame with split logs on the grate, a top plate, and the flue pipe rising to the box top"""
     m = mats_for(it, "all") or "METAL-BLACK"
-    mb.box(-W / 2, W / 2, -D / 2, D / 2, 0.08, H, m, 0.006)
-    for sx in (-1, 1): mb.box(sx * W * 0.4 - 0.02, sx * W * 0.4 + 0.02, -D * 0.35, D * 0.35, 0, 0.08, m)
-    mb.box(-W * 0.36, W * 0.36, D / 2, D / 2 + 0.004, 0.16, H - 0.12, "TV-BLACK")     # the glass door (off by day)
+    for sx in (-1, 1):
+        for sy in (-1, 1): mb.box(sx * W * 0.4 - 0.025, sx * W * 0.4 + 0.025, sy * D * 0.38 - 0.025, sy * D * 0.38 + 0.025, 0, 0.06, m)
+    bt = H - 0.20                                                                          # firebox top
+    mb.box(-W / 2, W / 2, -D / 2, D / 2, 0.06, bt, m, 0.01)
+    mb.box(-W * 0.28, W * 0.28, -D * 0.2, D * 0.2, bt, bt + 0.03, m, 0.004)              # flue collar
+    mb.cyl(0, 0, bt + 0.03, H, 0.075, m, 16)                                               # flue pipe
+    fy = D / 2 - 0.022                                                                     # door frame, glass and logs sit inside the box depth
+    mb.box(-W * 0.4, W * 0.4, fy, fy + 0.016, 0.14, bt - 0.07, m, 0.003)
+    mb.box(-W * 0.34, W * 0.34, fy + 0.016, fy + 0.02, 0.18, bt - 0.11, "TV-BLACK")
+    mb.box(-W * 0.34, W * 0.34, fy - 0.16, fy + 0.014, 0.13, 0.17, "METAL-BLACK")           # grate floor
+    for lx, lz, lw in ((-0.11, 0.17, 0.12), (0.0, 0.17, 0.13), (0.11, 0.17, 0.12), (-0.05, 0.23, 0.12), (0.06, 0.23, 0.11)):
+        mb.box(lx - lw / 2, lx + lw / 2, fy - 0.14, fy + 0.004, lz, lz + 0.06, "WOOD-OAK-FURN", 0.008)
 
 
 def k_slab(mb, W, D, H, it): mb.box(-W / 2, W / 2, -D / 2, D / 2, 0, H, mats_for(it, "all") or "STONE-SLATE", 0.004)
@@ -425,7 +481,7 @@ def kitchen_unit(mb, W, D, H, it):
     ctop = H if tall else min(H, wt - tt) if H >= wt - 0.01 else H - 0.02
     mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.07, 0, pl, "METAL-BLACK" if False else front)              # plinth (front colour)
     mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.022, pl, ctop, front)                                       # carcass
-    handles = "BRASS" if front == "KIT-FRONT" else None
+    handles = "BRASS" if front == "KIT-FRONT" else ("c:#C9CBCE:0.12:1.0" if front == "KITB-FRONT" else None)   # finish words: brass bar / chrome bar
     if "washing machine" in unit or "tumble dryer" in unit:
         mb.box(-W / 2 + 0.002, W / 2 - 0.002, D / 2 - 0.022, D / 2 - 0.002, pl, ctop, WHITE)
         mb.cyl(0, D / 2 - 0.002, pl + 0.32, pl + 0.32 + 0.001, 0.0, WHITE) if False else None
@@ -454,9 +510,14 @@ def kitchen_unit(mb, W, D, H, it):
                 hx = x0 + dw - 0.05 if (i == 0 and nd == 2) or nd == 1 else x0 + 0.05
                 mb.box(hx - 0.006, hx + 0.006, D / 2, D / 2 + 0.025, ctop - 0.24 if not tall else 0.9, ctop - 0.08 if not tall else 1.06, handles, 0.004)
     if not tall and top:
-        mb.box(-W / 2, W / 2, -D / 2, D / 2, ctop, ctop + tt, top, 0.002)
+        if "sink" in unit:                                  # the worktop is cut round the sink; a stainless bowl drops into it
+            hx0, hx1, hy0, hy1 = -min(0.21, W / 2 - 0.06), min(0.21, W / 2 - 0.06), -0.17, 0.17
+            mb.box(-W / 2, hx0, -D / 2, D / 2, ctop, ctop + tt, top, 0.002); mb.box(hx1, W / 2, -D / 2, D / 2, ctop, ctop + tt, top, 0.002)
+            mb.box(hx0, hx1, -D / 2, hy0, ctop, ctop + tt, top); mb.box(hx0, hx1, hy1, D / 2, ctop, ctop + tt, top)
+            HF._basin_bowl(mb, (hx1 - hx0) + 0.03, (hy1 - hy0) + 0.03, ctop + tt + 0.003, 0.20, "STEEL-BRUSHED", rim=0.02, depth=0.18, r=0.02, nx=24, ny=20)
+        else:
+            mb.box(-W / 2, W / 2, -D / 2, D / 2, ctop, ctop + tt, top, 0.002)
         if "sink" in unit:
-            mb.box(-0.22, 0.22, -0.2, 0.18, ctop + tt - 0.001, ctop + tt + 0.004, "STEEL-BRUSHED")          # sink rim (bowl below)
             mb.cyl(0, -0.24, ctop + tt, ctop + tt + 0.3, 0.014, "BRASS" if "brass" in unit else "STEEL-BRUSHED", 12)
             mb.box(-0.012, 0.012, -0.24, -0.02, ctop + tt + 0.28, ctop + tt + 0.3, "BRASS" if "brass" in unit else "STEEL-BRUSHED")
             if "chrome" in unit: NOTES.append(f"{it['id']}: chrome mixer built in STEEL-BRUSHED (the spec's only bright metal)")
@@ -591,14 +652,17 @@ def k_bedside(mb, W, D, H, it):
 
 def k_wardrobe(mb, W, D, H, it):
     m = mats_for(it, "all", "front") or "KIT-FRONT"; a = it["asset"]
-    mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.022, 0, H, m)
+    mb.box(-W / 2, W / 2, -D / 2 + 0.003, D / 2 - 0.022, 0, H, m)
     n = int(a.get("doors", 2)); dw = W / n
     for i in range(n):
         x0 = -W / 2 + i * dw
         shaker(mb, x0 + 0.002, x0 + dw - 0.002, D / 2, 0.08, H - 0.002, m)
-        if "brass" in a.get("handles", ""):
-            hx = x0 + dw - 0.05 if i % 2 == 0 else x0 + 0.05
+        hx = x0 + dw - 0.05 if i % 2 == 0 else x0 + 0.05
+        if "knob" in a.get("handles", ""):
             mb.pieces.append(_disc((hx, D / 2 + 0.03, 1.05), 0.015, 0.03, "BRASS", 12))
+        elif m == "KIT-FRONT":                              # KIT-FRONT's words: brushed brass bar handles 160 mm
+            mb.box(hx - 0.006, hx + 0.006, D / 2 + 0.012, D / 2 + 0.024, 0.97, 1.13, "BRASS", 0.004)
+            for zz in (0.985, 1.115): mb.box(hx - 0.004, hx + 0.004, D / 2, D / 2 + 0.013, zz - 0.004, zz + 0.004, "BRASS")
 
 
 def k_chest(mb, W, D, H, it):
@@ -624,13 +688,16 @@ def k_mirror_cabinet(mb, W, D, H, it):
 
 
 def k_towel_rail(mb, W, D, H, it):
+    """heated towel rail: two 30 mm uprights and 9 bars at the front, wall brackets back to the wall (the spec depth D)"""
     m = mats_for(it, "all") or "METAL-BLACK"
-    for sx in (-1, 1): mb.cyl(sx * (W / 2 - 0.015), 0, 0, H, 0.015, m, 10)
+    yf = D / 2 - 0.015
+    for sx in (-1, 1): mb.cyl(sx * (W / 2 - 0.015), yf, 0, H, 0.015, m, 10)
     n = 9
     for i in range(n):
         z = 0.1 + (H - 0.15) * i / (n - 1)
-        mb.box(-W / 2 + 0.015, W / 2 - 0.015, -0.01, 0.01, z - 0.01, z + 0.01, m)
-    for sx in (-1, 1): mb.box(sx * (W / 2 - 0.015) - 0.01, sx * (W / 2 - 0.015) + 0.01, -D / 2, -0.01, H * 0.8, H * 0.8 + 0.02, m)
+        mb.box(-W / 2 + 0.015, W / 2 - 0.015, yf - 0.01, yf + 0.01, z - 0.01, z + 0.01, m)
+    for sx in (-1, 1):
+        for zz in (H * 0.15, H * 0.8): mb.box(sx * (W / 2 - 0.015) - 0.01, sx * (W / 2 - 0.015) + 0.01, -D / 2, yf - 0.012, zz, zz + 0.02, m)
 
 
 def k_towels(mb, W, D, H, it):
@@ -659,10 +726,12 @@ def k_upstand(mb, W, D, H, it): mb.box(-W / 2, W / 2, -D / 2, D / 2, 0, H, mats_
 
 
 def k_roman_blind(mb, W, D, H, it):
+    """OPEN (Jack, walk 2: 'the kitchen blind should be open'): raised, so the fabric is stacked in tight folds under the head rail and the
+    window is clear below it"""
     m = mats_for(it, "all", "fabric") or LINEN; n = int(it["asset"].get("folds", 5))
     mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.03, H - 0.04, H, m)                           # head rail cover
-    fh = (H - 0.04) / n
-    for i in range(n): mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.03 + 0.03 * (i % 2), i * fh, (i + 1) * fh, m, 0.008)
+    fh = 0.035
+    for i in range(n): mb.box(-W / 2, W / 2, -D / 2, D / 2 - 0.03 + 0.012 * (i % 2), H - 0.04 - (i + 1) * fh, H - 0.04 - i * fh, m, 0.008)
 
 
 def k_dining_table(mb, W, D, H, it):
@@ -738,7 +807,7 @@ def k_towel_ring(mb, W, D, H, it):
 
 KINDS = dict(bench_box=k_bench_box, hook_rail=k_hook_rail, rug=k_rug, flush_disc=k_flush_disc, pendant_drum=k_pendant_drum,
              radiator_panel=k_radiator_panel, framed_print=k_framed_print, sofa=k_sofa, cushion=k_cushion, throw_drape=k_throw_drape,
-             stove=k_stove, slab=k_slab, tv=k_tv, alcove_unit=k_alcove_unit, armchair=k_armchair, floor_lamp=k_floor_lamp,
+             stove=k_stove, dining_chair=k_dining_chair, slab=k_slab, tv=k_tv, alcove_unit=k_alcove_unit, armchair=k_armchair, floor_lamp=k_floor_lamp,
              table_lamp=k_table_lamp, curtain_pair=k_curtain_pair, kitchen_unit=kitchen_unit, cooker_hood=k_cooker_hood,
              tile_band=k_tile_band, kettle=k_kettle, toaster=k_toaster, coffee_machine=k_coffee_machine, board=k_board,
              washing_machine=k_washing_machine, table_low=k_table_low, bed=k_bed, bedside=k_bedside, wardrobe=k_wardrobe, chest=k_chest,
@@ -748,14 +817,59 @@ KINDS = dict(bench_box=k_bench_box, hook_rail=k_hook_rail, rug=k_rug, flush_disc
 
 
 def k_bookcase(mb, W, D, H, it):
-    m = mats_for(it, "all") or "KIT-FRONT"; n = int(it["asset"].get("shelves", 5)); t = 0.018
-    mb.box(-W / 2, -W / 2 + t, -D / 2, D / 2, 0, H, m); mb.box(W / 2 - t, W / 2, -D / 2, D / 2, 0, H, m)
-    mb.box(-W / 2 + t, W / 2 - t, -D / 2, -D / 2 + 0.008, 0, H, m)
-    mb.box(-W / 2 + t, W / 2 - t, -D / 2, D / 2, H - t, H, m); mb.box(-W / 2 + t, W / 2 - t, -D / 2 + 0.008, D / 2 - 0.02, 0, 0.08, m)
-    for i in range(1, n): z = 0.08 + (H - 0.08 - t) * i / n; mb.box(-W / 2 + t, W / 2 - t, -D / 2 + 0.008, D / 2 - 0.01, z - t, z, m)
+    """fitted bookcase in a recess: carcass sides full depth, back panel above the skirting, plinth set in front of the skirting
+    (a fitted unit is scribed over the skirting: no volume shared with it)"""
+    m = mats_for(it, "all") or "KIT-FRONT"; n = int(it["asset"].get("shelves", 5)); t = 0.018; sk = 0.022
+    for x0_, x1_ in ((-W / 2, -W / 2 + t), (W / 2 - t, W / 2)):        # sides notched over the skirting
+        mb.box(x0_, x1_, -D / 2 + sk, D / 2, 0, 0.16, m); mb.box(x0_, x1_, -D / 2 + 0.003, D / 2, 0.16, H, m)
+    mb.box(-W / 2 + t, W / 2 - t, -D / 2, -D / 2 + 0.006, 0.16, H, m)          # the back closes the recess (shell check)
+    mb.box(-W / 2 + t, W / 2 - t, -D / 2 + 0.006, D / 2, H - t, H, m); mb.box(-W / 2 + t, W / 2 - t, -D / 2 + sk, D / 2 - 0.02, 0, 0.08, m)
+    for i in range(1, n): z = 0.08 + (H - 0.08 - t) * i / n; mb.box(-W / 2 + t, W / 2 - t, -D / 2 + (sk if z - t < 0.16 else 0.008), D / 2 - 0.01, z - t, z, m)
 
 
 KINDS["bookcase"] = k_bookcase
+def SAN_KIND(it):
+    w = (it["asset"].get("parametric", "") + " " + it["type"]).lower()
+    if "shower" in w or "tray" in w: return None                         # the drawn tray + screen stay (frame, glass, tray finished)
+    if re.search(r"\bwc\b|toilet", w): return "wc_wall" if "wall" in w and "hung" in w else "wc_cc"
+    if "basin" in w or "vanity" in w: return "basin"
+    return None
+
+
+def build_sanitary(it, W, D, H, fin, log):
+    k = SAN_KIND(it)
+    if k == "basin":
+        mb = MB(); HF.k_sanitary2(mb, W, D, H, it, mats_for, shaker)
+        return mb.build(f"SPEC-{it['id']}", fin) if mb.pieces else None
+    key = {"wc_cc": "BK-WC-CC", "wc_wall": "BK-WC-WALL"}[k]
+    if not os.path.exists(os.path.join(HF.LIB, "blendkit", key, "source.blend")):
+        NOTES.append(f"{it['id']}: library WC {key} not in the library yet: drawn block kept"); return None
+    if k == "wc_cc":
+        return HF.build_library_item(dict(it, materials={"all": "SAN-WHITE"}), key, None, W, D, H, fin, mats_for, log)
+    # wall-hung: the boxed concealed cistern (tiled to 1000 high, spec) + the pan from the library + a matt black flush plate
+    pan = HF.build_library_item(dict(it, materials={"all": "SAN-WHITE"}), key, None, W, min(D, 0.55), 0.40, fin, mats_for, log)
+    mb = MB(); bd = max(0.0, D - 0.55)
+    mb.box(-W / 2 - 0.15, W / 2 + 0.15, -D / 2, -D / 2 + max(0.16, bd), 0, H, "FIN-TILE-WALL", 0.004)
+    mb.box(-0.12, 0.12, -D / 2 + max(0.16, bd), -D / 2 + max(0.16, bd) + 0.008, H - 0.32, H - 0.16, "METAL-BLACK", 0.003)
+    box = mb.build(f"SPEC-{it['id']}-boxing", fin)
+    if pan is not None:
+        M = Matrix.Translation((0, -D / 2 + max(0.16, bd) + min(D, 0.55) / 2, 0.20))
+        pan.data.transform(M)
+        bm = bmesh.new(); bm.from_mesh(box.data); bm.from_mesh(pan.data)
+        mats = list(box.data.materials) + [m for m in pan.data.materials]
+        me = bpy.data.meshes.new(f"SPEC-{it['id']}"); bm.to_mesh(me); bm.free()
+        nb = len(box.data.materials)
+        for i, pl in enumerate(me.polygons):
+            if i >= len(box.data.polygons): pl.material_index += nb
+        for m in mats: me.materials.append(m)
+        return bpy.data.objects.new(f"SPEC-{it['id']}", me)
+    return box
+
+
+V2_KINDS = dict(curtain_pair=lambda mb, W, D, H, it: HF.k_curtain_pair2(mb, W, D, H, it, mats_for),
+                rug=lambda mb, W, D, H, it: HF.k_rug2(mb, W, D, H, it, mats_for, QUESTIONS),
+                roman_blind=lambda mb, W, D, H, it: HF.k_roman_blind2(mb, W, D, H, it, mats_for),
+                table_low=lambda mb, W, D, H, it: HF.k_table_low2(mb, W, D, H, it, mats_for))
 
 
 # ------------------------------------------------------------------------------------------------ Poly Haven assets
@@ -833,13 +947,12 @@ def _ph_proto(aid, root, log):
 CEILING_KINDS = {"pendant_drum", "flush_disc", "linear_pendant"}
 # CORRECTIONS 183 (Jack, 1 Nov: "it should be scripted well in the first place"): these scripted types are held back until each
 # passes its close-up test sheet against a real product (renders/house-build/first-build/furniture-tests/); not placed as boxes
-HOLD_KINDS = {"sofa", "armchair", "bed", "wardrobe", "desk", "dining_table", "island", "rug", "curtain_pair", "roman_blind",
-              "throw_drape", "cushion", "chest", "bedside", "bookcase", "alcove_unit", "table_low", "bench_box"}
+HOLD_KINDS = set()      # (2 Nov 2026, furnishing job: every kind now built to its bar: library/adapt (hb_furnish), cloth sim or v2 kind)
 HELD = []
 # G5b SHELL READY (Jack, 1 Nov 2026; CORRECTIONS-LOG 191): nothing is furnished until the bare shell passes tools/house/check_shell.py.
 # Fixed fittings (kitchen and utility runs, sanitaryware, radiators, light fittings, joinery) are part of the shell; furniture,
 # soft furnishings, decor and plants are held (the code stays: set SHELL_ONLY False once Jack has seen the shell).
-SHELL_ONLY = True
+SHELL_ONLY = False      # G5b SHELL READY passed 2 Nov 2026 (shell-1): the loose layer is built, tagged furnishing: true
 SHELL_HOLD_CATS = {"furniture", "soft_furnishing", "decor", "plant"}
 SOLID_CATS = {"furniture", "joinery", "appliance", "sanitary", "radiator"}
 
@@ -871,6 +984,20 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
             u = dx * c - dz * s_; v = -dx * s_ - dz * c          # along W (cos, -sin) and along the front (-sin, -cos)
             if abs(u) <= W_ / 2 + 0.02 and abs(v) <= D_ / 2 + 0.02 and p[1] + 0.05 < y <= p[1] + H_ + 0.08: return True
         return False
+    loose_boxes = []
+    for it_ in V["items"]:
+        if it_["category"] in SHELL_HOLD_CATS:
+            W_, D_, H_ = [x / 1000 for x in it_["size_mm"]]; loose_boxes.append((it_["position_m"], it_["yaw_deg"], W_, D_, H_, it_["id"]))
+    def stands_on_loose(it):
+        """an item whose base sits on top of a loose item (a lamp on a bedside): it hides with its host in Unfurnished"""
+        if it["category"] in SHELL_HOLD_CATS: return False
+        x, y, z = it["position_m"]
+        for (p, yaw, W_, D_, H_, hid) in loose_boxes:
+            c, s_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+            dx, dz = x - p[0], z - p[2]
+            u = dx * c - dz * s_; v = -dx * s_ - dz * c
+            if abs(u) <= W_ / 2 + 0.02 and abs(v) <= D_ / 2 + 0.02 and abs(y - (p[1] + H_)) < 0.06: return True
+        return False
     for it in V["items"]:
         if SHELL_ONLY and it["category"] in SHELL_HOLD_CATS:
             HELD.append(it["id"] + " (G5b: no furniture/decor until SHELL READY)"); continue
@@ -883,9 +1010,37 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
                      group="fitting", storey="first" if pos[1] > 2.0 else "ground",
                      label=f"{it['type']} ({it['id']}; spec_v1 {it['status']})", plain_label=it["type"][:80],
                      drawing="spec_v1 (signed 1 Nov 2026)", conf="assumed", provenance=it.get("provenance", "typical"),
-                     collide=bool(it["category"] in SOLID_CATS and H > 0.3))
+                     collide=bool(it["category"] in SOLID_CATS and H > 0.3 and not re.search(r"\bbed\b|bedside", it["type"].lower())))   # walk test (F103): the viewer's walker starts its floor ray 0.36 m above the feet, INSIDE a bed's mattress or a bedside's top, and finds the base frame / lower shelf (0.18-0.33 m) as a step, then the top (0.53 m): beds and bedsides are not obstacles (walked through) until the viewer's floor probe is fixed
+        if it["category"] in SHELL_HOLD_CATS or stands_on_loose(it):
+            props["furnishing"] = True                     # the viewer's Unfurnished switch hides these (SIGNOFF decision 2 Nov)
+            if it["category"] not in SHELL_HOLD_CATS: props["furnishing_reason"] = "stands on a loose item (hides with its host)"
         ob = None
-        if src == "elements":
+        pl_item = (PLAN or {}).get("items", {}).get(it["id"], {}) if PLAN else {}
+        lib_key = pl_item.get("asset") if isinstance(pl_item.get("asset"), str) and pl_item.get("asset", "") in (PLAN or {}).get("sources", {}).get("blendkit", {}) else None
+        if a.get("kind") in ("curtain_pair", "dining_table"): lib_key = None        # studio-made to the written spec (plan: reference only)
+        soft_key = f"{SOFT_FOR[a.get('kind')]}_{it['id']}" if src == "parametric" and a.get("kind") in SOFT_FOR else None
+        if it["id"] in SOFT_FOR_ITEM: soft_key = SOFT_FOR_ITEM[it["id"]]
+        if soft_key and not os.path.exists(os.path.join(HF.LIB, "soft", soft_key[5:], "source.blend")):
+            NOTES.append(f"{it['id']}: cloth-sim item {soft_key} not made yet: parametric fallback"); soft_key = None
+        if src == "parametric" and (lib_key or soft_key):
+            ob = HF.build_library_item(it, lib_key, soft_key, W, D, H, fin, mats_for, log)
+            if ob is not None:
+                place(ob, pos, yaw)
+                props["asset_library"] = lib_key or soft_key
+                if soft_key: props["soft_dressed"] = soft_key
+                if lib_key in HF.UNIFORM: props["fit"] = "uniform"
+        if ob is None and src == "elements" and it["category"] == "sanitary" and SAN_KIND(it):
+            # G5c: the drawn placeholder block is replaced by real sanitaryware (studio basin / library WC) at the spec's
+            # position, yaw and size; the drawn element keeps its node but loses its geometry (no block left behind)
+            ob = build_sanitary(it, W, D, H, fin, log)
+            if ob is not None:
+                place(ob, pos, yaw); props["replaces_element"] = a["element"]; props["collide"] = True
+                gone = set(o.name for o in by_el.get(a["element"], []))
+                house_objs[:] = [(o_, p_) for (o_, p_) in house_objs if o_.name not in gone]
+                for o in by_el.get(a["element"], []): bpy.data.objects.remove(o)
+                by_el[a["element"]] = []
+        if ob is not None: pass
+        elif src == "elements":
             obs = by_el.get(a["element"], [])
             if not obs: QUESTIONS.append(dict(id=it["id"], what=f"element {a['element']} not in this build", evidence="")); continue
             key = (it.get("materials") or {}).get("all") or next(iter((it.get("materials") or {}).values()), None)
@@ -893,7 +1048,8 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
                 if key and key in fin.F: o.data.materials.clear(); o.data.materials.append(fin.get(key))
                 o["spec_id"] = it["id"]; o["spec_kind"] = "elements"
             continue
-        if a.get("kind") == "note_only":
+        if ob is not None: pass
+        elif a.get("kind") == "note_only":
             ob = bpy.data.objects.new(f"SPEC-{it['id']}", None); place(ob, pos, yaw)
         elif src == "polyhaven":
             proto = _ph_proto(a["id"], ph_root, log)
@@ -901,7 +1057,24 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
             if proto is None:
                 QUESTIONS.append(dict(id=it["id"], what=f"Poly Haven {a['id']} could not be loaded: item left out", evidence=a.get("url", ""))); continue
             me, (bx, by, bz) = proto
+            # orient the model to the spec box before fitting (CORRECTIONS-LOG: the coffee table came in at half size because
+            # the model's long side ran front-to-back): lay a standing book set flat where the box is flat ('lay 3 books flat'),
+            # turn 90 degrees where the model's long horizontal side crosses the box's
+            rot = Matrix.Identity(4)
+            no_turn = a["id"].startswith("decorative_book_set")         # a row of books keeps its spines along the shelf
+            if not no_turn and (H < 0.5 * min(W, D) or "flat" in a.get("scale_note", "")) and bz > 0.8 * max(bx, by):
+                rot = Matrix.Rotation(math.pi / 2, 4, "X") @ rot; bx, by, bz = bx, bz, by
+            if not no_turn and abs(bx - by) > 0.05 and (bx > by) != (W > D) and abs(W - D) > 0.05:
+                rot = Matrix.Rotation(math.pi / 2, 4, "Z") @ rot; bx, by = by, bx
+            if a["id"].startswith(("decorative_book_set", "standing_picture_frame")):      # Jack walk 2 (F53/F54 'wrong way round'): these Poly Haven models face -Y; the library frame (front +Y) needs a half turn
+                rot = Matrix.Rotation(math.pi, 4, "Z") @ rot
+            if rot != Matrix.Identity(4):
+                me = me.copy(); me.transform(rot)
+                xs_ = [v.co.x for v in me.vertices]; ys_ = [v.co.y for v in me.vertices]; zs_ = [v.co.z for v in me.vertices]
+                me.transform(Matrix.Translation((-(min(xs_) + max(xs_)) / 2, -(min(ys_) + max(ys_)) / 2, -min(zs_))))
+                NOTES.append(f"{it['id']}: {a['id']} turned to the spec box before fitting (laid flat / long side to the box's long side)")
             r = [W / max(bx, 1e-6), D / max(by, 1e-6), H / max(bz, 1e-6)]
+            if a["id"].startswith("hanging_picture_frame"): fit = "scale_to_box"; r = [9.0, 1.0, 1.0]   # 'framed print': studio oak frame (written description governs)
             if fit == "scale_to_box" and (max(r) - min(r)) / max(r) > 0.05:
                 kind = "framed_print" if "frame" in a["id"] else None
                 if kind:
@@ -926,12 +1099,24 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
                 for k_, v_ in ov.items():
                     hit = [i for i, m_ in enumerate(me2.materials) if m_ and k_.lower() in m_.name.lower()]
                     if not hit and len(me2.materials) == 1: hit = [0]
+                    if not hit and len(me2.materials) > 1:     # by role: the pot is the lowest part, a glaze/frame the largest
+                        st_ = {}
+                        for pl in me2.polygons:
+                            a_, z_ = st_.get(pl.material_index, (0.0, 0.0)); st_[pl.material_index] = (a_ + pl.area, z_ + pl.center.z * pl.area)
+                        if st_:
+                            if k_.lower() in ("pot", "planter", "base"): hit = [min(st_, key=lambda i: st_[i][1] / max(st_[i][0], 1e-9))]
+                            else: hit = [max(st_, key=lambda i: st_[i][0])]
+                            NOTES.append(f"{it['id']}: spec finish {v_} on the {k_} part of {a['id']} (material chosen by its role: {'lowest' if k_.lower() in ('pot', 'planter', 'base') else 'largest'})")
                     if not hit: NOTES.append(f"{it['id']}: no part '{k_}' on {a['id']}: finish {v_} not applied"); continue
                     for i in hit:
-                        m2 = fin.get(v_).copy(); m2.name = fin.get(v_).name + "_2s"; m2.use_backface_culling = False   # open model: both sides
+                        m2 = fin.get(v_).copy(); m2.name = fin.get(v_).name + ".2s"; m2.use_backface_culling = False   # open model: both sides
                         me2.materials[i] = m2
         elif src == "parametric" and a.get("kind") in HOLD_KINDS:
             HELD.append(it["id"]); continue
+        elif src == "parametric" and a.get("kind") in V2_KINDS:
+            mb = MB()
+            if V2_KINDS[a["kind"]](mb, W, D, H, it) is False or not mb.pieces: continue
+            ob = mb.build(f"SPEC-{it['id']}", fin); place(ob, pos, yaw); props["kind_v2"] = a["kind"]
         elif src == "parametric":
             k = a.get("kind")
             fn = KINDS.get(k)
@@ -960,6 +1145,10 @@ def build_items(spec, vkey, N, coll, fin, ph_root, house_objs, log):
         for k_, v_ in props.items(): ob[k_] = v_
         coll.objects.link(ob)
         out.append((ob, dict(props=props, atom=dict(id=props["element"], kind="spec", meta=props, provenance=props["provenance"]))))
+    if PLAN is not None:
+        HF.snap_loose(out, house_objs, N, log, V["items"])
+        out += HF.build_addendum(SPEC_PATH, vkey, N, coll, fin, out, house_objs, log, ph=lambda aid: _ph_proto(aid, ph_root, log))
+        HF.validate(vkey, out, house_objs, log)
     return out
 
 

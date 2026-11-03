@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {gardenDesktopRender} from "../garden/desktop-render.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -77,6 +78,7 @@ const LITE = IS_QUEST || IS_PHONE;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, IS_PHONE ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
+const gardenDesktop=gardenDesktopRender(renderer,renderer.getPixelRatio());
 renderer.localClippingEnabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;         // Khronos PBR Neutral: keeps the brick and tile colours sampled from Jack's frames
@@ -215,7 +217,7 @@ function adaptExposure(dt, snap = false) {
   if (snap || t - coverAt > 200) {
     coverAt = t;
     _upRay.ray.origin.copy(camera.getWorldPosition(_camPos));
-    const covered = _upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
+    const covered = gardenDesktop.active?gardenDesktop.roofCover(V,_upRay.ray.origin,stageValue,snap):_upRay.intersectObject(V.model.root, true).some(h => h.object.visible && !SHADE.test(h.object.name || "") && !h.object.isSprite);
     adaptExposure.target = covered ? LOOK.exposureIn : LOOK.exposureOut;
   }
   const want = adaptExposure.target ?? LOOK.exposureOut;
@@ -3408,7 +3410,7 @@ async function boot() {
   $("startDesktop").disabled = false;
   console.info(`house: ${V.model.parts.length} parts · house ${V.model.drawCalls()} batches + setting ${V.model.settingCalls()} · ${V.bvh.triangles} ray triangles · mode ${MODE.key}`);
   /* make the Before / After switch instant on a laptop; the Quest loads a version only when asked (memory) */
-  if (!LITE && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
+  if (!LITE && !garden?.enabled && manifest.as_built_now && manifest.as_built_now !== V.def.id && !params.get("test") && !params.get("capture")) loadVersion(manifest.as_built_now, true).catch(err => console.warn(err));
   /* the headset's own panels: their shaders compiled and textures on the GPU now, not on the frame they first show */
   for (const o of [vrBoard.mesh, wristTab, card.mesh, perf.hud, laserDot, hover, baPanel, gotoMenu.mesh, trigRing]) { renderer.compile(o, camera, scene); o.traverse(m => m.material?.map && renderer.initTexture(m.material.map)); }
   dispatchEvent(new Event("house-ready"));
@@ -3519,6 +3521,7 @@ function loop(fakeNow) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (renderer.shadowMap.needsUpdate && renderer.shadowMap.enabled) shadowPasses++;
+  gardenDesktop.use(!!garden?.enabled && !LITE && !inVR());
   perf.frame(now, workPrev, SEND_PERF || renderer.xr.isPresenting);
   renderer.info.reset();
   if (!V) { renderer.render(scene, camera); workPrev = performance.now() - now; return; }
@@ -3555,7 +3558,7 @@ function loop(fakeNow) {
     if (step) { const ms = performance.now() - t0; if (ms > 4) perf.tag(`board ${step} ${Math.round(ms)} ms`); }
   }
   fade.update(dt);
-  adaptExposure(dt);
+  if(!garden?.bird||inVR())adaptExposure(dt);
   const vt = !inVR() && SIMPLE && comfort === "vignette" && deskMoving ? 0.45
     : inVR() && comfort === "vignette" && speedNow > 0.05 ? (MODE.vr.locomotion === "teleport" && !flying ? 0.75 : 0.5) + (fastWalk && walkBoost > 0.3 && !flying ? 0.1 : 0) : 0;
   vignette.material.opacity += (vt - vignette.material.opacity) * Math.min(1, dt * 8);
@@ -3569,7 +3572,7 @@ function loop(fakeNow) {
   blurFade = Math.max(0, Math.min(1, blurFade + (moving ? 1 : -1) * dt / BLUR.fade));
   deskMoving = !inVR() && deskMove.moving;
   if (garden?.bird && !inVR()) { workPrev = performance.now() - now; return; }
-  if (renderer.xr.isPresenting || SIM.on || !composer) {
+  if (renderer.xr.isPresenting || SIM.on || !composer || gardenDesktop.active) {
     const t0 = performance.now();
     const blurred = inVR() && blurFade > 0.001 && xrBlur.render(scene, camera, blurFade * BLUR.xrShutter);
     if (!blurred) renderer.render(scene, camera);

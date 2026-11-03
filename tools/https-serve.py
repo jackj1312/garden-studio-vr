@@ -745,6 +745,10 @@ def spec_post(h):
 if "--garden-lan" in sys.argv[3:]:
     from garden_network import garden_handler
     Handler = garden_handler(Handler, root, sys.argv[2])
+if port == 8450:
+    from preview_http import preview_handler
+    Handler = preview_handler(Handler,os.environ.get("STUDIO_PREVIEW_ROOT",os.path.join(root,"assets","previews")),
+                              sys.argv[2] if len(sys.argv)>2 else "127.0.0.1")
 handler = functools.partial(Handler, directory=root)
 httpd = http.server.ThreadingHTTPServer((sys.argv[2] if len(sys.argv) > 2 else "0.0.0.0", port), handler)
 ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

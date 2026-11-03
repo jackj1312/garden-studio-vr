@@ -7,6 +7,9 @@ design choice this brief and the project files don't answer, and batch those que
 - From your build, bring in: **every interior thing** (furniture, fittings, kitchen and bathroom, toilets, basins, washing
   machine, appliances, soft furnishings, styling, materials, the way the rooms are lit), **the windows, the front door, the
   internal doors, and the outside window surrounds**, and outside **the apples under the tree and your better grass**.
+- Keep **the client room planner** (`planner.html`, the `/plan/` link): clients use it to see each room in 3D and place furniture
+  before they pay a deposit. Keep it working and improve it with the kit and catalogue; it must read and write the same layout
+  file as the viewer.
 - Keep ours: **our brickwork** (yours was too bright and had visual bugs: don't touch our brick), **our front garden layout and
   paving**, our measured scale front and back, and our navigation.
 

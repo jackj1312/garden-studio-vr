@@ -1,19 +1,23 @@
 /**
  * Bake a viewable, self-contained furnished GLB from the version's fixed house
  * and effective saved layout; the live viewer keeps its fixed GLB + layout.
- *   node tools/house/bake_layout.mjs assets/sites/house [version ...]
+ *   node tools/house/bake_layout.mjs assets/sites/house [--layout-site house-wip --layout-root <checkout>] [version ...]
  * The normal background generator invokes the same command with --split after
  * writing its full temporary inputs. Artifacts and receipts stay private under
  * furnish/<version>/bakes. No save, history record or published route is changed.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {pathToFileURL} from 'node:url';
 import * as T from '../../assets/vendor/three/build/three.module.js';
 import {io,studioRequire,ROOT,sha,atomic,immutable,versionData} from './runtime_assets.mjs';
 import {variantKey,variantModel,partColour} from '../../src/furnish/asset-recipe.mjs';
 import {floorRecipe} from '../../src/furnish/floor-recipe.mjs';
 
+const run=promisify(execFile);
+const siteNameOK=id=>typeof id==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(id);
 const {copyToDocument,dedup,unpartition,prune}=studioRequire('@gltf-transform/functions');
 const sharp=studioRequire('sharp');
 const up=new T.Vector3(0,1,0),one=new T.Vector3(1,1,1),kitRoot=path.join(ROOT,'tools/library/kit');
@@ -28,14 +32,73 @@ function localFile(root,uri){
   if(!file.startsWith(root+path.sep))throw Error('Asset outside its declared root: '+uri);
   return file;
 }
-function effective(bytes,seed,version){
+function effective(bytes,seed,version,siteId=null){
   const saved=bytes?JSON.parse(bytes):null;
-  if(saved && (saved.schema!==1||saved.version!==version||!Array.isArray(saved.items)||!Number.isInteger(saved.revision)))throw Error('Invalid saved layout for '+version);
-  const own=saved && (saved.furnishSeeded===true||saved.items.length>0);
-  const items=own?saved.items:seed.items,walls=own?saved.wallColours:{...seed.wallColours,...saved?.wallColours},
+  if(saved && (typeof saved!=='object'||Array.isArray(saved)||saved.schema!==undefined&&saved.schema!==1||
+      saved.version!==undefined&&saved.version!==version||siteId&&saved.site!==undefined&&saved.site!==siteId||
+      saved.items!==undefined&&!Array.isArray(saved.items)||!Number.isSafeInteger(saved.revision??0)||(saved.revision??0)<0))
+    throw Error('Invalid saved layout identity or revision for '+(siteId||'candidate')+'/'+version);
+  const own=saved && (saved.furnishSeeded===true||saved.items?.length>0);
+  const items=own?(saved.items||[]):seed.items,walls=own?saved.wallColours:{...seed.wallColours,...saved?.wallColours},
     floors=own?saved.roomFloors:{...seed.roomFloors,...saved?.roomFloors};
   return {items,wallColours:walls||{},roomFloors:floors||{},source:own?'layout':'seed',revision:saved?.revision||0,hasSaved:!!saved,
-    garden:saved?.garden||{schema:1,objects:[]}};
+    garden:saved?.garden||seed.garden||{schema:1,objects:[]}};
+}
+function sourceBinding(site,binding){
+  if(!binding)return null;
+  if(!siteNameOK(binding.site)||typeof (binding.projectRoot??'.')!=='string')throw Error('Invalid candidate layout source binding');
+  const project=path.resolve(site,'../../..',binding.projectRoot||'.');
+  return {project,site:binding.site,directory:path.join(project,'assets','sites',binding.site)};
+}
+async function snapshot(owner,site,def){
+  if(!owner)return {saved:await optionalBytes(localFile(site,'layout/'+def.id+'.json')),row:def};
+  const {stdout}=await run('python3',['-B',path.join(ROOT,'tools/layout_store.py'),'--build-snapshot',owner.project,owner.site,def.id],
+    {encoding:'utf8',maxBuffer:32*1024*1024});
+  const data=JSON.parse(stdout);
+  return {saved:data.layout==null?null:Buffer.from(data.layout),row:data.version};
+}
+async function safeOwnerBytes(root,file){
+  const base=await fs.realpath(root),resolved=await fs.realpath(localFile(root,file));
+  if(!resolved.startsWith(base+path.sep))throw Error('Asset escapes its layout owner: '+file);
+  return fs.readFile(resolved);
+}
+async function retainOwnerModels(site,def,registry,owner,sourceRow,items){
+  if(!owner||!sourceRow.furnish_runtime?.variants)return registry;
+  const uri=sourceRow.furnish_runtime.variants,registered=JSON.parse(await safeOwnerBytes(owner.directory,uri));
+  const release=/^(releases\/[a-z0-9_-]+)\//.exec(uri);
+  const resourceRoot=release?localFile(owner.directory,release[1]):owner.directory;
+  const next={...registry,variants:{...registry.variants}};
+  let changed=false;
+  const copied=new Set();
+  async function transfer(file){
+    const match=/^furnish\/(?:models|buffers|textures)\/([a-f0-9]{64})\.(?:gltf|bin|png|jpe?g|webp|ktx2)$/.exec(file);
+    if(!match)throw Error('Unregistered client variant resource '+file);
+    const target=localFile(site,file),prior=await optionalBytes(target);
+    // A model already in the candidate is identical only if its real content
+    // matches the immutable name. Missing dependencies are still checked below.
+    const bytes=prior||await safeOwnerBytes(resourceRoot,file);
+    if(sha(bytes)!==match[1])throw Error('Conflicting immutable client variant '+file);
+    if(!prior)await immutable(target,bytes);
+    return bytes;
+  }
+  for(const key of new Set(items.map(i=>i.variant))){
+    if(!Object.hasOwn(registered.variants||{},key))continue;
+    const record=registered.variants[key];
+    if(!/^site-[a-f0-9]{64}$/.test(key)||record.url!=='furnish/models/'+key.slice(5)+'.gltf')throw Error('Invalid immutable client variant '+key);
+    for(const model of new Set([record.url,record.questUrl].filter(Boolean))){
+      if(copied.has(model))continue;copied.add(model);
+      const doc=JSON.parse(await transfer(model));
+      for(const file of [...(doc.buffers||[]),...(doc.images||[])].map(x=>x.uri).filter(u=>u&&!u.startsWith('data:'))){
+        const local=path.posix.normalize(path.posix.join(path.posix.dirname(model),file));
+        if(!copied.has(local)){await transfer(local);copied.add(local);}
+      }
+    }
+    if(!next.variants[key]){next.variants[key]=record;changed=true;}
+    else if(next.variants[key].url!==record.url||next.variants[key].catalogueId!==record.catalogueId)
+      throw Error('Regenerated variant conflicts with the owning client: '+key);
+  }
+  if(changed)await atomic(localFile(site,def.furnish_runtime.variants),pretty(next));
+  return next;
 }
 async function floorPNG(def){
   const recipe=floorRecipe(def),{n,base,lines,motifs}=recipe,colour=new T.Color(base).convertLinearToSRGB().toArray().map(x=>Math.round(x*255));
@@ -196,31 +259,39 @@ async function compile(site,def,layout,registry,defs,stock,ref,opts={}){
   const furniture=await place(doc,site,layout,registry,stock,opts.kitRoot);
   const scene=doc.getRoot().getDefaultScene()||doc.getRoot().listScenes()[0];
   scene.setExtras({...scene.getExtras(),furnish_bake:{version:def.id,layout:ref,revision:layout.revision,
-    garden:{ref:layout.hasSaved?'layout/'+def.id+'.json':null,objects:layout.garden.objects?.length||0,sha256:sha(JSON.stringify(layout.garden))}}});
+    garden:{ref:layout.hasSaved?layout.layoutFile:null,objects:layout.garden.objects?.length||0,sha256:sha(JSON.stringify(layout.garden))}}});
   await doc.transform(unpartition(),dedup({propertyTypes:['Texture','Accessor']}),prune({propertyTypes:['Mesh','Primitive','PrimitiveTarget','Accessor','Material','Texture','Buffer'],keepAttributes:true,keepIndices:true,keepSolidTextures:true}));
   return {bytes:await io.writeBinary(doc),finishes,furniture};
 }
 async function bakeVersion(site,def,specRoot=path.join(site,'spec'),opts={}){
   if(!def.furnish_runtime)return null;
-  const folder=path.join(site,'furnish',def.id,'bakes'),layoutPath='layout/'+def.id+'.json',layoutFile=localFile(site,layoutPath);
+  const folder=path.join(site,'furnish',def.id,'bakes'),localPath='layout/'+def.id+'.json';
+  const config=Object.hasOwn(opts,'layoutSource')?opts.layoutSource:
+    await optionalBytes(path.join(site,'versions.json')).then(b=>b?JSON.parse(b).layout_source:null);
+  const owner=sourceBinding(site,config),ownerId=owner?.site||path.basename(site);
+  if(owner&&await fs.realpath(owner.directory)===await fs.realpath(site))throw Error('A bound client layout needs a distinct private build destination');
+  const layoutPath='assets/sites/'+ownerId+'/'+localPath;
   const [seed,variants,floors,catalogue]=await Promise.all([read(localFile(site,def.furnish_runtime.seed)),read(localFile(site,def.furnish_runtime.variants)),
     optionalBytes(path.join(specRoot,'catalogue_v1.json')).then(b=>b?JSON.parse(b):{floors:[]}),opts.catalogue?Promise.resolve(opts.catalogue):read(path.join(kitRoot,'catalogue.json'))]);
   const stock=new Map(catalogue.items.map(i=>[i.id,i]));
   for(let attempt=0;attempt<3;attempt++){
-    const saved=await optionalBytes(layoutFile),finger=saved?sha(saved):null,layout=effective(saved,seed,def.id);
-    const ref=layout.source==='layout'?layoutPath:def.furnish_runtime.seed;
-    const out=await compile(site,def,layout,variants,floors.floors,stock,ref,opts);
+    const input=await snapshot(owner,site,def),saved=input.saved,finger=saved?sha(saved):null;
+    const layout=effective(saved,seed,def.id,owner?.site);layout.layoutFile=layoutPath;
+    const registry=await retainOwnerModels(site,def,variants,owner,input.row,layout.items);
+    const ref=layout.source==='layout'?layoutPath:'assets/sites/'+path.basename(site)+'/'+def.furnish_runtime.seed;
+    const out=await compile(site,def,layout,registry,floors.floors,stock,ref,opts);
     const digest=sha(out.bytes),model=path.join(folder,digest+'.glb');
     await immutable(model,out.bytes);
-    const receipt={schema:1,version:def.id,fixed:def.glb,source:layout.source,layout:ref,layoutRevision:layout.revision,savedFileSHA256:finger,
+    const receipt={schema:1,version:def.id,fixed:def.glb,source:layout.source,layout:ref,layoutSite:ownerId,layoutFile:layoutPath,
+      layoutRevision:layout.revision,savedFileSHA256:finger,sourceRegistry:input.row.furnish_runtime?.variants||null,
       model:path.relative(site,model),modelSHA256:digest,items:out.furniture.ids,uniqueModels:out.furniture.variants,
       ...out.finishes,
       hosts:Object.fromEntries(layout.items.map(i=>[i.id,{...i.host,offset:i.hostOffset,rotation:i.hostRotation}])),
       garden:{ref:saved?layoutPath:null,count:layout.garden.objects?.length||0,sha256:sha(JSON.stringify(layout.garden))}};
     const body=pretty(receipt),stamp=path.join(folder,sha(body)+'.json');
     await immutable(stamp,body);
-    const recheck=await optionalBytes(layoutFile);
-    if((recheck?sha(recheck):null)!==finger)continue;
+    const again=await snapshot(owner,site,def),recheck=again.saved;
+    if((recheck?sha(recheck):null)!==finger||again.row.furnish_runtime?.variants!==input.row.furnish_runtime?.variants)continue;
     await atomic(path.join(folder,'latest.json'),body);
     console.log(def.id,'baked',receipt.items.length,'items from',receipt.source,'revision',receipt.layoutRevision,'at',receipt.model);
     return receipt;
@@ -242,17 +313,25 @@ async function main(){
   if(prepared&&(!split||path.dirname(path.resolve(prepared))!==site||!/^\.runtime-source-[\w-]+\.json$/.test(path.basename(prepared))))
     throw Error('Expected the generator-owned temporary source manifest inside the candidate site');
   const manifest=await read(prepared||path.join(site,'versions.json'));
+  const requested=option('--layout-site'),override=option('--layout-root');
+  if(requested||override) {
+    const binding={...manifest.layout_source,...(requested?{site:requested}:{})};
+    if(override)binding.projectRoot=path.relative(await fs.realpath(path.resolve(site,'../../..')),await fs.realpath(override))||'.';
+    sourceBinding(site,binding);manifest.layout_source=binding;
+  }
+  const owner=sourceBinding(site,manifest.layout_source);
+  if(owner&&await fs.realpath(owner.directory)===await fs.realpath(site))throw Error('A bound client layout needs a distinct private build destination');
   const spec=split?await read(specPath):null;
   const selected=manifest.versions.filter(v=>!argv.length||argv.includes(v.id));
   if(argv.some(id=>!selected.some(v=>v.id===id)))throw Error('Unknown version requested');
   for(const def of selected){
-    const result=split?await versionData(site,def,spec,specRoot):null,active=result||def;
+    const result=split?await versionData(site,def,spec,specRoot,!!owner):null,active=result||def;
     if(result)manifest.versions[manifest.versions.indexOf(def)]=result;
-    if(active.furnish_runtime)await bakeVersion(site,active,specRoot);
+    if(active.furnish_runtime)await bakeVersion(site,active,specRoot,{layoutSource:manifest.layout_source});
   }
   // Only completed runtime assets become the version's live, fixed target.
   // Baked snapshots are deliberately never assigned to def.glb/glb_quest.
-  if(split||prepared)await atomic(path.join(site,'versions.json'),pretty(manifest));
+  if(split||prepared||requested||override)await atomic(path.join(site,'versions.json'),pretty(manifest));
   if(prepared)await fs.unlink(prepared);
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)await main();

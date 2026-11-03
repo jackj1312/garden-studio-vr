@@ -34,6 +34,8 @@ ap.add_argument("--spec-tex", default=os.path.join(os.path.dirname(HERE), "..", 
 ap.add_argument("--polyhaven", default=os.path.join(os.path.dirname(HERE), "..", "master", "polyhaven"))
 ap.add_argument("--no-items", action="store_true", help="leave out the signed spec's interior (items, floor finishes, skirting)")
 ap.add_argument("--runtime-furnish", action="store_true", help="enable separate fixed house, editable items and a saved-layout GLB; future builds detect the site's existing runtime manifest")
+ap.add_argument("--layout-site", help="Published client site that owns the saved layouts. Recorded in the private candidate manifest.")
+ap.add_argument("--layout-root", help="Checkout containing assets/sites/<layout-site>. Defaults to the persisted binding or the candidate project.")
 ap.add_argument("--versions", default=""); ap.add_argument("--no-check", action="store_true"); ap.add_argument("--blend", default="")
 args = ap.parse_args(argv)
 DATA = json.load(open(args.data)); SPEC = json.load(open(args.spec))
@@ -2086,10 +2088,25 @@ def stages_json(vb):
 # ======================================================================================== main
 def main():
     manifest_file=os.path.join(OUT,'versions.json')
-    previous={}
+    old_manifest={}
     if os.path.isfile(manifest_file):
         with open(manifest_file) as stream:
-            previous={v['id']:v for v in json.load(stream).get('versions',[])}
+            old_manifest=json.load(stream)
+    previous={v['id']:v for v in old_manifest.get('versions',[])}
+    binding=dict(old_manifest.get('layout_source') or {})
+    if args.layout_site is not None:
+        if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',args.layout_site):
+            raise ValueError('Invalid --layout-site')
+        binding['site']=args.layout_site
+    if args.layout_root is not None:
+        if not binding.get('site'):raise ValueError('--layout-root requires a bound --layout-site')
+        binding['projectRoot']=os.path.relpath(os.path.realpath(args.layout_root),os.path.realpath(os.path.join(OUT,'../../..')))
+    if binding:
+        if not isinstance(binding.get('site'),str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',binding['site']):
+            raise ValueError('Invalid saved layout-site binding')
+        source=os.path.realpath(os.path.join(OUT,'../../..',binding.get('projectRoot','.'),'assets','sites',binding['site']))
+        if not os.path.isfile(os.path.join(source,'versions.json')):raise ValueError('Missing bound client site: '+source)
+        if source==os.path.realpath(OUT):raise ValueError('A bound client layout needs a distinct private build destination')
     want=[v for v in args.versions.split(',') if v]
     runtime_ids=[v['elements'] for v in (SPEC_V1 or {}).get('versions',{}).values()
                  if v.get('elements') and (not want or v['elements'] in want) and
@@ -2109,6 +2126,7 @@ def main():
     MAT_BASE = dict(MAT); TILE_BASE = dict(TILE)
     versions = [v for v in SPEC["versions"] if not want or v["id"] in want]
     manifest = dict(contract=1, name=SPEC["name"], as_built_now=SPEC["as_built_now"], default=SPEC["default"], versions=[])
+    if binding:manifest['layout_source']=binding
     summary = {}
     for vs in SPEC["versions"]:
         mv = dict(id=vs["id"], name=vs["name"], description=vs["description"], kind=vs["kind"], base=vs.get("base"),

@@ -227,7 +227,7 @@ def read_bytes(fd, name, limit=MAX_LAYOUT):
     return data
 
 
-def write_bytes(fd, name, data):
+def write_bytes(fd, name, data, *, missing_only=False):
     regular(fd, name)
     temp = ".layout-" + uuid.uuid4().hex + ".tmp"
     handle = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
@@ -236,8 +236,16 @@ def write_bytes(fd, name, data):
             file.write(data)
             file.flush()
             os.fsync(file.fileno())
-        os.replace(temp, name, src_dir_fd=fd, dst_dir_fd=fd)
+        if missing_only:
+            try:
+                os.link(temp, name, src_dir_fd=fd, dst_dir_fd=fd, follow_symlinks=False)
+            except FileExistsError:
+                regular(fd, name)
+                return False
+        else:
+            os.replace(temp, name, src_dir_fd=fd, dst_dir_fd=fd)
         os.fsync(fd)
+        return True
     finally:
         try:
             os.unlink(temp, dir_fd=fd)
@@ -411,26 +419,69 @@ class LayoutStore:
         self.root = root
 
     @contextmanager
-    def site(self, site, version):
-        if not all(isinstance(v, str) and NAME.fullmatch(v) for v in (site, version)):
-            invalid("invalid site or version")
+    def locked_site(self, site):
+        if not isinstance(site, str) or not NAME.fullmatch(site):
+            invalid("invalid site")
         try:
             with directory(self.root) as project, directory("assets", project) as assets, \
                     directory("sites", assets) as sites, directory(site, sites) as fd:
-                manifest = read_bytes(fd, "versions.json")
-                if manifest is None:
-                    raise LayoutError(404, "Unknown house site")
-                try:
-                    versions = {v["id"] for v in decode(manifest)["versions"]}
-                except (KeyError, ValueError, TypeError, UnicodeError):
-                    raise LayoutError(500, "Invalid site manifest") from None
-                if version not in versions:
-                    raise LayoutError(404, "Unknown house version")
-                # flock across server threads AND separate server processes.
+                # Publication, GET and updates share the same pinned directory lock.
                 fcntl.flock(fd, fcntl.LOCK_EX)
                 yield fd
         except FileNotFoundError:
             raise LayoutError(404, "Unknown house site") from None
+
+    @contextmanager
+    def site(self, site, version):
+        if not isinstance(version, str) or not NAME.fullmatch(version):
+            invalid("invalid version")
+        with self.locked_site(site) as fd:
+            manifest = read_bytes(fd, "versions.json")
+            if manifest is None:
+                raise LayoutError(404, "Unknown house site")
+            try:
+                versions = {v["id"] for v in decode(manifest)["versions"]}
+            except (KeyError, ValueError, TypeError, UnicodeError):
+                raise LayoutError(500, "Invalid site manifest") from None
+            if version not in versions:
+                raise LayoutError(404, "Unknown house version")
+            yield fd
+
+    def initialise_missing(self, fd, site, version, seed):
+        """Gated publisher only, while locked_site is held; ordinary GET is read-only."""
+        if not NAME.fullmatch(version) or not isinstance(seed, dict) or seed.get("schema") != 1 or not isinstance(seed.get("items"), list):
+            raise LayoutError(500, "Invalid published furnishing seed")
+        with directory("layout", fd, create=True) as layout:
+            self.recover(layout, site, version)
+            name = version + ".json"
+            if regular(layout, name):
+                return False
+            value = dict(seed, **{k: v for k, v in initial(site, version).items() if k not in ("items", "wallColours", "roomFloors", "garden")})
+            value.setdefault("wallColours", {})
+            value.setdefault("roomFloors", {})
+            value.setdefault("garden", {"schema": 1, "objects": []})
+            value["furnishSeeded"] = True
+            data = encode(value)
+            if len(data) > MAX_LAYOUT:
+                raise LayoutError(413, "Furnishing seed is too large")
+            stored(data, site, version)
+            return write_bytes(layout, name, data, missing_only=True)
+
+    def build_snapshot(self, site, version):
+        """Read a coherent, existing version and exact bytes; never recover/write the client site."""
+        with self.site(site, version) as fd:
+            manifest = decode(read_bytes(fd, "versions.json"))
+            row = next(v for v in manifest["versions"] if v["id"] == version)
+            try:
+                with directory("layout", fd) as layout:
+                    if regular(layout, version + ".pending.json"):
+                        raise LayoutError(409, "Layout update awaits server recovery; retry the bake")
+                    raw = read_bytes(layout, version + ".json")
+                    if raw is not None:
+                        stored(raw, site, version)
+            except FileNotFoundError:
+                raw = None
+            return {"layout": raw.decode("utf-8") if raw is not None else None, "version": row}
 
     def recover(self, layout, site, version):
         pending = read_bytes(layout, version + ".pending.json", 5 * MAX_LAYOUT)
@@ -554,3 +605,14 @@ def handle_layout(handler, root):
         return handler._json(400, {"error": "Invalid layout request"})
     except OSError:
         return handler._json(500, {"error": "Unable to persist the layout"})
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+    parser = argparse.ArgumentParser(description="Read-only source snapshot for a local furnishing build.")
+    parser.add_argument("--build-snapshot", nargs=3, required=True, metavar=("PROJECT", "SITE", "VERSION"))
+    project, site, version = parser.parse_args().build_snapshot
+    try:
+        sys.stdout.buffer.write(encode(LayoutStore(project).build_snapshot(site, version)))
+    except LayoutError as exc:
+        parser.exit(1, str(exc) + "\n")

@@ -145,3 +145,75 @@ test('generator handoff splits and bakes the completed version, preserves its si
     await assert.rejects(fs.stat(pending),{code:'ENOENT'});await assert.rejects(fs.stat(path.join(site,'layout/v.json')),{code:'ENOENT'});
   }finally{await fs.rm(site,{recursive:true});}
 });
+
+test('normal split/build reads the bound client checkout and its immutable historical variant across rebuilds',async()=>{
+  const temp=await fs.mkdtemp(path.join(os.tmpdir(),'studio-bound-build-')),candidateProject=path.join(temp,'work'),
+    live=path.join(temp,'live'),site=path.join(candidateProject,'assets/sites/candidate'),client=path.join(live,'assets/sites/client'),
+    k='v',boundRel=path.relative(candidateProject,live),def={id:k,glb:'v.glb',glb_quest:'v_quest.glb',elements:'v_elements.json',stages:'v.json'};
+  const {createHash}=await import('node:crypto'),digest=bytes=>createHash('sha256').update(bytes).digest('hex');
+  const cli=fileURLToPath(new URL('../house/bake_layout.mjs',import.meta.url));
+  try{
+    const pending=path.join(site,'.runtime-source-fixture.json');
+    await put(pending,{versions:[def]});await put(path.join(site,'versions.json'),{versions:[{id:'prior'}]});
+    const room={id:'A',name:'Room',storey:'ground',floor_y:0,ceiling_y:2.6,polygon:[[0,0],[6,0],[6,6],[0,6]]};
+    await put(path.join(site,'spec/spec_v1.json'),{versions:{after:{elements:k,rooms:[room],items:[]}}});
+    await put(path.join(site,'spec/catalogue_v1.json'),{floors:[{id:'client-tile',hex:'#405060',pattern:'tiles',unit_mm:[400,400]}]});
+    await put(path.join(site,'v_elements.json'),{elements:[]});await put(path.join(site,'v.json'),{stages:[{}]});
+    const house=new Document(),scene=house.createScene(),wall=make(house,'wall',[2,2,.1],house.createMaterial('wall')),
+      floor=make(house,'floor',[4,.5,4],house.createMaterial('floor')),table=make(house,'new seed',[.5,.5,.5],house.createMaterial('wood'));
+    scene.addChild(house.createNode('wall').setMesh(wall).setTranslation([0,1,0]).setExtras({element:'wall',room_id:'A',surface_id:'A/W/1',surface_role:'wall',stage_in:1}));
+    scene.addChild(house.createNode('floor').setMesh(floor).setTranslation([0,-.25,0]).setExtras({element:'floor',room_id:'A',surface_id:'floor/A',surface_role:'floor',stage_in:1}));
+    scene.addChild(house.createNode('candidate-seed').setMesh(table).setTranslation([0,.25,0]).setExtras({element:'SPEC-default',spec_id:'default',room_id:'A',kit_kind:'side_table',furnishing:true,stage_in:1,storey:'ground'}));
+    await io.write(path.join(site,'v.glb'),house);await io.write(path.join(site,'v_quest.glb'),house);
+    const releasePath='releases/test-release',release=path.join(client,releasePath);
+    const product=new Document(),ps=product.createScene(),m=product.createMaterial('owner-only frame');
+    const pixel=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABBAMAAAAAAl21/SIAAAACdFJOUwBA5thmKAAAAAtJREFUeJxjYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=','base64');
+    const imageUri='../textures/'+digest(pixel)+'.png';
+    m.setBaseColorTexture(product.createTexture('owner-only texture').setMimeType('image/png').setImage(pixel).setURI(imageUri));
+    ps.addChild(product.createNode('old measured mesh').setMesh(make(product,'old',[1,1,1],m)).setTranslation([0,.5,0]));
+    product.getRoot().listBuffers()[0].setURI('mesh.bin');
+    const {json:model,resources}=await io.writeJSON(product);
+    const bin=resources[model.buffers[0].uri],binPath='furnish/buffers/'+digest(bin)+'.bin';
+    model.buffers[0].uri='../buffers/'+digest(bin)+'.bin';
+    const text=JSON.stringify(model),key='site-'+digest(text),modelPath='furnish/models/'+digest(text)+'.gltf';
+    const artifacts=[[modelPath,Buffer.from(text)],[binPath,bin],['furnish/textures/'+digest(pixel)+'.png',pixel]];
+    for(const [relative,bytes] of artifacts){const f=path.join(release,relative);await fs.mkdir(path.dirname(f),{recursive:true});await fs.writeFile(f,bytes);}
+    const record={url:modelPath,questUrl:modelPath,front:'-Z',size:[1,1,1],kind:'desk',style:'modern',catalogueId:'modern.desk'},
+      registry={schema:1,hosts:{},variants:{[key]:record}},registryUri=releasePath+'/furnish/v/variants.json';
+    await put(path.join(client,registryUri),registry);
+    await put(path.join(client,'versions.json'),{versions:[{id:k,furnish_runtime:{variants:registryUri,seed:releasePath+'/furnish/v/seed.json'}}]});
+    const foreign=path.join(live,'assets/sites/other/layout/v.json'),clientFile=path.join(client,'layout/v.json'),candidateFile=path.join(site,'layout/v.json');
+    const garden={schema:1,objects:[{id:'client-tree',kind:'tree'}],future:{untouched:true}};
+    const saved={schema:1,site:'client',version:k,revision:9,furnishSeeded:true,items:[item('CLIENT-ONLY',key,[1.2,0,1],{type:'floor',id:'floor/A'},45)],
+      wallColours:{'A/W/1':'#35684A'},roomFloors:{A:'client-tile'},garden,privateFuture:'keep'};
+    await put(clientFile,saved);await put(candidateFile,{...saved,site:'candidate',revision:42,items:[]});
+    await put(foreign,{...saved,site:'other',revision:88,items:[]});
+    const original=new Map();
+    for(const f of [clientFile,candidateFile,foreign,path.join(client,'versions.json'),path.join(client,registryUri),...artifacts.map(([p])=>path.join(release,p))])
+      original.set(f,await fs.readFile(f));
+    execFileSync(process.execPath,[cli,site,'--split','--source-manifest',pending,'--layout-site','client','--layout-root',live,k],{stdio:'pipe'});
+    const manifest=JSON.parse(await fs.readFile(path.join(site,'versions.json')));
+    assert.deepEqual(manifest.layout_source,{site:'client',projectRoot:boundRel});assert.equal(manifest.versions[0].glb,'furnish/v/fixed.glb');
+    const resultFile=path.join(site,'furnish/v/bakes/latest.json'),first=JSON.parse(await fs.readFile(resultFile));
+    assert.equal(first.layoutSite,'client');assert.equal(first.layoutFile,'assets/sites/client/layout/v.json');
+    assert.equal(first.layout,first.layoutFile);assert.equal(first.source,'layout');assert.equal(first.layoutRevision,9);
+    assert.equal(first.savedFileSHA256,digest(original.get(clientFile)));assert.equal(first.sourceRegistry,registryUri);
+    assert.deepEqual(first.items,['CLIENT-ONLY']);assert.deepEqual(first.wallFaceIds,['A/W/1']);assert.deepEqual(first.floorRoomIds,['A']);
+    assert.equal(first.garden.sha256,digest(JSON.stringify(garden)));assert.equal(first.garden.ref,first.layoutFile);
+    const merged=JSON.parse(await fs.readFile(path.join(site,manifest.versions[0].furnish_runtime.variants)));
+    assert.deepEqual(merged.variants[key],record);
+    for(const [relative,bytes] of artifacts)assert.deepEqual(await fs.readFile(path.join(site,relative)),Buffer.from(bytes));
+    const baked=await io.read(path.join(site,first.model));const nodes=new Map(baked.getRoot().listNodes().map(n=>[n.getName(),n]));
+    assert.deepEqual(nodes.get('Layout/CLIENT-ONLY').getWorldTranslation(),saved.items[0].position);
+    assert.deepEqual(nodes.get('wall').getMesh().listPrimitives()[0].getMaterial().getBaseColorFactor().slice(0,3),new T.Color('#35684A').toArray());
+    assert.equal(nodes.get('floor').getMesh().listPrimitives()[0].getMaterial().getName(),'Client floor · client-tile');
+    // No options on the next ordinary build: the persisted binding is authoritative.
+    execFileSync(process.execPath,[cli,site,k],{stdio:'pipe'});
+    assert.deepEqual(JSON.parse(await fs.readFile(resultFile)),first);
+    for(const [file,bytes] of original)assert.deepEqual(await fs.readFile(file),bytes,'Source modified '+file);
+    // A misleading site field must be rejected before publication of a new receipt.
+    await put(clientFile,{...saved,site:'other'});
+    assert.throws(()=>execFileSync(process.execPath,[cli,site,k],{stdio:'pipe'}),/Invalid existing layout/);
+    assert.deepEqual(JSON.parse(await fs.readFile(resultFile)),first);
+  }finally{await fs.rm(temp,{recursive:true});}
+});

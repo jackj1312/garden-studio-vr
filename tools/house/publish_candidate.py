@@ -6,7 +6,11 @@ import json
 import os
 import shutil
 import tempfile
+import sys
 from pathlib import Path
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from layout_store import LayoutStore, directory, read_json_asset
 
 MODEL_FIELDS = ('glb','glb_quest','glb_quest_meshopt','stages','elements')
 SPEC_FILES = ('spec_v1.json','spec_v1_addendum2_details.json','furnishing_plan.json',
@@ -54,9 +58,17 @@ def digest(path):
 
 def promote(site,destination):
     dest=destination.resolve()
-    if dest==site or dest.parent.name!='sites' or not (dest/'versions.json').is_file():
+    if dest==site.resolve() or dest.parent.name!='sites' or dest.parent.parent.name!='assets' or not (dest/'versions.json').is_file():
         raise ValueError('Expected an existing, distinct local studio site')
     manifest=json.loads((site/'versions.json').read_text())
+    binding=manifest.pop('layout_source',None)
+    if binding:
+        if binding.get('site')!=dest.name:
+            raise ValueError('The candidate layout source is not the destination client site')
+        project=(site.resolve().parents[2]/binding.get('projectRoot','.')).resolve()
+        owner=(project/'assets'/'sites'/binding['site']).resolve()
+        if owner!=dest:
+            raise ValueError('The publication destination is not the bound client checkout')
     paths=payload(site,manifest)
     hashes={p:digest(site/p) for p in paths}
     key=hashlib.sha256((json.dumps(manifest,sort_keys=True)+''.join(str(p)+sha for p,sha in hashes.items())).encode()).hexdigest()[:20]
@@ -82,10 +94,17 @@ def promote(site,destination):
             for field,value in (row.get('furnish_runtime') or {}).items():
                 if field in ('seed','variants'):row['furnish_runtime'][field]=(Path('releases')/key/value).as_posix()
         manifest['furnish_release']=key
-        with tempfile.TemporaryDirectory(prefix='.publish-',dir=dest) as tmp:
+        store=LayoutStore(dest.parents[2])
+        with store.locked_site(dest.name) as client, tempfile.TemporaryDirectory(prefix='.publish-',dir=dest) as tmp:
             rollback=Path(tmp)/'previous';rollback.mkdir()
-            changed=[]
+            changed=[];initialised=[]
             try:
+                for row in manifest['versions']:
+                    seed_uri=(row.get('furnish_runtime') or {}).get('seed')
+                    if not seed_uri:continue
+                    seed=read_json_asset(client,Path(seed_uri).parts,required=True)
+                    if store.initialise_missing(client,dest.name,row['id'],seed):
+                        initialised.append(row['id'])
                 for p in paths:
                     target=dest/p;target.parent.mkdir(parents=True,exist_ok=True)
                     if target.exists() and target.samefile(release/p):continue
@@ -96,11 +115,17 @@ def promote(site,destination):
                     os.link(release/p,link);os.replace(link,target);changed.append(p)
                 new_manifest=Path(tmp)/'versions.json'
                 new_manifest.write_text(json.dumps(manifest,indent=1)+'\n')
+                with new_manifest.open('rb') as pending:os.fsync(pending.fileno())
                 os.replace(new_manifest,dest/'versions.json')
             except BaseException:
+                if initialised:
+                    with directory('layout',client) as layout:
+                        for version in initialised:os.unlink(version+'.json',dir_fd=layout)
+                        os.fsync(layout)
                 for p in reversed(changed):
                     if (rollback/p).exists():os.replace(rollback/p,dest/p)
                     else:
                         with contextlib.suppress(FileNotFoundError):(dest/p).unlink()
                 raise
+            os.fsync(client)
     print(f'Published local release {key} to {dest}')

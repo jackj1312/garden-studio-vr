@@ -301,7 +301,7 @@ async function fixed(doc,site,version,profile,rows){
   await atomic(target,await io.writeBinary(doc));
   return path.relative(site,target);
 }
-async function versionData(site,def,spec,specRoot=path.join(site,'spec')){
+async function versionData(site,def,spec,specRoot=path.join(site,'spec'),externalLayout=false){
   const vkey=Object.keys(spec.versions).find(k=>spec.versions[k].elements===def.id);
   if(!vkey)return null;
   const specVersion=spec.versions[vkey],items=new Map(specVersion.items.map(i=>[i.id,i]));
@@ -349,7 +349,8 @@ async function versionData(site,def,spec,specRoot=path.join(site,'spec')){
   // A version may still have an older measured product in its live client
   // layout. Its content-addressed model stays immutable across regenerations.
   const optional=async file=>{try{return await json(file);}catch(err){if(err.code!=='ENOENT')throw err;return null;}};
-  const saved=await optional(path.join(site,'layout',def.id+'.json'));
+  // External bindings import preserved variants from the client's own immutable release in bake_layout.
+  const saved=externalLayout?null:await optional(path.join(site,'layout',def.id+'.json'));
   const old=await optional(path.join(out,'variants.json'));
   for(const row of saved?.items||[])if(!variants[row.variant] && old?.variants?.[row.variant])variants[row.variant]=old.variants[row.variant];
   // The historical placement gate needs the actual measured fixed hosts

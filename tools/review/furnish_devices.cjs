@@ -43,8 +43,14 @@ async function main() {
         if (!xr) {
           await page.waitForSelector('#startDesktop:not([disabled])',{timeout:200000});await page.click('#startDesktop');
           for (const [button,version] of [['#baBefore',manifest.as_built_now],['#baAfter',manifest.default]]) {
+            const target=await page.$eval(button,b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+              return {id:hit?.closest('button')?.id||hit?.id||hit?.tagName,locked:!!document.pointerLockElement};});
+            console.log(profile,button,version,target);
+            assert.equal(target.id,button.slice(1),'Version control is covered '+JSON.stringify(target));
             await page.click(button);
-            await page.waitForFunction((id,button)=>window.__house.V?.def.id===id && document.querySelector(button).getAttribute('aria-pressed')==='true',{timeout:150000},version,button);
+            try {await page.waitForFunction((id,button)=>window.__house.V?.def.id===id && document.querySelector(button).getAttribute('aria-pressed')==='true',{timeout:45000},version,button);}
+            catch(err){result.transition={button,version,errors,state:await page.evaluate(()=>({version:__house.V?.def.id,before:document.querySelector('#baBefore').ariaPressed,after:document.querySelector('#baAfter').ariaPressed,load:document.querySelector('#loadText').textContent,versions:[...__house.versions.keys()]}))};
+              throw Error('Version transition failed '+JSON.stringify(result.transition),{cause:err});}
           }
           await page.click('#baFurnish');
           await page.waitForFunction(()=>window.__house.unfurnished);

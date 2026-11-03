@@ -158,6 +158,8 @@ async function run(){
             if(h.camera.getWorldDirection(new T.Vector3()).dot(aim)<.999999)throw Error('Wrong signed camera orientation '+definition.name);
             // Refresh cached illumination at the new position before timings.
             h.renderer.shadowMap.needsUpdate=true;
+            // Room cards are transient. Measure the standing view once its entry card has faded.
+            if(h.presentation)await new Promise(resolve=>setTimeout(resolve,3500));
             const rows=[];
             await new Promise((resolve,reject)=>{
               let prev=null,passed=0,previousRender=-1;

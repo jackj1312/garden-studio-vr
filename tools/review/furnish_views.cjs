@@ -43,13 +43,20 @@ async function main(){
       return {url:r.url,hash:r.hash,stats,version:h.V.def.id,stage:h.stage};
     },{w:800,h:450,post:true,...point});
     if(hashes.has(shot.hash))throw Error('Duplicate camera frame: '+name);
-    hashes.add(shot.hash);stats[name]={version:shot.version,stage:shot.stage,...shot.stats};
+    hashes.add(shot.hash);stats[name]={version:shot.version,stage:shot.stage,pose:point,viewport:[800,450],...shot.stats};
     fs.writeFileSync(path.join(out,name+'.jpg'),Buffer.from(shot.url.split(',')[1],'base64'));
   }
   await select(manifest.default);
   for(const [name,eye,target] of cameras){
     const [dx,dy,dz]=target.map((n,i)=>n-eye[i]),deg=180/Math.PI;
-    await shoot(name,{x:eye[0],z:eye[2],y:eye[1]-1.6,eye:1.6,yawDeg:Math.atan2(-dx,-dz)*deg,pitchDeg:Math.atan2(dy,Math.hypot(dx,dz))*deg});
+    const pose={x:eye[0],z:eye[2],y:eye[1]-1.6,eye:1.6,yawDeg:Math.atan2(-dx,-dz)*deg,pitchDeg:Math.atan2(dy,Math.hypot(dx,dz))*deg};
+    await shoot(name,pose);
+    if(name==='lounge'&&opts.includes('--lamps')){
+      const on=await page.evaluate(()=>__house.look.switch('room'));
+      if(on!==true)throw Error('The actual lounge lamps did not switch on');
+      await shoot('lounge-lamps',pose);
+      await page.evaluate(()=>__house.look.switch('room'));
+    }
   }
   if(opts.includes('--conservatory')){
     await select(manifest.as_built_now);

@@ -188,3 +188,11 @@ All answered by Jack on 2 Nov 2026 (form):
   along the floor or wall, rotate with the stick or Q/E, snap to walls and other items, delete; contact and collision checked
   as it moves. A per-room bird's-eye view (top-down, the room's plan) for laying out by drag; switching back to the walk
   shows the same layout. Saves to the change list on the Mac; the next build bakes it in.
+- 2026-11-03 · Direction (Jack): AI builds the shell, people design the space. Roadmap to make each build mostly AI-free:
+  (1) CAD import (DXF/DWG from the architect) plus a trace editor for PDF-only drawings: click walls, openings and levels
+  over the drawing with snapping and typed dimensions; AI only verifies. (2) A finish painter: click a wall, floor or ceiling
+  and pick its material/colour; room-type defaults. (3) Room templates: kitchen runs, bathrooms and wardrobes generated
+  from wall lengths. (4) A garden editor: draw paths, beds, lawn, fences and planting palettes in plan. (5) Deterministic
+  checks replace routine AI judging (integrity, shell, clash, walk test, material-ID raw-surface pass); mark presets route
+  fixes, and only new kinds of fault need AI diagnosis. (6) Buttons for publish, cloud bake and Unreal stills, each with a
+  cost cap. Target: AI usage per house down to the drawing check and new-fault diagnosis.

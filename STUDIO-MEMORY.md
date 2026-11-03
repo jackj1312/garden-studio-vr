@@ -376,3 +376,5 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
 - 2026-11-03 · direction · Jack: take every interior thing from Codex's build plus its windows, front door, internal doors and
   outside window surrounds, its apples and grass; KEEP our brickwork, front garden layout/paving, scale and navigation.
   Codex runs it in our folder (CODEX-FURNISH-PROMPT.md, 6 staged branches).
+- 2026-11-03 · docs · Pipeline document: docs/pipeline/ → ~/Desktop/Garden Studio Pipeline (HTML+PDF) via tools/docs/publish_pipeline.sh;
+  Claude and Codex update it whenever a stage/tool/link changes. Server: ~/Desktop/Start Garden Studio Server.command (8443, new folder).

@@ -32,3 +32,6 @@ assets/sites/house-wip/
 
 # pictures of the house interior (performance and plan evidence) stay local
 renders/perf/
+.server-8443.log
+# the pipeline document's pictures show the house: local only
+docs/pipeline/img/

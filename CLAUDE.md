@@ -25,6 +25,11 @@ create a studio software so every build follows the same flow."
 - **The house build's plan is `PLAN.md` (written 2 Nov 2026 from `AIRBNB-METHOD.md`).** It is the anchor from now on;
   WORKFLOW.md gates and the spec are the checks inside it. When a new plan is written it replaces the old one as the anchor.
 
+## The pipeline document stays current (Jack, 3 Nov 2026)
+- `docs/pipeline/` is Jack's illustrated start-to-finish guide (published to ~/Desktop/Garden Studio Pipeline/ as HTML + PDF,
+  with links to the planner and walkthrough). Whenever a stage, tool, link or method is added or changed, update it and run
+  `tools/docs/publish_pipeline.sh`. Applies to Claude and Codex alike.
+
 ## Tell Jack which model (Jack, 2 Nov 2026)
 - Claude says, unprompted and at the top of the reply, when to change the session model and to which: **Model: switch to
   Opus 5.5 now (the fix round).** PLAN.md §5b has the model per stage. Loops go to cheaper agents regardless.

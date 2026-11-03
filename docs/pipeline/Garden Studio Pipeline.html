@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garden Studio Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2421;--muted:#5d6762;--line:#dcd8cf;--paper:#fbfaf7;--card:#ffffff;--accent:#5a7a5f;--accent-soft:#e8efe6;--warm:#b8693f;--warm-soft:#f6ebe3;--done:#2f6b45;--part:#9a6a12;--plan:#5b5f86}
+:root[data-theme="dark"]{--ink:#ece9e2;--muted:#a9aca6;--line:#3a3f3b;--paper:#161a18;--card:#1e2320;--accent:#8fb193;--accent-soft:#25302a;--warm:#e0946a;--warm-soft:#33261f;--done:#7cc493;--part:#e2b45a;--plan:#a7abd8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ink:#ece9e2;--muted:#a9aca6;--line:#3a3f3b;--paper:#161a18;--card:#1e2320;--accent:#8fb193;--accent-soft:#25302a;--warm:#e0946a;--warm-soft:#33261f;--done:#7cc493;--part:#e2b45a;--plan:#a7abd8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:48px 20px 80px}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;font-weight:600;line-height:1.2;margin:0}
+h1{font-size:44px;letter-spacing:-.01em}
+h2{font-size:28px;margin:56px 0 14px}
+h3{font-size:21px}
+p{margin:0 0 12px}
+.kicker{font:600 12px/1 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.lede{font-size:19px;color:var(--muted);max-width:720px;margin-top:14px}
+.meta{margin-top:22px;font-size:14px;color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:24px 0 8px}
+.flow div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}
+.flow b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 26px 22px;margin:22px 0;break-inside:avoid}
+.stage header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.num{font:600 15px/1 Inter,sans-serif;color:var(--paper);background:var(--accent);border-radius:999px;width:32px;height:32px;display:inline-grid;place-items:center;flex:none}
+.badge{font:600 12px/1 Inter,sans-serif;padding:5px 9px;border-radius:999px;border:1px solid currentColor;margin-left:auto}
+.done{color:var(--done)}.part{color:var(--part)}.plan{color:var(--plan)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 18px;margin:12px 0 4px;font-size:14px}
+.facts div{border-top:1px solid var(--line);padding-top:8px}
+.facts b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+figure{margin:16px 0 4px}
+.pics{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+figure img{width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--line);background:#ddd}
+figcaption{font-size:13px;color:var(--muted);margin-top:6px}
+.note{background:var(--warm-soft);border-left:3px solid var(--warm);border-radius:0;padding:12px 16px;margin:14px 0;font-size:15px}
+.ok{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0;padding:12px 16px;margin:14px 0;font-size:15px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+ul{margin:6px 0 12px;padding-left:20px}
+footer{margin-top:60px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media print{body{background:#fff}main{padding:0}.stage{border-color:#ccc}h2{break-after:avoid}}
+@media (max-width:600px){h1{font-size:34px}.stage{padding:18px}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="kicker">Garden Studio · how a house becomes a walkthrough</div>
+<h1>The pipeline, start to finish</h1>
+<p class="lede">Every client home goes through the same twelve stages: from the architect's drawings and a few photos to a
+house you can walk through in a browser, on a phone, in a Quest headset and, as the premium tier, in Unreal Engine.
+This document explains each stage in plain English, shows what it looks like, and says honestly where each one stands
+today on 23 Battle Road, the test house.</p>
+<p class="meta">Version 3 November 2026 · Source of truth: <code>PLAN.md</code> in ~/Garden Studio VR · Status key:
+<span class="done">● working</span> · <span class="part">● working, still improving</span> · <span class="plan">● planned</span></p>
+
+<div class="ok"><strong>Open it any time</strong> (on the Mac, phone or Quest, on the home Wi-Fi):<br>
+Room planner: <a href="https://192.168.1.118:8443/plan/">https://192.168.1.118:8443/plan/</a> · 
+Walkthrough (review): <a href="https://192.168.1.118:8443/w/">https://192.168.1.118:8443/w/</a> · 
+Customer preview: <a href="https://192.168.1.118:8443/p/">https://192.168.1.118:8443/p/</a><br>
+If a link doesn't load (after a restart), double-click <strong>Start Garden Studio Server</strong> on the Desktop and keep its
+window open. This document is kept up to date by Claude and Codex whenever a stage is added or changed.</div>
+
+<h2>The whole journey on one page</h2>
+<div class="flow">
+  <div><b>Client</b>Sends drawings and photos</div>
+  <div><b>Free</b>Plan view: they arrange each room</div>
+  <div><b>Deposit</b>They approve the plan</div>
+  <div><b>Build</b>Shell, finishes, furniture, outside</div>
+  <div><b>Check</b>Machine checks, then a human walk</div>
+  <div><b>Look</b>Light and materials, then Unreal</div>
+  <div><b>Deliver</b>Link, headset, stills, film</div>
+</div>
+<p>The rule that holds it together: <strong>one written plan</strong> (<code>PLAN.md</code>) that every stage is checked
+against, and <strong>one lessons log</strong>: every mistake, whether ours, a check's or one Jack spots in the headset, is
+written down with its cause and a rule that stops it happening again, before it's fixed. Three hundred lessons so far;
+each one makes the next house cheaper.</p>
+
+<h2>The stages</h2>
+
+<section class="stage">
+  <header><span class="num">0</span><h3>Gather the inputs</h3><span class="badge done">● working</span></header>
+  <p>Before anything is built: the architect's drawings (plans, elevations, sections), photos of every room and elevation,
+  close-ups of each finish (brick, roof, floor, worktop), floor and ceiling heights, the client's style choice, and the
+  decisions (what "before" and "after" mean, budget caps). Gaps become one form of questions with a recommended answer each.</p>
+  <div class="facts"><div><b>In</b>Drawings, photos, a short visit</div><div><b>Out</b>An inputs sheet; every gap answered</div><div><b>Check</b>Nothing is guessed</div></div>
+  <figure class="pics"><img src="img/01-capture-photo.jpg" alt="Front garden photo"><img src="img/03-drawing.jpg" alt="Architect's general plan"></figure>
+  <figcaption>The real front garden, and the architect's plan the house is built from.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">1</span><h3>Drawings to exact data</h3><span class="badge done">● working</span></header>
+  <p>Every wall, door, window, floor level, stair and roof plane is read off the drawings into numbers. Photos and tape
+  measurements win where they disagree with the drawings, and every override is written down (for example, the hallway
+  width Jack measured). The plan is then drawn back from the data and laid over the drawings and photos to prove it lines up.</p>
+  <div class="facts"><div><b>Tools</b>read_drawing, trace_drawing, draw_plan</div><div><b>Check</b>Within 10 mm of the drawings; sits on the photos</div></div>
+  <figure class="pics"><img src="img/04-traced.jpg" alt="Traced ground floor"><img src="img/02-plan-on-photo.jpg" alt="Plan laid on a photo"></figure>
+  <figcaption>Left: the ground floor traced from the drawings. Right: the measured plan laid over a real photo.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">2</span><h3>Design spec and the client planner</h3><span class="badge part">● working, still improving</span></header>
+  <p>Every finish (floor, walls, skirting, doors) and every item (sofa, beds, lamps, towels) is decided and placed in a
+  signed spec. The client does this themselves in the <strong>room planner</strong>: a free plan view where they see each
+  room, drag furniture, swap items from a catalogue by style, change colours and preview in 3D, before any expensive 3D work.
+  When they're happy they pay the deposit and the build starts.</p>
+  <div class="facts"><div><b>In</b>The measured house, the client's choices</div><div><b>Out</b>A signed spec of every finish and item</div><div><b>Next</b>The planner reads and writes the same layout as the walkthrough</div></div>
+  <figure class="pics"><img src="img/05-planner-room.jpg" alt="Planner room view"><img src="img/06-planner-catalogue.jpg" alt="Planner catalogue"><img src="img/07-planner-3d.jpg" alt="Planner 3D preview"></figure>
+  <figcaption>The client planner: a room in plan, the catalogue by style, and the kitchen previewed in 3D.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">3</span><h3>The shell</h3><span class="badge part">● working, still improving</span></header>
+  <p>The house is built by script in Blender from the data: walls, floors, ceilings, stairs, roof, doors and windows, then
+  every surface finished: plastered reveals, skirting, architraves, window boards. The house must look finished, never
+  "mid-build" (no raw brick inside, no gaps, nothing poking through the roof).</p>
+  <div class="ok"><strong>Being upgraded:</strong> finishes will be assigned to each wall face as it's built (Codex's method),
+  instead of finding raw surfaces afterwards. That's what caused the raw reveals and the plaster on the outside walls.</div>
+  <div class="facts"><div><b>Tools</b>generate_house.py and the shell, integrity and finish checks</div><div><b>Check</b>Watertight; nothing raw; every check passes</div></div>
+  <figure><img src="img/08-shell.jpg" alt="Finished shell kitchen"></figure>
+  <figcaption>The bare finished shell of the new kitchen-diner, before furniture.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">4</span><h3>Furniture and fittings: the studio kit</h3><span class="badge plan">● next (Codex is building it)</span></header>
+  <p>Every item comes from one <strong>furniture kit</strong>, made to its exact size in one consistent style: sofas,
+  beds, kitchens, toilets, washing machines, lamps, cushions, art. Each item faces the same way, sits on its surface and is
+  checked for clipping as it's placed. Soft things (towels, throws, curtains) have real folds. Catalogues come in styles
+  (modern, contemporary, Scandinavian, country, industrial, traditional), each with a thumbnail.</p>
+  <p>The furniture won't be baked into the house: it's placed from a layout file, so the client (or Jack) can <strong>add and
+  move furniture inside the walkthrough</strong>, in the headset, or from a bird's-eye view of each room.</p>
+  <figure class="pics"><img src="img/18-codex-living.jpg" alt="Codex interior living and dining"><img src="img/19-codex-kitchen.jpg" alt="Codex kitchen"></figure>
+  <figcaption>The interior quality we're adopting (Codex's build): one coherent style, real proportions, soft contact light.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">5</span><h3>Materials and light</h3><span class="badge part">● working, still improving</span></header>
+  <p>Every surface gets a proper material at true scale (oak boards at real width, marble, painted joinery, bouclé, linen),
+  colour-matched to the client's photos. Then the light: a low warm sun, daylight coming in from each room's real windows,
+  soft shadows where things meet the floor and walls, and lamps that work. This is what makes it feel real.</p>
+  <figure><img src="img/09-hero-round1.jpg" alt="Hero sheet next to the Airbnb benchmark"></figure>
+  <figcaption>Our three test spaces next to the benchmark (right column). The blue cast is gone; the soft contact shadows and window daylight come next.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">6</span><h3>The outside</h3><span class="badge part">● working, still improving</span></header>
+  <p>Brickwork matched to the real house, roof, the front garden with its paving, planting and pergola, the street,
+  neighbours and trees, so every window looks out on a real world. Added from Codex: apples under the tree, better grass,
+  and festoon lights.</p>
+  <figure class="pics"><img src="img/10-front-audit.jpg" alt="The front, matched to a photo"><img src="img/22-codex-front.jpg" alt="Codex front garden details"></figure>
+  <figcaption>Left: our front, checked against a real photo. Right: Codex's details we're adding (lights, cushions); we keep our brickwork and paving.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">7</span><h3>Self-checks: the machine looks first</h3><span class="badge done">● working</span></header>
+  <p>Before anyone sees it, the house is swept from a grid of standing points in every room, every direction, at two eye
+  heights. The machine counts raw surfaces, floating or clipping items and missing textures; a cheaper AI reads the
+  pictures; only flagged frames get a closer look. Then fixed "hero" cameras are compared round by round.</p>
+  <figure><img src="img/11-sweep.jpg" alt="Room sweep"></figure>
+  <figcaption>A room-by-room sweep in the actual viewer.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">8</span><h3>The owner's walk and the lessons loop</h3><span class="badge done">● working</span></header>
+  <p>Jack walks the house in the headset and draws on anything wrong. A one-tap reason (visual bug, missing item, hole in
+  wall, missing texture, clipping, wrong way round, don't like it) plus a voice note. Every mark becomes a lesson with its
+  cause and a rule, then it's fixed in one round.</p>
+  <figure class="pics"><img src="img/12-mark-stroke.jpg" alt="Marking in the headset"><img src="img/13-mark-note.jpg" alt="Note panel"></figure>
+  <figcaption>Drawing a mark in the headset, and the note panel with reasons and voice.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">9</span><h3>The walkthrough: browser, phone and Quest</h3><span class="badge part">● working, still improving</span></header>
+  <p>One link works everywhere: Before/After, Furnished/Unfurnished, Go to any room, fly, teleport, open doors, 4 ft or real
+  height, thumb sticks on phones. The headset is being made smooth without losing quality: drawing only what you can see
+  (done), merging each room's parts and compressing textures (next), then baking the light in.</p>
+  <figure class="pics"><img src="img/14-wrist-panel.jpg" alt="Headset wrist panel"><img src="img/15-phone.jpg" alt="Phone view"></figure>
+  <figcaption>The headset wrist panel, and the phone view.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">10</span><h3>Unreal Engine: the premium tier</h3><span class="badge part">● pipeline proven; look-dev next</span></header>
+  <p>The same house in Unreal Engine 5.8, on a rented cloud graphics card (no Unreal on the Mac). First a look-dev session:
+  close-ups of the tricky materials and one still per room, judged before anything else is spent. Then the walkthrough, the
+  film, and streaming to a headset. Cost so far is capped at £10 for this house.</p>
+  <figure class="pics"><img src="img/16-unreal.jpg" alt="Early Unreal still"><img src="img/17-airbnb.jpg" alt="Airbnb benchmark frame"></figure>
+  <figcaption>Left: an early Unreal test. Right: the benchmark we're aiming for.</figcaption>
+</section>
+
+<section class="stage">
+  <header><span class="num">11</span><h3>Deliver</h3><span class="badge plan">● planned</span></header>
+  <p>A private link for the client (browser, phone, headset), stills and a film, and for the premium tier a streamed Unreal
+  walkthrough. A branded loading screen and clean controls make it feel like a product.</p>
+  <figure><img src="img/20-codex-loader.jpg" alt="Branded loading screen"></figure>
+  <figcaption>The branded loading screen we're adopting.</figcaption>
+</section>
+
+<h2>What it costs</h2>
+<table>
+<tr><th>Item</th><th>Per house</th><th>Notes</th></tr>
+<tr><td>Claude subscription share</td><td>About 30–50% of a Max 20× week (target)</td><td>On Max 5×, roughly 2–3 houses a month</td></tr>
+<tr><td>Cloud graphics card (Unreal, bakes)</td><td>£15–40 (first houses), less later</td><td>Well under £1 an hour; every run capped and approved first</td></tr>
+<tr><td>Streaming to a client headset</td><td>About £1 an hour while in use</td><td>Premium tier only</td></tr>
+<tr><td>Models and textures</td><td>Free</td><td>Our own kit plus CC0 libraries, licences recorded</td></tr>
+<tr><td>Jack's time</td><td>5–8 hours</td><td>Capture visit, sign-offs, three to five headset walks</td></tr>
+<tr><td>Price to client</td><td>About £800, +£200 for VR</td><td>Unreal as a paid extra</td></tr>
+</table>
+
+<h2>The rules that make it repeatable</h2>
+<ul>
+<li><strong>The plan is the anchor:</strong> <code>PLAN.md</code> is re-read at every stage, every fix round and every report.</li>
+<li><strong>Measure, never guess:</strong> drawings and photos are the truth; tape measurements beat both.</li>
+<li><strong>Every mistake becomes a lesson</strong> with its cause, a rule and a check, written before the fix.</li>
+<li><strong>The client sees a clean build:</strong> machine checks first, then a human walk, then Jack.</li>
+<li><strong>Proportionate checks:</strong> enough to catch faults, never so many that the work stops.</li>
+<li><strong>Private by default:</strong> drawings, photos and models of a client's home never go anywhere public.</li>
+</ul>
+
+<footer>Garden Studio · 23 Battle Road is the test house · Built with Claude Code (with ideas from Codex's independent build) · 3 November 2026</footer>
+</main>
+</body>
+</html>

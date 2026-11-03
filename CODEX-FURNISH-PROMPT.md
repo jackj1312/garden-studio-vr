@@ -101,6 +101,11 @@ fix round, after any context reset, and before every report. Change it only with
   diner, lounge and front garden at each stage. No giant evidence ledgers.
 - Never upload the drawings, photos or anything private; no purchases, no logins, no keys.
 
+## Keep the pipeline document current
+`docs/pipeline/Garden Studio Pipeline.html` is my illustrated guide to the whole pipeline. Whenever you add or change a stage,
+tool, link or method, update its section (and its status badge and pictures), then run `tools/docs/publish_pipeline.sh` to
+publish it to my Desktop as HTML and PDF.
+
 ## Hand back
 After each stage, a short note in `FURNISH-PROGRESS.md`: what was built (paths), what was checked, the branch, what's left.
 At the end, a short report: the catalogue (counts by style and kind, a contact sheet of the thumbnails), matched before/after

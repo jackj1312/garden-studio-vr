@@ -13,6 +13,7 @@ export function containsXZ(p,polygon){
 }
 export function createRoomPlan(canvas){
  let room=null,items=[],selected=null,preview=null,verdict=null,objects=[],fit=null,dirty=true,appearance={};
+ let detailFrame=null;
  const photos=new Map();
  const picture=document.createElement('canvas');picture.width=picture.height=768;
  const poly=(ctx,list,map,close=true)=>{ctx.beginPath();list.map(map).forEach(([x,z],i)=>ctx[i?'lineTo':'moveTo'](x,z));if(close)ctx.closePath();};
@@ -38,7 +39,12 @@ export function createRoomPlan(canvas){
   const low=f=>/rug|carpet|runner|mat/.test(f.kind)?-1000:f.position[1]-room.floorY+(f.host.type==='surface'?.001:0);
   arr.sort((a,b)=>low(a)-low(b));objects=arr;
   const drawnLabels=[];
-  for(const f of arr){
+  const detailed=appearance.detail&&detailFrame?.room===room.id;
+  if(detailed){
+    const f=detailFrame;
+    c.save();poly(c,points,xy);c.clip();c.drawImage(f.image,ox+f.x*m,oz+f.z*m,f.w*m,f.d*m);c.restore();
+  }
+  for(const f of detailed?[]:arr){
     const on=selected===f.id||f===preview, rug=low(f)<0,blocked=f===preview&&!verdict?.ok;
     const pos=xy([f.position[0],f.position[2]]),w=sizeOf(f)[0]*m,d=sizeOf(f)[1]*m;
     c.save();c.translate(...pos);c.rotate(-(f.rotation||0)*Math.PI/180);
@@ -62,7 +68,7 @@ export function createRoomPlan(canvas){
     }
   }
   for(const face of room.wallFaces||[]){const colour=appearance.walls?.[face.id];if(!colour||!face.a||!face.b)continue;poly(c,[face.a,face.b],xy,false);c.lineWidth=Math.max(4,m*.08);c.strokeStyle=colour;c.stroke();}
-  for(const o of appearance.openings||[]){if(!room.wallFaces?.some(f=>f.wall===o.wall))continue;poly(c,[o.p0,o.p1],xy,false);c.lineWidth=Math.max(6,m*.13);c.strokeStyle=o.kind==='window'?'#aec4c0':'#eadfca';c.stroke();}
+  for(const o of detailed?[]:appearance.openings||[]){if(!room.wallFaces?.some(f=>f.wall===o.wall))continue;poly(c,[o.p0,o.p1],xy,false);c.lineWidth=Math.max(6,m*.13);c.strokeStyle=o.kind==='window'?'#aec4c0':'#eadfca';c.stroke();}
   for(const f of room.wallFaces||[])if(f.id===appearance.face&&f.a&&f.b){
     poly(c,[f.a,f.b],xy,false);c.strokeStyle='#173744';c.lineWidth=10;c.stroke();c.strokeStyle='#59e5fd';c.lineWidth=5;c.stroke();
   }
@@ -84,10 +90,11 @@ export function createRoomPlan(canvas){
   if(!dirty)return;dirty=false;pictureFit=draw(picture);picture.furnishRevision=(picture.furnishRevision||0)+1;
   if(!canvas.hidden){const b=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.round(b.width));canvas.height=Math.max(1,Math.round(b.height));draw(canvas);}
  }
+ function background(frame){detailFrame=frame;dirty=true;render();canvas.dataset.roomView=appearance.detail?'detailed':'plan';}
  function point(x,y){const b=canvas.getBoundingClientRect();if(!fit)return null;return [(x-b.left-fit.ox)/fit.m,(y-b.top-fit.oz)/fit.m];}
  function onUV(u,v){return pictureFit?[(u*picture.width-pictureFit.ox)/pictureFit.m,((1-v)*picture.height-pictureFit.oz)/pictureFit.m]:null;}
  function pick(p){return [...objects].reverse().find(f=>containsXZ(p,itemCorners(f)))||null;}
- return {set(r,list,id,d,v,surface={}){room=r;items=list;selected=id;preview=d;verdict=v;appearance=surface;dirty=true;render();},resize(){dirty=true;render();},point,onUV,pick,wallAt(p){
+ return {set(r,list,id,d,v,surface={}){room=r;items=list;selected=id;preview=d;verdict=v;appearance=surface;canvas.dataset.roomView=surface.detail&&detailFrame?.room===r?.id?'detailed':'plan';dirty=true;render();},background,resize(){dirty=true;render();},point,onUV,pick,wallAt(p){
    let id=null,limit=Math.max(.1,10/(fit?.m||pictureFit?.m||100));
    for(const f of room?.wallFaces||[]){
      if(!f.a||!f.b)continue;

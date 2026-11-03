@@ -185,10 +185,10 @@ async function run() {
     await stage('Dragged the side table and rotated it with the right thumbstick');
 
     const at=[rotated.position[0],rotated.position[2]];
-    const invalid=await trigger([at,fit.bad],true);assert.equal(invalid?.ok,false,'Blocked preview was never shown');
-    await screenshot('blocked-drop');
+    const invalid=await trigger([at,fit.bad],true);assert.equal(invalid?.ok,true,'Advisory placement was blocked');
+    await screenshot('advisory-drop');
     await page.evaluate(()=>{const h=__house;h.sim.hold('trigger',false);h.step(2);});
-    s=await state();assert.match(s.status,/blocked/i);assert.deepEqual(await get(ownId),rotated);
+    s=await state();assert.notDeepEqual((await get(ownId)).position,rotated.position);await wrist('Undo');assert.deepEqual(await get(ownId),rotated);
     await wrist('Undo');assert.equal((await get(ownId)).rotation,0);
     await wrist('Redo');assert.deepEqual(await get(ownId),rotated);
     await stage('Rejected the blocked drop and restored the exact rotation with undo and redo');
@@ -200,6 +200,8 @@ async function run() {
       if(alternate){await wrist('Floor covering');await paged(alternate.name);assert.equal((await state()).floor,alternate.id);chosenFloor=alternate.id;}
     }
     await screenshot('furnished-room-plan');
+    await wrist('Views');await wrist('Detailed 3D');await page.waitForFunction(()=>document.querySelector('#furnish-plan')?.dataset.roomView==='detailed');
+    await wrist('Views');await wrist('Plan');assert.deepEqual(await get(ownId),rotated);
     await wrist('Walking view');assert.equal((await state()).bird,false);
     await wrist('Rooms');await paged(roomLabel);
     await wrist('How to use');await wrist('Dismiss help');

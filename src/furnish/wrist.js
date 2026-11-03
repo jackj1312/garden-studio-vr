@@ -5,7 +5,7 @@ const paints=['#f7f4ed','#e2d5c4','#d3cbbd','#ceb89f','#c3cdbb','#94a69b','#9aae
 export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
  const surface=(w,h,name)=>{
   const c=document.createElement('canvas');c.width=W;c.height=H;const m=new T.CanvasTexture(c);m.colorSpace=T.SRGBColorSpace;m.generateMipmaps=false;m.minFilter=T.LinearFilter;
-  const mesh=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:m,toneMapped:false,depthWrite:false,depthTest:false}));mesh.name=name;mesh.visible=false;mesh.renderOrder=1930;scene.add(mesh);return mesh;
+  const mesh=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:m,toneMapped:false,depthWrite:false,depthTest:false}));mesh.name=name;mesh.userData.furnishOverlay=true;mesh.visible=false;mesh.renderOrder=1930;scene.add(mesh);return mesh;
  };
  const wrist=surface(.26,.26*H/W,'Furnish · left wrist'),table=surface(.76,.76,'Furnish · room plan');table.renderOrder=1929;
  const ctx=wrist.material.map.image.getContext('2d'),q=new T.Raycaster(),head=new T.Vector3(),fwd=new T.Vector3();
@@ -21,17 +21,17 @@ export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
   for(const word of str.split(' ')){if(ctx.measureText(line+' '+word).width>limit&&line){ctx.fillText(line,x,y);y+=size*1.35;line='';}line+=(line?' ':'')+word;}if(line)ctx.fillText(line,x,y);return y;
  }
  function render(s){
-  const signature=JSON.stringify([page,offset,help,s.room?.id,s.selected?.id,s.selected?.rotation,s.pending,s.filtered.length,s.filters,s.face,s.floor,s.colour,s.status,s.verdict?.ok,s.undo,s.redo,s.dirty,s.revision]);
+  const signature=JSON.stringify([page,offset,help,s.room?.id,s.detail,s.selected?.id,s.selected?.rotation,s.pending,s.filtered.length,s.filters,s.face,s.floor,s.colour,s.status,s.verdict?.ok,s.undo,s.redo,s.dirty,s.revision]);
   if(signature===cache)return;cache=signature;boxes=[];ctx.fillStyle='#203029';ctx.fillRect(0,0,W,H);ctx.fillStyle='#c2d7ac';ctx.font='600 19px system-ui';ctx.fillText('GARDEN STUDIO',20,36);
   ctx.fillStyle='#fff8e7';ctx.font='600 37px system-ui';ctx.fillText(page==='home'?'Furnish a room':page==='help'?'How to use':page[0].toUpperCase()+page.slice(1),20,83);
   ctx.fillStyle='#c8d6c7';ctx.font='22px system-ui';ctx.fillText(s.room?.label||'Choose a room',22,122,W-44);
   const half=(label,y,col,fn)=>rect(label,20+col*320,y,305,59,fn);
   if(page==='home'){
    [['Catalogue','catalogue'],['Rooms','rooms'],['Wall faces','faces'],['Floor covering','floors']].forEach(([t,k],i)=>half(t,147+Math.floor(i/2)*70,i%2,()=>go(k)));
-   half(s.bird?'Walking view':'Bird’s-eye',292,0,()=>action(s.bird?'stand':'bird'));half('Wall colour',292,1,()=>go('colour'));
+   half(s.bird?'Walking view':'Bird’s-eye',292,0,()=>action(s.bird?'stand':'bird'));half('Views',292,1,()=>go('views'));
    half('Rotate −15°',362,0,()=>action('rotate-left'));half('Rotate +15°',362,1,()=>action('rotate-right'));
    half('Copy',432,0,()=>action('copy'));half('Delete',432,1,()=>action('delete'));half('Undo',502,0,()=>action('undo'));half('Redo',502,1,()=>action('redo'));
-   half('Save layout',572,0,()=>action('save'));half('Close editor',572,1,()=>action('close'));
+   half('Save layout',572,0,()=>action('save'));half('Garden',572,1,()=>action('garden'));
   }else if(page==='help'){
    const rows=helpPage('furnish')[1],[title,detail]=rows[help%rows.length];ctx.font='bold 30px system-ui';ctx.fillStyle='#fff8e7';ctx.fillText(title,24,195,W-48);lines(detail,24,248,W-52,29);
    half('Next',545,0,()=>{help=(help+1)%rows.length;cache='';});half('Dismiss help',545,1,()=>go('home'));
@@ -41,7 +41,10 @@ export function createFurnitureWrist(T,{scene,camera,state,action,plan}){
     half('Kind',143,0,()=>go('kind'));half('Style',143,1,()=>go('style'));half('Room type',211,0,()=>go('roomType'));half('Select item',211,1,()=>action('select'));
     half('Raise 1 cm',277,0,()=>action('PageUp'));half('Lower 1 cm',277,1,()=>action('PageDown'));
     top=345;perPage=3;choices=s.filtered.map(i=>[i.name,()=>{action('add',i.id);go('home');},i.thumbnail]);
-   }else if(page==='rooms')choices=s.rooms.map(r=>[r.label||r.id,()=>{action('room',r.id);go('home');}]);
+   }else if(page==='views')choices=[
+     ['Plan',()=>{action('plan-view');go('home');}],['Detailed 3D',()=>{action('detail-view');go('home');}],
+     ['Walking view',()=>{action('stand');go('home');}],['Close editor',()=>action('close')]];
+   else if(page==='rooms')choices=s.rooms.map(r=>[r.label||r.id,()=>{action('room',r.id);go('home');}]);
    else if(page==='faces')choices=(s.room?.wallFaces||[]).map((f,i)=>[f.label||'Wall '+(i+1),()=>{action('face',f.id);go('colour');}]);
    else if(page==='floors')choices=[['Original covering',()=>{action('floor','');go('home');}],...s.floors.map(f=>[f.name,()=>{action('floor',f.id);go('home');}])];
    else if(page==='colour')choices=paints.map(c=>[c,()=>{action('colour',c);go('home');},null,c]);

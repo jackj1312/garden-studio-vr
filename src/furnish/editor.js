@@ -6,6 +6,7 @@ import {createFurnitureModels} from './models.js';
 import {createFurniturePanel} from './panel.js';
 import {createRoomPlan,containsXZ,itemCorners} from './room-plan.js';
 import {createFinishOverrides} from './finishes.js';
+import {captureRoom} from './overhead.js';
 import {createFurnitureWrist} from './wrist.js';
 
 const fetchAsset=(url,opts)=>fetch(studioAsset(url),opts);
@@ -21,9 +22,18 @@ const nearest=(v,candidates)=>candidates.reduce((best,item)=>{const a=item.a,b=i
 export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit,prepare,walkPreview,goRoom,openGarden,changedShadow,lite=false}){
  const stores=new Map(),canvas=document.createElement('canvas');canvas.id='furnish-plan';canvas.hidden=true;canvas.setAttribute('aria-label','Bird’s-eye furniture plan');document.body.append(canvas);
  const plan=createRoomPlan(canvas);
- const line=new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1,1,1)),new T.LineBasicMaterial({color:0xb4e59b,depthTest:false,toneMapped:false}));line.renderOrder=995;line.visible=false;scene.add(line);
+ const line=new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(1,1,1)),new T.LineBasicMaterial({color:0xb4e59b,depthTest:false,toneMapped:false}));line.userData.furnishOverlay=true;line.renderOrder=995;line.visible=false;scene.add(line);
  let entry=null,ctx=null,layout=null,models=null,finish=null,kit=[],floors=[],catalogueData=null,versionTicket=0,ready=null,modelReady=Promise.resolve();
- let collapsed=false,resumeBird=true;
+ let collapsed=false,resumeBird=true,detail=false,detailDirty=true,detailBusy=false,detailTime=0;
+ function invalidateView(){detailDirty=true;}
+ function updateDetail(now){
+   const room=getRoom(),version=entry;
+   if(!active||!bird||!detail||!room||!entry||!detailDirty||detailBusy||now-detailTime<(inVR()?200:70))return;
+   detailBusy=true;detailDirty=false;detailTime=now;
+   captureRoom(renderer,scene,entry,room,inVR()?512:1000).then(frame=>{
+     if(detail&&version===entry&&room.id===getRoom()?.id)plan.background(frame);
+   }).catch(error=>{detail=false;status='Detailed view unavailable · '+error.message;sync();}).finally(()=>{detailBusy=false;});
+ }
  let active=false,bird=true,roomId='',selectedId='',face='',pending='',draft=null,verdict=null,drag=null,stage=0,furnished=true,status='',vrWas=false,retry=false,indoorLite=false;
  const filters={kind:'',style:'',roomType:'current',query:''};
  const raycaster=new T.Raycaster(),ndc=new T.Vector2();
@@ -35,13 +45,14 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
    const allowedByRoom=c=>!roomType||!c.roomTypes?.length||c.roomTypes.includes('any')||c.roomTypes.includes(roomType)||
      (roomType==='kitchen' && c.roomTypes.includes('dining'))||(roomType==='hall'&&c.roomTypes.includes('entry'));
    const filtered=kit.filter(c=>allowedByRoom(c)&&(!filters.kind||c.kind===filters.kind)&&(!filters.style||c.style===filters.style||c.style==='shared')&&(!filters.query||[c.name,c.kind,c.style].join(' ').toLowerCase().includes(filters.query.toLowerCase())));
-   return {active,collapsed,bird,site,version:entry?.def.id||'',room,rooms:ctx?.rooms||[],selected:layout?.get(selectedId)||null,pending,filtered,filters,
+   return {active,collapsed,bird,detail,site,version:entry?.def.id||'',room,rooms:ctx?.rooms||[],selected:layout?.get(selectedId)||null,pending,filtered,filters,
      kinds:[...new Set(kit.map(c=>c.kind))].sort(),styles:[...new Set(kit.map(c=>c.style))].filter(s=>s!=='shared').sort(),roomTypes:typedRooms(),
      items:layout?.items||[],floors,face,colour:layout?.wallColours?.[face]||'',floor:layout?.roomFloors?.[room?.id]||'',
      status:verdict?.reasons.length?verdict.reasons.join(' · '):status,verdict,dirty:layout?.dirty,undo:layout?.canUndo,redo:layout?.canRedo,
      saving:layout?.saving,conflict:layout?.conflict||retry,revision:layout?.revision||0};
  }
  function sync(){
+   invalidateView();
    const s=state(),items=s.items;
    if(models){
      let display=items;if(draft){const group=moveGroup(items,draft),ids=new Set(group.map(f=>f.id));display=[...items.filter(f=>!ids.has(f.id)),...group];}
@@ -52,7 +63,7 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
    const outline=draft||s.selected;line.visible=active&&!!outline&&furnished;
    if(line.visible){line.position.set(outline.position[0],outline.position[1]+outline.size[2]/2,outline.position[2]);line.rotation.y=outline.rotation*degrees;
       line.scale.set(outline.size[0]+.018,outline.size[2]+.018,outline.size[1]+.018);line.material.color.setHex(verdict?.ok===false?0xf05c52:0xa8e29d);}
-   if(active){plan.set(s.room,items,selectedId,draft,verdict,{floor:floors.find(f=>f.id===s.floor),walls:layout?.wallColours,face,openings:ctx?.openings});panel.update(s);}else panel.update(s);
+   if(active){plan.set(s.room,items,selectedId,draft,verdict,{floor:floors.find(f=>f.id===s.floor),walls:layout?.wallColours,face,openings:ctx?.openings,detail});panel.update(s);}else panel.update(s);
    changedShadow?.();
  }
  async function useVersion(v,{force=false}={}){
@@ -68,8 +79,8 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
        if(!stores.has(v.def.id))stores.set(v.def.id,new FurnitureLayout({site,version:v.def.id,fetcher:layoutFetcher(site,v.def.id),onChange:()=>{if(layout===stores.get(v.def.id))sync();}}));
        layout=stores.get(v.def.id);await layout.load();if(ticket!==versionTicket)return;
        roomId=ctx.rooms.find(r=>r.id===roomId)?.id||ctx.rooms.find(r=>stockRoom(r)==='living')?.id||ctx.rooms[0]?.id||'';
-       models=createFurnitureModels({THREE:T,scene,site,version:v.def.id,variants,catalogue:kit,lite,onChange:()=>changedShadow?.()});
-       finish=createFinishOverrides(v.model,floors);
+       models=createFurnitureModels({THREE:T,scene,site,version:v.def.id,variants,catalogue:kit,lite,onChange:()=>{changedShadow?.();invalidateView();}});
+       finish=createFinishOverrides(v.model,floors,invalidateView);
        if(!runtime&&(!layout.items.length))status='This version has no movable-item seed yet. The house still shows its built-in furnishings.';
        sync();
      }catch(e){if(ticket===versionTicket){status=e.message;sync();}}
@@ -152,8 +163,9 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
  }
  async function action(name,value){
    try{
+    if(name==='plan-view'||name==='detail-view'){detail=name==='detail-view';view(true);return;}
     if(name==='close'){leave();return;}if(name==='bird'||name==='stand'){view(name==='bird');if(name==='stand'&&!inVR()&&getRoom())goRoom(getRoom());return;}
-    if(name==='minimise'){collapse(!collapsed);return;}if(name==='resize'){fit();return;}if(name==='vr'){document.querySelector('#vr').click();return;}if(name==='plants'){leave();openGarden();return;}
+    if(name==='minimise'){collapse(!collapsed);return;}if(name==='resize'){fit();return;}if(name==='vr'){document.querySelector('#vr').click();return;}if(name==='plants'||name==='garden'){leave();openGarden(name==='plants');return;}
     if(!layout||!ctx){status='This version has no editable room schedule.';sync();return;}
     if(Object.hasOwn(filters,name)){filters[name]=value;sync();return;}
     status='';
@@ -245,10 +257,10 @@ export function createFurnishingEditor({scene,camera,renderer,site,inVR,houseHit
  let stickLatch=false;
  function stick(x){if(!active||(!selectedId&&!pending)||Math.abs(x)<.36){stickLatch=false;return false;}if(!stickLatch&&Math.abs(x)>.6){stickLatch=true;turn(Math.sign(x)*15);}return true;}
  const consumer={project:surface,hover:h=>{if(pending)move(h);},begin:h=>start(h),move:h=>move(h),end:()=>drop(),cancel};
- function frame(left){const vr=inVR();if(!active){wrist.update(left,false);return;}
+ function frame(left){updateDetail(performance.now());const vr=inVR();if(!active){wrist.update(left,false);return;}
   document.body.classList.toggle('furniture-immersive',vr);if(vr!==vrWas){vrWas=vr;view(bird);}wrist.update(left,vr);
  }
- return {enter,leave,action,state,useVersion,frame,consumer,wrist,stick,plan,releaseView(v){if(v===entry){models?.dispose();models=null;finish?.clear();finish=null;}},get enabled(){return active;},get bird(){return active&&bird;},get runtime(){return models;},get layout(){return layout;},get context(){return ctx;},get readyModels(){return modelReady;},
+ return {enter,leave,action,state,useVersion,frame,invalidateView,consumer,wrist,stick,plan,releaseView(v){if(v===entry){models?.dispose();models=null;finish?.clear();finish=null;}},get enabled(){return active;},get bird(){return active&&bird;},get dragging(){return !!draft;},get runtime(){return models;},get layout(){return layout;},get context(){return ctx;},get readyModels(){return modelReady;},
   setStage(n){if(n!==stage){stage=n;if(layout)sync();}},setFurnished(on){if(furnished!==on){furnished=on;if(layout)sync();}},gardenLite(on){if(on!==indoorLite){indoorLite=on;if(layout)sync();}}};
 }
 

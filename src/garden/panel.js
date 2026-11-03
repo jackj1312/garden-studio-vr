@@ -81,6 +81,7 @@ export function createGardenPanel({ action }) {
     <header class="gd-header">
       <div class="gd-brand"><span class="gd-kicker">Garden Studio</span><h2>Garden design</h2><span class="gd-context"></span></div>
       <div class="gd-head-actions">
+        <button type="button" data-cmd="furniture">Furniture</button>
         <button type="button" class="gd-help" data-editor-help="garden">How to use</button>
         <button type="button" class="gd-collapse" data-cmd="collapse" aria-expanded="true" aria-label="Collapse garden tools" title="Collapse tools">Minimise</button>
         <button type="button" data-cmd="close" aria-label="Close garden design" title="Close garden design">×</button>

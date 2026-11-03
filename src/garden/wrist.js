@@ -167,7 +167,8 @@ export function createGardenWrist({ THREE, scene, camera, action, state, planIma
         row(388, op('Undo', 'undo', undefined, { enabled: s.undo }), op('Redo', 'redo', undefined, { enabled: s.redo }));
         row(456, op('Save layout', 'save', undefined, { enabled: dirty && !s.saving && !s.conflict }),
                  op('Reload', 'reload', undefined, { enabled: !s.saving }));
-        row(524, nav('Materials', 'finish', hasItem), op('Close editor', 'close'));
+        row(524, nav('Materials', 'finish', hasItem), op('Furniture', 'furniture'));
+        row(592, op('Close editor','close'));
         if (s.bird || base) row(592, ...(base ? [nav('Slab measurements','measures')] : []),
           ...(s.bird ? [input('Centre plan', () => { recenter = true; })] : []));
         break;

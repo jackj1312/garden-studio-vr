@@ -6,7 +6,7 @@ export function showHousePreview(){
   const identity='Latest house · preview';
   document.querySelector('.studio-welcome > .studio-kicker').textContent=identity;
   document.querySelector('.studio-identity > .studio-kicker').textContent=identity;
-  const garden=new URL('/garden/',location.href);garden.port='8450';
+  const garden=new URL('/garden/',location.href);garden.port='8450';garden.searchParams.set('version',new URL(location.href).searchParams.get('version')||'approved_2b');
   function link(){
     const a=document.createElement('a');a.href=garden.href;a.className='studio-preview-link';a.textContent='Open editable garden';return a;
   }

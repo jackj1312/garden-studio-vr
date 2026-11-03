@@ -10,7 +10,7 @@ import {createDrawing,angleOf} from './drawing.mjs';
 import {createFeature} from './catalogue.mjs';
 import {fitStroke,handlesOf,outlineMeasurements} from './geometry.mjs';
 
-export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,walkPreview,indoor,occlusion,normalPass}) {
+export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,walkPreview,openFurniture,indoor,occlusion,normalPass}) {
   const canvas=document.createElement('canvas');canvas.id='garden-plan';canvas.hidden=true;canvas.setAttribute('aria-label','Measured garden drawing plan');document.body.append(canvas);
   const terrain=createGardenTerrain(T,normalPass), garden=createGardenScene(T,scene), plan=createGardenPlan(T,{renderer,scene,canvas,terrain});
   const stores=new Map();let active=false,bird=false,collapsed=false,resumeBird=false,version='',store=null,loaded=false,oldPen=false,vrWas=false;
@@ -120,6 +120,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   async function action(name,value){
     try{
       if(name==='vr'){document.getElementById('vr').click();return;}
+      if(name==='furniture'){await openFurniture();return;}
       if(name==='collapse'){collapse(!collapsed);return;}
       if(name==='view'){view(!bird);return;} if(name==='close'){leave();return;}
       if(name==='save'){await store.save();status='Saved · revision '+store.revision;draw.state.conflict=false;}

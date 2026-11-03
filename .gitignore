@@ -35,3 +35,5 @@ renders/perf/
 .server-8443.log
 # the pipeline document's pictures show the house: local only
 docs/pipeline/img/
+# Local editable-garden browser captures and disposable QA results
+renders/garden-tool/

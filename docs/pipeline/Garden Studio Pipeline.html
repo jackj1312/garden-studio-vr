@@ -45,6 +45,8 @@ ul{margin:6px 0 12px;padding-left:20px}
 footer{margin-top:60px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
 @media print{figure img.kit-plate{height:142mm;width:100%;object-fit:contain;background:#eeeae3}body{background:#fff}main{padding:0}.stage{border-color:#ccc}h2{break-after:avoid}}
 @media (max-width:600px){h1{font-size:34px}.stage{padding:18px}}
+#garden-design .pics img {max-height:210px; object-fit:contain;background:#edf0e9;}
+@media print {#garden-design .pics img {max-height:145px;} #garden-design {break-before:page;break-inside:avoid;} #garden-design figure {break-inside:avoid;}}
 </style>
 </head>
 <body>
@@ -63,6 +65,7 @@ today on 23 Battle Road, the test house.</p>
 Room planner: <a href="https://192.168.1.118:8443/plan/">https://192.168.1.118:8443/plan/</a> · 
 Walkthrough (review): <a href="https://192.168.1.118:8443/w/">https://192.168.1.118:8443/w/</a> · 
 Customer preview: <a href="https://192.168.1.118:8443/p/">https://192.168.1.118:8443/p/</a><br>
+Garden design on the <a href="https://127.0.0.1:8450/garden/">studio Mac</a> or <a href="https://192.168.1.118:8450/garden/">studio Wi-Fi for iPad and Quest</a>. Start the garden port with <code>tools/start_garden.command</code>.<br>
 If a link doesn't load (after a restart), double-click <strong>Start Garden Studio Server</strong> on the Desktop and keep its
 window open. This document is kept up to date by Claude and Codex whenever a stage is added or changed.</div>
 
@@ -114,8 +117,20 @@ each one makes the next house cheaper.</p>
   <figcaption>The client planner: a room in plan, the catalogue by style, and the kitchen previewed in 3D.</figcaption>
 </section>
 
+<section class="stage" id="garden-design">
+  <header><span class="num">2G</span><h3>Draw the garden</h3><span class="badge part">● desktop, tablet and simulated Quest checked</span></header>
+  <p>Jack draws directly over the surveyed garden in the walkthrough. A circle keeps its radius in metres. Straight runs use their two ends, curves retain their tangents, and closed areas carry a material and level. A sunken court cuts the displayed ground and its steps carry the walker down to the proposed floor. Each plant and tree has its own editable position.</p>
+  <div class="facts"><div><b>Draw</b>Mouse, touch, Apple Pencil or right Quest trigger</div><div><b>Inspect</b>Whole-garden plan and standing view of the same drawing</div><div><b>Save</b>Versioned local layout, previous copy and change receipts</div></div>
+  <figure class="pics"><img src="img/26-garden-plan.jpg" alt="Measured garden drawing with a selected circular court"><img src="img/27-garden-steps.jpg" alt="A 600 mm sunken court and flight of steps in the measured garden"></figure>
+  <figcaption>Example design in a separate test layout. The original paving under the proposal remains available when the design is removed.</figcaption>
+  <figure class="pics"><img src="img/28-garden-wrist.jpg" alt="Simulated Quest wrist and the measured garden plan"><img src="img/29-outbuilding-base.jpg" alt="Measured six-sided concrete base in the editor"></figure>
+  <figcaption>The base on the right measures 10 m². Its six measured sides have a combined length of 14 m.</figcaption>
+  <p>Choose <strong>Outbuilding base</strong> for a freeform concrete footprint. The plan labels its measured lengths, the inspector gives its area, perimeter, thickness and levels, and <strong>Copy base reference</strong> carries its ID and contour into the later structure design session.</p>
+  <p>Choose <strong>How to use</strong> in the active editor. On iPad the Pencil draws while fingers pan and zoom. In Quest the tools are on the left wrist and the right controller edits the garden or its measured plan. The original garden viewer and house toolbar both open this editor.</p>
+</section>
+
 <section class="stage">
-  <header><span class="num">3</span><h3>The shell</h3><span class="badge part">● candidate in verification</span></header>
+  <header><span class="num">3</span><h3>The shell</h3><span class="badge part">● candidate checks passed</span></header>
   <p>The house is built by script in Blender from the data: walls, floors, ceilings, stairs, roof, doors and windows, then
   every surface finished: plastered reveals, skirting, architraves, window boards. The house must look finished, never
   "mid-build" (no raw brick inside, no gaps, nothing poking through the roof).</p>
@@ -123,7 +138,7 @@ each one makes the next house cheaper.</p>
   <div class="facts"><div><b>Tools</b>generate_house.py and the shell, integrity and finish checks</div><div><b>Check</b>Watertight; nothing raw; every check passes</div></div>
   <p>The generator assigns each wall face to a room as it builds the openings. It fits the cut faces of partial walls, the stair enclosure and the vault separately. Roof planes and room polygons set the ceilings and floors. The Before conservatory uses the studio footprint and clear heights. Its twin-wall glazing follows the pitch from the house to the rear boundary, and the approved construction sequence removes it.</p>
   <figure class="pics"><img src="img/24-conservatory.jpg" alt="Inside the newly fitted Before conservatory"><img src="img/25-lounge.jpg" alt="Lounge and measured opening in the latest private candidate"></figure>
-  <figcaption>Candidate views on port 8450. The shell and integrity checks run before this build can reach the client link.</figcaption>
+  <figcaption>Candidate views on port 8450. Both shell versions and all four integrity scans passed. The candidate has completed its export and walk tests on port 8450.</figcaption>
   <figure><img src="img/08-shell.jpg" alt="Finished shell kitchen"></figure>
   <figcaption>The bare finished shell of the new kitchen-diner, before furniture.</figcaption>
 </section>

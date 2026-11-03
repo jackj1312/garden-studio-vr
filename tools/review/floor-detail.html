@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>Studio floor detail check</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#eae6dc;color:#26372e;font:16px system-ui;padding:18px}h1{font:600 22px system-ui;margin:0}p{margin:5px 0 12px}main{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}figure{margin:0}canvas{display:block;width:100%;height:auto;background:#b8b2a6}figcaption{font-size:14px;margin:3px 0 7px}</style>
+<h1>Room floor finishes</h1><p>Identical camera and grazing light. The lower row uses the normal and roughness maps in the saved house model.</p><main></main>
+<script type="importmap">{"imports":{"three":"/assets/vendor/three/build/three.module.js","three/addons/":"/assets/vendor/three/examples/jsm/"}}</script>
+<script type="module">
+import * as T from 'three';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {floorSwatch} from '../../src/furnish/finishes.js';
+const floors=(await (await fetch('/assets/sites/house/spec/catalogue_v1.json')).json()).floors;
+const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setSize(440,230);renderer.toneMapping=T.NeutralToneMapping;
+const scene=new T.Scene(),env=new T.PMREMGenerator(renderer),room=new RoomEnvironment(),map=env.fromScene(room);
+scene.environment=map.texture;scene.environmentIntensity=.42;
+const light=new T.DirectionalLight(0xffeee2,3);light.position.set(-1.8,.65,-1.2);scene.add(light);
+const camera=new T.PerspectiveCamera(42,440/230,.01,10);camera.position.set(.04,.24,.40);camera.lookAt(0,0,0);
+const plane=new T.Mesh(new T.PlaneGeometry(6,6));plane.rotation.x=-Math.PI/2;scene.add(plane);
+for(const detail of [false,true])for(const [id,label] of [['FLR-CARPET-OAT','Oatmeal wool'],['FLR-SISAL','Sisal'],['FLR-CONCRETE','Polished concrete']]){
+  const def=floors.find(f=>f.id===id),swatch=floorSwatch(def);await swatch.ready;
+  const m=swatch.material.clone();if(!detail){m.normalMap=m.roughnessMap=null;m.roughness=id==='FLR-CONCRETE' ? .3 : .97;}
+  plane.material=m;const uv=plane.geometry.attributes.uv,pos=plane.geometry.attributes.position;
+  for(let i=0;i<uv.count;i++)uv.setXY(i,pos.getX(i)/swatch.tile[0],-pos.getY(i)/swatch.tile[1]);
+  renderer.render(scene,camera);const c=document.createElement('canvas');c.width=440;c.height=230;c.getContext('2d').drawImage(renderer.domElement,0,0);
+  const fig=document.createElement('figure'),caption=document.createElement('figcaption');caption.textContent=label+' · '+(detail?'surface detail':'colour only');fig.append(c,caption);document.querySelector('main').append(fig);m.dispose();
+}
+document.body.dataset.ready='1';plane.geometry.dispose();renderer.dispose();map.dispose();room.dispose();env.dispose();
+</script>

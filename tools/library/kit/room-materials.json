@@ -24,32 +24,32 @@
     {
       "asset": "Concrete030",
       "path": "maps/FLR-CONCRETE-photo.jpg",
-      "sha256": "ae6f538c7f3951138851902f1e8dd5d1da74a5a54011cfba807d1b1c8c668cf8",
-      "bytes": 352417,
+      "sha256": "f7c75864bf749ac088ed0f0c4795ec258545cd2ce96b40dede20198b6257121b",
+      "bytes": 217153,
       "licence": "CC0-1.0",
       "source_url": "https://ambientcg.com/a/Concrete030",
       "licence_url": "https://docs.ambientcg.com/license/",
-      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+      "treatment": "Matched diffuse scan tinted to the catalogue swatch; restrained concrete variation"
     },
     {
-      "asset": "wool_boucle",
+      "asset": "curly_teddy_natural",
       "path": "maps/FLR-CARPET-OAT-photo.jpg",
-      "sha256": "5434e894848688d4a857b4ea73d0247295c3df2382441bbc8efda696a953337b",
-      "bytes": 462878,
+      "sha256": "64ac1b4a9d7e00d7383faefc530918f12649cab43e630bfc528c36eaff74353d",
+      "bytes": 378352,
       "licence": "CC0-1.0",
-      "source_url": "https://polyhaven.com/a/wool_boucle",
+      "source_url": "https://polyhaven.com/a/curly_teddy_natural",
       "licence_url": "https://polyhaven.com/license",
-      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+      "treatment": "Undyed looped-pile diffuse scan tinted to the catalogue swatch"
     },
     {
-      "asset": "wool_boucle",
+      "asset": "curly_teddy_natural",
       "path": "maps/FLR-CARPET-GREY-photo.jpg",
-      "sha256": "0a7293acc0014b3173f0a1c77fb9bd69f9c8ebc93a39d79aea271d98f98c8a32",
-      "bytes": 457168,
+      "sha256": "dff98f1cd28683ca9c1008de3ab0863035f7890cc92294a50909a22ad742d65b",
+      "bytes": 378351,
       "licence": "CC0-1.0",
-      "source_url": "https://polyhaven.com/a/wool_boucle",
+      "source_url": "https://polyhaven.com/a/curly_teddy_natural",
       "licence_url": "https://polyhaven.com/license",
-      "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+      "treatment": "Undyed looped-pile diffuse scan tinted to the catalogue swatch"
     },
     {
       "asset": "hessian_380",
@@ -60,6 +60,46 @@
       "source_url": "https://polyhaven.com/a/hessian_380",
       "licence_url": "https://polyhaven.com/license",
       "treatment": "Diffuse photograph, greyscale contrast and catalogue tint"
+    },
+    {
+      "asset": "Concrete030",
+      "path": "maps/Concrete030_1K-JPG_NormalGL.jpg",
+      "bytes": 1809544,
+      "sha256": "2467fd294fe69c1dcb969d5c141eca13ac0acda9915f9b0842405f493b82cd4e",
+      "licence": "CC0-1.0",
+      "source_url": "https://ambientcg.com/a/Concrete030",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "treatment": "Original tangent-space normal"
+    },
+    {
+      "asset": "Concrete030",
+      "path": "maps/Concrete030-floor-rough.jpg",
+      "bytes": 334486,
+      "sha256": "183ad59e263d675f47eb39799909c7fa485f077cd187b447e27cf046d3faf03b",
+      "licence": "CC0-1.0",
+      "source_url": "https://ambientcg.com/a/Concrete030",
+      "licence_url": "https://docs.ambientcg.com/license/",
+      "treatment": "Scan roughness mapped to linear 52/255 through 110/255 for the chosen finish"
+    },
+    {
+      "asset": "hessian_380",
+      "path": "maps/hessian_380-floor-rough.jpg",
+      "bytes": 437814,
+      "sha256": "78fed584210ec10c7b18d069417ab22e8774b56bdbe4783375b52eeab4cad201",
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/hessian_380",
+      "licence_url": "https://polyhaven.com/license",
+      "treatment": "Scan roughness mapped to linear 190/255 through 247/255 for the chosen finish"
+    },
+    {
+      "asset": "curly_teddy_natural",
+      "path": "maps/curly_teddy_natural-floor-rough.jpg",
+      "sha256": "b26ef456ab53ce46441d5edae6c997c83b7cab81a102a70f9b3c37de89ca09c3",
+      "bytes": 223328,
+      "licence": "CC0-1.0",
+      "source_url": "https://polyhaven.com/a/curly_teddy_natural",
+      "licence_url": "https://polyhaven.com/license",
+      "treatment": "Scan roughness mapped to linear 214/255 through 253/255"
     }
   ],
   "tile": {

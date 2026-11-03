@@ -8,7 +8,8 @@ import { bbox, dot2, sub2, add2, scale2, len2, norm2, segDist, hexToRgb, mix } f
 import { sizeM, shapeOf, mountOf, partColour, roomWalls, roomFloor } from "./data.js?v=p8";
 import { mainPart } from "./plan.js?v=p8";
 import {createFurnitureModels} from '../furnish/models.js';
-import {floorRecipe} from '../furnish/floor-recipe.mjs';
+import {floorSwatch} from '../furnish/finishes.js';
+import {bulbMaterial} from '../house/room-light-data.mjs';
 import {wallFaces} from './shared.mjs';
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
@@ -79,7 +80,8 @@ export class Preview3D {
   }
 
   /* ---------------------------------------------------------------- the room shell */
-  show(state, roomId, selected) {
+  show(state, roomId, selected, lights=false) {
+    this.lights=lights;
     const first = this.roomId !== roomId || this.vkey !== state.vkey;
     if ((!state.runtime || this.modelVersion!==state.house.elements) && this.furniture) {this.furniture.dispose();this.furniture=null;}
     if(state.runtime && !this.furniture) {
@@ -89,7 +91,10 @@ export class Preview3D {
     this.state = state; this.roomId = roomId; this.vkey = state.vkey;
     this.buildShell();
     this.buildItems(selected);
-    if(this.furniture) this.furniture.set(state.layoutItems,{room:roomId}).catch(e=>{
+    if(this.furniture) this.furniture.set(state.layoutItems,{room:roomId}).then(()=>{
+      for(const mesh of this.furniture?.group.children||[])if(bulbMaterial(mesh.material?.name))mesh.material.emissiveIntensity=this.lights?1:0;
+      this.request();
+    }).catch(e=>{
       const label=this.el.querySelector('.three-label'); if(label) label.textContent='Room model unavailable · '+e.message;
     });
     if (first) this.frameCamera();
@@ -111,12 +116,10 @@ export class Preview3D {
     const fl = roomFloor(db, st, room);
     const shape = new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z)));
     const g = new THREE.ShapeGeometry(shape); g.rotateX(-Math.PI / 2);
-    const uv = g.attributes.uv, pos = g.attributes.position;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getZ(i));
-    const recipe=floorRecipe(fl);
-    const tex=recipe.photo?new THREE.TextureLoader().load(new URL('../../tools/library/kit/maps/'+recipe.source,import.meta.url).href,()=>this.request()):floorTexture(fl);
-    if(recipe.photo){tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(1/recipe.repeat[0],1/recipe.repeat[1]);tex.colorSpace=THREE.SRGBColorSpace;}
-    const fm = new THREE.MeshStandardMaterial({ map: tex, roughness: recipe.roughness??.75 });
+    const swatch=floorSwatch(fl),fm=swatch.material;
+    const uv=g.attributes.uv,pos=g.attributes.position;
+    for(let i=0;i<uv.count;i++)uv.setXY(i,pos.getX(i)/swatch.tile[0],pos.getZ(i)/swatch.tile[1]);
+    swatch.ready.then(()=>this.request());
     const floor = new THREE.Mesh(g, fm); floor.position.y = f; this.room.add(floor);
     /* walls: one slab outside each edge of the room polygon, cut where an opening sits on that edge */
     const wc = roomWalls(db, st, room), acc = st.rooms.get(room.id)?.accent;
@@ -225,7 +228,7 @@ export class Preview3D {
           const box=new THREE.LineSegments(lines,new THREE.LineBasicMaterial({color:0x377bb2}));
           box.position.set(p[0],p[1]+h/2,p[2]);box.rotation.y=it.yaw_deg*Math.PI/180;box.userData.helper=true;this.items.add(box);
         }
-        if(it.lampOn && lampCount<6 && it.category==='lighting') {
+        if(this.lights && lampCount<6 && it.category==='lighting') {
           const lamp=new THREE.PointLight(0xffd9a0,2.2,5,1.6);
           lamp.position.set(it.position_m[0],it.position_m[1]+it.size_mm[2]/1000*.75,it.position_m[2]);this.scene.add(lamp);this.lamps.push(lamp);lampCount++;
         }
@@ -240,7 +243,7 @@ export class Preview3D {
       if (it.id === selected) {
         const box = new THREE.BoxHelper(g, 0x2f7fd0); box.userData.helper = true; this.items.add(box);
       }
-      if (it.lampOn && lampCount < 6 && /lamp|light|pendant/.test(shapeOf(this.db, it) + it.category)) {
+      if (this.lights && lampCount < 6 && /lamp|light|pendant/.test(shapeOf(this.db, it) + it.category)) {
         const L = new THREE.PointLight(0xffd9a0, 2.2, 5, 1.6);
         L.position.set(it.position_m[0], (mountOf(this.db, it) === "ceiling" ? g.position.y : it.position_m[1] + it.size_mm[2] / 1000 * 0.85), it.position_m[2]);
         this.scene.add(L); this.lamps.push(L); lampCount++;
@@ -251,7 +254,7 @@ export class Preview3D {
     const db = this.db, st = this.state, [W, D, Hh] = sizeM(it), H = Math.max(Hh, 0.01), shape = shapeOf(db, it);
     const c = p => partColour(db, st, it, p, "#C9C2B6").hex;
     const main = c(mainPart(it)), g = new THREE.Group();
-    const lit = it.lampOn;
+    const lit = this.lights;
     const box = (w, h, d, x, y, z, hex, o) => { const m = new THREE.Mesh(UNIT, this.mat(hex, o)); m.scale.set(Math.max(w, 0.005), Math.max(h, 0.005), Math.max(d, 0.005)); m.position.set(x, y, z); g.add(m); return m; };
     const cyl = (r, h, x, y, z, hex, o, geo = CYL) => { const m = new THREE.Mesh(geo, this.mat(hex, o)); m.scale.set(r * 2, h, r * 2); m.position.set(x, y, z); g.add(m); return m; };
     const legs = (w, d, h, hex, r = 0.02) => { for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(r, h, sx * (w / 2 - r * 2), h / 2, sz * (d / 2 - r * 2), hex); };
@@ -363,42 +366,6 @@ export class Preview3D {
   }
 }
 
-function floorTexture(fl) {
-  const cv = document.createElement("canvas"); cv.width = cv.height = 512;
-  const x = cv.getContext("2d"), [r, g, b] = hexToRgb(fl.hex);
-  x.fillStyle = fl.hex; x.fillRect(0, 0, 512, 512);
-  const pat = fl.pattern || "planks", u = fl.unit_mm || [190, 1900];
-  const px = 512 / 2;                                   // the texture covers 2 m
-  const shade = k => `rgb(${r * k | 0},${g * k | 0},${b * k | 0})`;
-  if (pat === "planks") {
-    const w = (u[0] / 1000) * px, L = (u[1] / 1000) * px;
-    for (let i = 0; i * w < 512; i++) {
-      const off = ((i * 0.37) % 1) * L;
-      for (let j = -1; j * L < 512 + L; j++) {
-        x.fillStyle = shade(0.9 + ((i * 7 + j * 3) % 5) * 0.04); x.fillRect(i * w, j * L + off, w - 1, L - 1);
-      }
-    }
-  } else if (pat === "herringbone") {
-    const w = (u[0] / 1000) * px, L = (u[1] / 1000) * px;
-    x.save(); x.translate(256, 256); x.rotate(Math.PI / 4);
-    for (let i = -14; i < 14; i++) for (let j = -14; j < 14; j++) {
-      x.fillStyle = shade(0.9 + (((i + j) % 4) + 4) % 4 * 0.04);
-      if ((i + j) % 2) x.fillRect(i * L * 0.5, j * w * 2, L - 1, w - 1); else x.fillRect(i * L * 0.5, j * w * 2 + w, w - 1, L - 1);
-    }
-    x.restore();
-  } else if (pat === "tiles" || pat === "pattern") {
-    const w = (u[0] / 1000) * px, hh = (u[1] / 1000) * px;
-    x.strokeStyle = shade(0.8); x.lineWidth = 2;
-    for (let i = 0; i * w <= 512; i++) for (let j = 0; j * hh <= 512; j++) {
-      x.fillStyle = shade(0.95 + ((i * 3 + j * 5) % 4) * 0.02); x.fillRect(i * w, j * hh, w, hh); x.strokeRect(i * w, j * hh, w, hh);
-      if (pat === "pattern") { x.fillStyle = shade(0.75); x.beginPath(); x.arc(i * w + w / 2, j * hh + hh / 2, w * 0.25, 0, 7); x.fill(); }
-    }
-  } else {
-    for (let i = 0; i < 2500; i++) { x.fillStyle = shade(0.92 + Math.random() * 0.12); x.fillRect(Math.random() * 512, Math.random() * 512, 2, 2); }
-  }
-  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.5, 0.5); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 const ART = ["#C9B79C", "#8FA3A8", "#B5694B", "#D8CEBF", "#6E7F6A", "#3E4A57"];
 const artColour = id => ART[[...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % ART.length];
 function signedArea(p) { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[i], r = p[(i + 1) % p.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; }
@@ -412,7 +379,7 @@ function insideTest([x, z], poly) {
 }
 function disposeGroup(g, geo = true) {
   for (const c of [...g.children]) {
-    c.traverse(o => { if (o.userData?.helper) {o.geometry?.dispose();o.material?.dispose();} if (o.isMesh && o.geometry !== UNIT && o.geometry !== CYL && o.geometry !== CONE && o.geometry !== SPH && geo) { o.geometry.dispose(); if (o.material?.map) o.material.map.dispose(); } });
+    c.traverse(o => { if (o.userData?.helper) {o.geometry?.dispose();o.material?.dispose();} if (o.isMesh && o.geometry !== UNIT && o.geometry !== CYL && o.geometry !== CONE && o.geometry !== SPH && geo) { o.geometry.dispose(); if (o.material?.map && !o.material.userData.studioFloor) o.material.map.dispose(); } });
     g.remove(c);
   }
 }

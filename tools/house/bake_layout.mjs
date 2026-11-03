@@ -121,6 +121,20 @@ function copyMesh(document,mesh,change){
 }
 async function applyFinishes(doc,layout,defs){
   const floors=new Map(),paint=new Map(),wallsFound=new Set(),floorsFound=new Set();
+  const detail=new Map();
+  async function detailMap(file,packed=false){
+    if(detail.has(file))return detail.get(file);
+    const bytes=await fs.readFile(path.join(kitRoot,'maps',file));
+    let texture;
+    if(packed){
+      const {data,info}=await sharp(bytes).greyscale().raw().toBuffer({resolveWithObject:true});
+      const rgb=Buffer.alloc(data.length*3);
+      for(let i=0;i<data.length;i++){rgb[i*3]=255;rgb[i*3+1]=data[i];}
+      const png=await sharp(rgb,{raw:{width:info.width,height:info.height,channels:3}}).png().toBuffer();
+      texture=doc.createTexture(file).setImage(png).setMimeType('image/png');
+    }else texture=doc.createTexture(file).setImage(bytes).setMimeType('image/jpeg');
+    detail.set(file,texture);return texture;
+  }
   let paintedPrimitives=0,coveredPrimitives=0;
   for(const n of doc.getRoot().listNodes()){
     const mesh=n.getMesh();if(!mesh)continue;
@@ -152,6 +166,9 @@ async function applyFinishes(doc,layout,defs){
           const {image,repeat}=await floorPNG(defs.get(key));
           const texture=doc.createTexture(key).setImage(image).setMimeType('image/png');
           const material=doc.createMaterial('Client floor · '+key).setBaseColorTexture(texture).setRoughnessFactor(floorRecipe(defs.get(key)).roughness??.82).setMetallicFactor(0);
+          const recipe=floorRecipe(defs.get(key));
+          if(recipe.normal)material.setNormalTexture(await detailMap(recipe.normal)).setNormalScale(recipe.relief??1);
+          if(recipe.rough)material.setMetallicRoughnessTexture(await detailMap(recipe.rough,true));
           material.getBaseColorTextureInfo().setWrapS(10497).setWrapT(10497);
           floors.set(key,{material,repeat});
         }

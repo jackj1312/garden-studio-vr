@@ -3,13 +3,23 @@ import {floorRecipe} from './floor-recipe.mjs';
 
 const cached=new Map();
 const maps=new URL('../../tools/library/kit/maps/',import.meta.url);
-function floorSwatch(def){
+export function floorSwatch(def){
   if(cached.has(def.id))return cached.get(def.id);
   const recipe=floorRecipe(def),c=document.createElement('canvas');c.width=c.height=recipe.n;
   const ctx=c.getContext('2d'),tile=recipe.repeat;
-  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  const jobs=[];
   const material=new THREE.MeshStandardMaterial({map:texture,roughness:recipe.roughness??.82,metalness:0});
-  material.name='Client floor · '+def.id;
+  material.name='Client floor · '+def.id;material.userData.studioFloor=true;
+  for(const [slot,file] of [['normalMap',recipe.normal],['roughnessMap',recipe.rough]]){
+    if(!file)continue;
+    const loader=new THREE.TextureLoader();
+    let finish;
+    jobs.push(new Promise(resolve=>{finish=resolve;}));
+    const map=loader.load(new URL(file,maps).href,finish,undefined,finish);
+    map.anisotropy=4;map.wrapS=map.wrapT=THREE.RepeatWrapping;material[slot]=map;
+  }
+  material.normalScale.setScalar(recipe.relief??1);
   const paint=image=>{
     const n=c.width;ctx.fillStyle=recipe.base;ctx.fillRect(0,0,n,n);
     if(image){ctx.globalAlpha=recipe.photo?1:.33;ctx.globalCompositeOperation=recipe.photo?'source-over':'multiply';ctx.drawImage(image,0,0,n,n);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;}
@@ -20,10 +30,10 @@ function floorSwatch(def){
   };
   paint(null);
   const file=recipe.source;
-  if(file){const im=new Image();im.onload=()=>paint(im);im.src=new URL(file,maps);}
-  const swatch={material,tile};cached.set(def.id,swatch);return swatch;
+  if(file)jobs.push(new Promise(resolve=>{const im=new Image();im.onload=()=>{paint(im);resolve();};im.onerror=resolve;im.src=new URL(file,maps);}));
+  const swatch={material,tile,ready:Promise.all(jobs)};cached.set(def.id,swatch);return swatch;
 }
-export function createFinishOverrides(model,floors){
+export function createFinishOverrides(model,floors,onReady){
   const active=new Map();
   const parts=model.parts.filter(p=>{
     const id=p.ud?.surface_id,role=p.ud?.surface_role;
@@ -37,7 +47,7 @@ export function createFinishOverrides(model,floors){
       if(value===active.get(p))continue;
       if(isFloor){
         const def=defs.get(typeof value==='string'?value:value?.id);
-        if(def){const s=floorSwatch(def);model.coverFloor(p,s.material,s.tile);}else model.coverFloor(p,null);
+        if(def){const s=floorSwatch(def);model.coverFloor(p,s.material,s.tile);if(onReady)s.ready.then(onReady);}else model.coverFloor(p,null);
       }else model.paintPart(p,value||null);
       if(value==null)active.delete(p);else active.set(p,value);
     }

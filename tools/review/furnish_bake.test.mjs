@@ -105,15 +105,19 @@ test('a mixed structural carrier bakes only its named wall and floor material sl
     scene.addChild(d.createNode('mixed carrier').setMesh(mesh).setExtras({stage_in:3,surface_id:'A/W/1',surface_role:'wall',room_id:'A'}));
     await io.write(path.join(site,defs.glb),d);
     await put(path.join(site,defs.furnish_runtime.variants),{schema:1,variants:{},hosts:{}});
-    await put(path.join(site,defs.furnish_runtime.seed),{schema:1,items:[],wallColours:{'A/W/1':'#345C32'},roomFloors:{A:'floor-test'}});
-    await put(path.join(site,'spec/catalogue_v1.json'),{floors:[{id:'floor-test',hex:'#777777',pattern:'concrete'}]});
+    await put(path.join(site,defs.furnish_runtime.seed),{schema:1,items:[],wallColours:{'A/W/1':'#345C32'},roomFloors:{A:'FLR-CONCRETE'}});
+    await put(path.join(site,'spec/catalogue_v1.json'),{floors:[{id:'FLR-CONCRETE',hex:'#777777',pattern:'concrete'}]});
     const receipt=await bakeVersion(site,defs,path.join(site,'spec'),{catalogue:{items:[]}});
     assert.equal(receipt.paintedPrimitives,1);assert.equal(receipt.coveredPrimitives,1);
     const result=await io.read(path.join(site,receipt.model));
     const [wall,opposite,ceiling,outside,floor,otherFloor]=result.getRoot().listNodes()[0].getMesh().listPrimitives().map(p=>p.getMaterial());
     assert.deepEqual(wall.getBaseColorFactor().slice(0,3),new T.Color('#345C32').toArray());
     assert.equal(opposite.getName(),'B plaster');assert.equal(ceiling.getName(),'A ceiling');assert.equal(outside.getName(),'Exterior brick');
-    assert.equal(floor.getName(),'Client floor · floor-test');assert.equal(otherFloor.getName(),'B floor');
+    assert.equal(floor.getName(),'Client floor · FLR-CONCRETE');assert.equal(otherFloor.getName(),'B floor');
+    assert.equal(floor.getNormalTexture().getMimeType(),'image/jpeg');
+    assert.equal(floor.getNormalScale(),.14);
+    assert.equal(floor.getMetallicRoughnessTexture().getMimeType(),'image/png');
+    assert.equal(floor.getMetallicFactor(),0);
     for(const m of [opposite,ceiling,outside,otherFloor])assert.deepEqual(m.getBaseColorFactor(),[1,1,1,1]);
   }finally{await fs.rm(site,{recursive:true});}
 });

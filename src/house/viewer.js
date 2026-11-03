@@ -1526,8 +1526,9 @@ const screenReach = hit => Math.max(0.012, hit.distance * Math.tan(THREE.MathUti
 const LOOK_SENS = 0.0022;                       // radians per mouse count (about 0.13 deg)
 const locked = () => document.pointerLockElement === renderer.domElement;
 let lockRefused = false, lockWanted = false;
-const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse") && !lockRefused;
+const lookEligible = e => walk && !inVR() && (!e ? !IS_TOUCH : e.pointerType === "mouse");
 function captureMouse() {
+  if(locked()||lockWanted)return;
   lockWanted = true;
   try {
     const p = renderer.domElement.requestPointerLock({ unadjustedMovement: false });
@@ -1538,8 +1539,9 @@ function captureMouse() {
    only gets a "click again"; one that refuses twice and never captured falls back to drag-to-look for the visit */
 let lockOk = false, lockFails = 0;
 function lockFailed(err) {
-  if (lockRefused) return;
+  if (!lockWanted) return;
   lockWanted = false;
+  if(pointer.down?.capture)pointer.down.capture=false;
   console.info("house: pointer lock refused", err?.message || err);
   if (lockOk || ++lockFails < 2) { toast("Click the view again to look around with the mouse (or drag to look)"); return; }
   lockRefused = true;
@@ -1549,7 +1551,7 @@ function lockFailed(err) {
 document.addEventListener("pointerlockerror", () => lockFailed("pointerlockerror"));
 document.addEventListener("pointerlockchange", () => {
   if (!locked()) { lockWanted = false; pointer.down = null; setHover(null); }
-  else { blurPass?.reset(); lockOk = true; lockFails = 0; }
+  else { blurPass?.reset(); lockOk = true; lockRefused=false; lockWanted=false; lockFails = 0; }
   updateLookUI();
 });
 function freeMouse() { if (locked()) document.exitPointerLock(); }

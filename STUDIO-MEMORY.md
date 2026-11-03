@@ -372,6 +372,7 @@ Mistakes go in CORRECTIONS-LOG.md (with their rule); this file holds what to *do
   Jack: its brickwork was too bright and buggy; the work stays here, but match Codex's interior quality.
 - 2026-11-03 · product · Jack wants to furnish rooms himself in the viewer (desktop, phone, Quest) plus a per-room bird's-eye view;
   needs furniture placed at runtime from one shared layout file (not baked into the GLB). In PLAN.md change log; after the reset.
+- 2026-11-03 · location · The project moved to /Users/Jack/Garden Studio VR (out of the app's temporary session folder).
 - 2026-11-03 · direction · Jack: take every interior thing from Codex's build plus its windows, front door, internal doors and
   outside window surrounds, its apples and grass; KEEP our brickwork, front garden layout/paving, scale and navigation.
   Codex runs it in our folder (CODEX-FURNISH-PROMPT.md, 6 staged branches).

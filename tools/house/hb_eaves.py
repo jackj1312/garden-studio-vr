@@ -12,6 +12,18 @@ def _board(outline, left, right):
     return [(x, y, z) for y, z, x in vertices], faces
 
 
+BARGE_THICKNESS = .018
+
+
+def surveyed_porch(spec):
+    survey = spec.get('as_built', {})
+    source = os.path.expanduser(survey.get('survey', ''))
+    if source and os.path.isfile(source):
+        with open(source) as stream:
+            return json.load(stream).get('porch', {})
+    return {}
+
+
 def porch_trim(spec, plane, low_edge, soffit):
     """A surveyed left verge, its boxed end and the front fascia/level return.
 
@@ -20,11 +32,7 @@ def porch_trim(spec, plane, low_edge, soffit):
     the wall arris. The opposite side is an abutment against the higher wing.
     """
     survey = spec.get('as_built', {})
-    source = os.path.expanduser(survey.get('survey', ''))
-    if not source or not os.path.isfile(source):
-        return None
-    with open(source) as stream:
-        porch = json.load(stream).get('porch', {})
+    porch = surveyed_porch(spec)
     verge = porch.get('verge')
     if not verge or 'verge_outer_x' not in porch.get('roof', {}):
         return None
@@ -34,7 +42,7 @@ def porch_trim(spec, plane, low_edge, soffit):
     wall = survey['shift'][0] + porch['side_wall_outer_x']
     if abs(left - (survey['shift'][0] + porch['roof']['verge_outer_x'])) > .02 or not left < wall < right:
         return None
-    board = .018
+    board = BARGE_THICKNESS
     skin = .012
     front = a[1] + .050             # behind the tile nose, inside the gutter
     wall_front = a[1] + plane.wing.spec['overhang']

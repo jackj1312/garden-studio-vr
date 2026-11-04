@@ -164,7 +164,7 @@ def bed_and_paving(grey):
                            (-.281, -.225), edging, "Cut grey sett at the house bed", grey, (.45, .45))
     # The first transverse sett starts just beyond the outside edge of the left side.
     # This is its actual cut, rather than an extra square over the corner of either run.
-    rectangular_member("G2_house_bed_corner_left", (left[0], front[0]-.001), (near, far),
+    rectangular_member("G2_house_bed_corner_left", (max(left[0],bounds(bed)[0][0]+.001), front[0]-.001), (near, min(far,CROSS_PATH_NEAR-.001)),
                        (-.281, -.225), edging, "House bed return corner", grey, (.45, .45))
 
 
@@ -179,7 +179,13 @@ def close_kerb_corner(grey):
     xs = [p.x for p in points if p.y < start + .011]
     if not .080 < start - end < .120 or not .085 < max(xs) - min(xs) < .105:
         raise ValueError("Unrecognised gate-side paving cut")
-    rectangular_member("G2_lawn_kerb_terminal", (min(xs), max(xs)), (end, start),
+    # The edge of the upstand turns into this closure. Cut the new sett
+    # to the outermost existing stone, preserving the surveyed upstand.
+    upstand = bpy.data.objects["G2_bed_upstand"]
+    rim = [plan_point(upstand.matrix_world @ v.co) for v in upstand.data.vertices]
+    cut = max(p.x for p in rim if end-.010 <= p.y <= start+.010) + .001
+    if not min(xs) < cut < max(xs): raise ValueError("Gate kerb cut misses the upstand")
+    rectangular_member("G2_lawn_kerb_terminal", (cut, max(xs)), (end, start),
                        (-.281, -.225), kerb, "Grey block joining the drive and lawn edgings", grey, (.45, .45))
 
 

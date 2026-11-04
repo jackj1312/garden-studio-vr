@@ -56,11 +56,21 @@ def up(a):
             "cloudType": a.cloud, "containerDiskInGb": 140, "volumeInGb": 0, "ports": ["8000/http"], "env": env,
             "containerRegistryAuthId": auth_id(a.auth), "dockerEntrypoint": ["/bin/bash", "-c"], "dockerStartCmd": [START],
             "supportPublicIp": False, "minRAMPerGPU": 24}
+    if a.network_volume:
+        # A replacement pod sees the same imported map, outputs, Zen store and
+        # logs, including files created before the editor can run a callback.
+        env["AGENT_WORK"]="/workspace/house-stills/job"
+        body.update(networkVolumeId=a.network_volume, volumeMountPath="/workspace",minRAMPerGPU=32)
+        body["gpuTypeIds"]=a.gpu or GPUS
+        body["dockerStartCmd"]=["set -eu; mkdir -p /workspace/house-stills/job /workspace/house-stills/epic; "
+            "ln -sfn /workspace/house-stills/job /tmp/job; mkdir -p \"$HOME/.config\"; "
+            "if ! test -e \"$HOME/.config/Epic\"; then ln -s /workspace/house-stills/epic \"$HOME/.config/Epic\"; fi; "+START]
     r = requests.post(f"{REST}/pods", headers=H(), json=body, timeout=60)
     if r.status_code >= 300: sys.exit(f"create failed {r.status_code}: {r.text[:300]}")
     pod = r.json(); rate = float(pod.get("costPerHr") or 0.9)
     cap_min = min(a.max_min, a.max_gbp * cb.USD_PER_GBP / max(rate, 0.1) * 60)
     s = {"pod": pod["id"], "token": token, "t0": time.time(), "rate": rate, "cap_min": cap_min, "image": a.image}
+    s["networkVolume"]=a.network_volume
     save(s)
     # the watchdog: its own process, outlives this shell; deletes the pod at the cap
     subprocess.Popen([sys.executable, os.path.abspath(__file__), "watchdog", pod["id"], str(cap_min * 60)],
@@ -81,6 +91,11 @@ def watchdog(pod, secs):
     deadline = time.time() + float(secs)                           # secs = time left until the money cap
     time.sleep(max(0, deadline - time.time() - 360))
     s = load()
+    if s and s.get("pod")==pod and s.get("networkVolume"):
+        time.sleep(max(0,deadline-time.time()))
+        if (load() or {}).get("pod")==pod and delete(pod):
+            os.remove(STATE)
+        return
     if s and s.get("pod") == pod:                                  # still up near the cap: save the work first
         print(time.ctime(), "near the cap: salvaging", flush=True); salvage(s)
         time.sleep(max(0, deadline - time.time()))
@@ -156,6 +171,8 @@ def main():
     u = sub.add_parser("up"); u.add_argument("--image", default="ghcr.io/epicgames/unreal-engine:dev-slim-5.8.4")
     u.add_argument("--auth", default="ghcr-epic"); u.add_argument("--cloud", default="SECURE", choices=["SECURE", "COMMUNITY"])
     u.add_argument("--max-gbp", type=float, default=5.0); u.add_argument("--max-min", type=float, default=150)
+    u.add_argument("--network-volume",help="Existing durable volume for this render")
+    u.add_argument("--gpu",action="append",choices=GPUS)
     u.add_argument("--wait-min", type=float, default=40)
     sub.add_parser("ping"); sub.add_parser("cost"); sub.add_parser("salvage")
     d = sub.add_parser("down"); d.add_argument("--no-salvage", action="store_true")

@@ -687,4 +687,5 @@ def main():
         unreal.SystemLibrary.quit_editor()
 
 
-main()
+if __name__ == "__main__":
+    main()

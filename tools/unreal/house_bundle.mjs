@@ -7,10 +7,11 @@ import {io,studioRequire,sha} from '../house/runtime_assets.mjs';
 const {transformMesh,joinPrimitives,prune}=studioRequire('@gltf-transform/functions');
 const {getBounds}=studioRequire('@gltf-transform/core');
 const sharp=studioRequire('sharp');
-const [site,out,permission]=process.argv.slice(2);
+const [site,out,permission,sourceHash]=process.argv.slice(2);
 assert.equal(permission,'--include-material-textures','Photo-derived render maps require owner consent');
 const json=async file=>JSON.parse(await fs.readFile(file,'utf8'));
-const receipt=await json(path.join(site,'furnish/approved_2b/bakes/latest.json'));
+if(sourceHash)assert.match(sourceHash,/^[a-f0-9]{64}$/);
+const receipt=sourceHash?{model:'furnish/approved_2b/bakes/'+sourceHash+'.glb',modelSHA256:sourceHash,items:[]}:await json(path.join(site,'furnish/approved_2b/bakes/latest.json'));
 const source=await fs.readFile(path.join(site,receipt.model));
 assert.equal(sha(source),receipt.modelSHA256);
 const table=await json(path.join(site,'approved_2b_elements.json'));
@@ -50,6 +51,9 @@ const active=new Set(cells.values());
 for(const mesh of root.listMeshes())if(!active.has(mesh))mesh.dispose();
 await doc.transform(prune({keepLeaves:false}));
 for(const ext of root.listExtensionsUsed())if(ext.extensionName==='EXT_texture_webp')ext.dispose();
+// Local-only identity map for native Unreal material rebinding; outside upload bundle.
+await fs.mkdir(path.dirname(out),{recursive:true});
+await fs.writeFile(path.join(path.dirname(out),'material-map.json'),JSON.stringify(root.listMaterials().map((m,i)=>({id:'Finish_'+i,name:m.getName(),vertex:/VertexPlant/.test(m.getName())})),null,2));
 let count=0,averaged=0;
 for(const tex of root.listTextures()){
   const name=tex.getName(), bytes=tex.getImage();

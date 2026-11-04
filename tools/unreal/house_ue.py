@@ -13,18 +13,26 @@ checkpoint=os.path.join(studio.OUT,'checkpoint.json')
 EAL=studio.EAL
 try:
     saved=json.load(open(checkpoint)) if os.path.exists(checkpoint) else {}
-    if saved.get('source')==studio.SC['source'] and EAL.does_asset_exist(saved.get('map','')):
-        studio.LES.load_level(saved['map'])
-        studio.LEVEL['path']=saved['map']
-    else:
-        task=unreal.AssetImportTask()
-        task.filename=os.path.join(studio.BUNDLE,'House.gltf')
-        task.destination_path='/Game/House/Assets'
-        task.automated=True
-        task.replace_existing=True
-        task.save=True
-        studio.AT.import_asset_tasks([task])
-        imported=task.get_objects()
+    restored=False
+    if saved.get('source')==studio.SC['source'] and saved.get('axisVerified') and EAL.does_asset_exist(saved.get('map','')):
+        loaded=studio.LES.load_level(saved['map'])
+        actors=studio.EAS.get_all_level_actors()
+        restored=bool(loaded) and sum(isinstance(a,unreal.StaticMeshActor) for a in actors)>=saved.get('meshes',113) and any(isinstance(a,unreal.DirectionalLight) for a in actors)
+        if restored: studio.LEVEL['path']=saved['map']
+        else: studio.warn('Saved map did not restore the house; reconstructing from persistent imported meshes')
+    if not restored:
+        if saved.get('source')==studio.SC['source']:
+            imported=[data.get_asset() for data in unreal.AssetRegistryHelpers.get_asset_registry().get_assets_by_path('/Game/House/Assets',recursive=True)
+                      if str(data.asset_class_path.asset_name)=='StaticMesh']
+        else:
+            task=unreal.AssetImportTask()
+            task.filename=os.path.join(studio.BUNDLE,'House.gltf')
+            task.destination_path='/Game/House/Assets'
+            task.automated=True
+            task.replace_existing=True
+            task.save=True
+            studio.AT.import_asset_tasks([task])
+            imported=task.get_objects()
         meshes=[a for a in imported if isinstance(a,unreal.StaticMesh)]
         if not meshes:
             meshes=[EAL.load_asset(p) for p in EAL.list_assets('/Game/House/Assets') if EAL.find_asset_data(p).asset_class_path.asset_name=='StaticMesh']
@@ -39,7 +47,17 @@ try:
             raise RuntimeError('Imported mesh count/name mismatch: '+repr((len(mapping),len(known),[m.get_name() for m in meshes[:12]])))
         # Reuse the FBX/Unreal basis detector against the actual glTF import,
         # then verify the vertical metric as well before positioning cameras.
-        reference=max(mapping,key=lambda k:sum((b-a)**2 for a,b in zip(*known[k])))
+        def basis_separation(key):
+            lo,hi=known[key]
+            variants=[]
+            for swap in (False,True):
+                for sx in (-1,1):
+                    for sy in (-1,1):
+                        a,b=(1,0) if swap else (0,1)
+                        variants.append(sorted((sx*lo[a],sx*hi[a]))+sorted((sy*lo[b],sy*hi[b])))
+            return min(sum(abs(a-b) for a,b in zip(v,w)) for i,v in enumerate(variants) for w in variants[i+1:])
+        reference=max(mapping,key=basis_separation)
+        if basis_separation(reference)<.01: raise RuntimeError('No asymmetric reference available for import-axis verification')
         det=studio.axis_check({'MI_Brick':mapping[reference]})
         if studio.REPORT['axis']['detected']['err_cm']>.5: raise RuntimeError('Imported horizontal dimensions differ from the source')
         mesh,desc=mapping[reference];bb=mesh.get_bounding_box()
@@ -63,9 +81,12 @@ try:
                 studio.setp(actor,'settings',settings)
         unreal.EditorLoadingAndSavingUtils.save_current_level()
         EAL.save_directory('/Game/House',only_if_is_dirty=True,recursive=True)
-        saved={'source':studio.SC['source'],'map':studio.LEVEL['path'],'meshes':len(meshes),'axis':studio.REPORT['axis']}
+        saved={'source':studio.SC['source'],'map':studio.LEVEL['path'],'meshes':len(meshes),'axis':studio.REPORT['axis'],'axisVerified':True}
         with open(checkpoint+'.part','w') as f:json.dump(saved,f,indent=2)
         os.replace(checkpoint+'.part',checkpoint)
+    if '--garden-detail' in sys.argv:
+        import garden_look
+        garden_look.apply()
     shots=studio.cameras()
     pending=[]
     for cam,res,description in shots:
@@ -73,7 +94,7 @@ try:
         studio.setp(component,'post_process_blend_weight',1.)
         pp=component.get_editor_property('post_process_settings')
         studio.setp(pp,'override_auto_exposure_bias',True)
-        studio.setp(pp,'auto_exposure_bias',3.5 if description['name']!='Front_left_garden' else 0.)
+        studio.setp(pp,'auto_exposure_bias',5.5 if description['name']!='Front_left_garden' else .35)
         studio.setp(component,'post_process_settings',pp)
         target=os.path.join(studio.OUT,'S_'+description['name']+'.png')
         if not os.path.isfile(target) or os.path.getsize(target)<4096:

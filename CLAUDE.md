@@ -57,3 +57,6 @@ create a studio software so every build follows the same flow."
 - Benchmarks: BENCHMARKS.md (Airbnb modelled walkthrough is the aim; kogu's bedroom for the film tier).
 - Full-quality VR is Unreal streamed from a cloud GPU to the Quest; the baked browser build is the fallback.
 - Three judges (Sonnet) after every output, checked against the client's photos.
+
+## Best-tool authoring and explicit Unreal omissions — Jack, 4 November 2026
+Read [BUILD-ENGINE-RULE.md](BUILD-ENGINE-RULE.md) before any build stage. It applies to every element without exception by category: if it is better built in Unreal, build it directly there; Blender is not a required first step. Every preview, report and handoff must name anything missing/simplified because it is deferred to Unreal, explain the specific benefit and intended replacement, and distinguish planned work from visually verified results. Carry this rule into every agent brief.

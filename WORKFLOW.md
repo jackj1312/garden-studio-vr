@@ -245,3 +245,6 @@ you can judge before real time is spent."
   proposed changes (new beds, paths, a studio footprint). Drawings are saved in plan coordinates and come straight
   back into the plan JSON, so a correction made in the headset updates the plan and the next build.
 - Film: Cycles or Unreal on the cloud.
+
+## Best-tool authoring and explicit Unreal omissions — Jack, 4 November 2026
+Read [BUILD-ENGINE-RULE.md](BUILD-ENGINE-RULE.md) before any build stage. It applies to every element without exception by category: if it is better built in Unreal, build it directly there; Blender is not a required first step. Every preview, report and handoff must name anything missing/simplified because it is deferred to Unreal, explain the specific benefit and intended replacement, and distinguish planned work from visually verified results. Carry this rule into every agent brief.

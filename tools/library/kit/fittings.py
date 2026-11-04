@@ -143,20 +143,23 @@ def _signed_custom(b,kind):
     elif kind in ['bookcase','alcove_unit','shelf_unit']:
         steel=kind=='shelf_unit';mat='metal' if steel else 'kitchen';shelf='metal' if steel else 'oak'
         for x in [-w/2+.015,w/2-.015]:b.box('upright',(.030,d,h),(x,0,h/2),mat,.002)
-        b.box('back',(w,.014,h),(0,d/2-.007,h/2),mat,.002)
+        b.box('back',(w-.06,.014,h),(0,d/2-.007,h/2),mat,.002)
         low=b.options.get('cupboard_h',.72) if kind=='alcove_unit' else .06
-        if kind=='alcove_unit':
-            b.box('lower-carcass',(w-.04,d-.025,low),(0,0,low/2),mat,.003)
-            for x in [-w/4,w/4]:F._cabinet_face(b,'lower-door',x,low/2,w/2-.008,low-.008,-d/2,mat)
         levels=b.options.get('levels')
+        t=b.options.get('shelf_t',.025) if levels else .025
+        if kind=='alcove_unit':
+            top=low if levels else low+.025
+            body=top-t
+            b.box('lower-carcass',(w-.06,d-.025,body),(0,0,body/2),mat,.003)
+            for x in [-w/4,w/4]:F._cabinet_face(b,'lower-door',x,body/2,w/2-.008,body-.008,-d/2,mat)
         if levels:
             for z in [low,*levels]:
                 t=b.options['shelf_t']
-                b.box('shelf',(w-.03,d,t),(0,0,z-t/2),shelf,.002)
+                b.box('shelf',(w-.06,d-.014,t),(0,-.007,z-t/2),shelf,.002)
         else:
             for j in range(5):
                 z=(j+1)*h/5 if kind=='bookcase' else low+.025+(h-low-.025)*j/4
-                b.box('shelf',(w-.03,d,.025),(0,0,z-.0125),shelf,.002)
+                b.box('shelf',(w-.06,d-.014,.025),(0,-.007,z-.0125),shelf,.002)
     elif kind in ['splashback','upstand']:
         if b.options.get('metro'):
             # 75x150 running bond with narrow recessed grout.

@@ -90,6 +90,7 @@ def recipe(it):
 
 def fingerprint(it):
     fields={k:it.get(k) for k in ('asset','type','size_mm','materials','position_m','yaw_deg','source_sofa','fruit_host','splash_segments')}
+    if it.get('asset',{}).get('kind') in ('alcove_unit','bookcase','shelf_unit'):fields['joinery_revision']=2
     return 'GS-'+hashlib.sha256(json.dumps(fields,sort_keys=True).encode()).hexdigest()[:20]
 
 ROLES={'legs':'oak','frame':'oak','rail':'oak','hooks':'black','shade':'linen','fabric':'linen','pole':'bronze',

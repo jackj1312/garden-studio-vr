@@ -102,7 +102,7 @@ const cameras=[
   const [x,y,z]=eye,dx=aim[0]-x,dy=aim[1]-y,dz=aim[2]-z;
   return {name,pos_cm:[100*x,100*z,100*y],fwd:[dx,dz,dy],up:[0,0,1],focal_mm,sensor_w_mm:36,sensor_h_mm:20.25,w:2560,h:1440};
 });
-await fs.writeFile(path.join(out,'scene.json'),JSON.stringify({site:'House',cameras,bounds,check:cameras.map(c=>c.name),sun:{to_sun_ue:[-.45,.60,.66]},source:presentation?sha(Buffer.concat([source,await fs.readFile('out/unreal-house/alcove/Alcove.bin'),Buffer.from('presentation-v1')])):receipt.modelSHA256},null,2));
+await fs.writeFile(path.join(out,'scene.json'),JSON.stringify({site:'House',cameras,bounds,check:cameras.map(c=>c.name),sun:{to_sun_ue:[-.45,.60,.66]},source:presentation?sha(Buffer.concat([source,await fs.readFile('out/unreal-house/alcove/Alcove.bin'),await fs.readFile('out/unreal-house/alcove/Alcove.gltf'),Buffer.from('presentation-v2')])):receipt.modelSHA256},null,2));
 console.log(JSON.stringify({itemNodes,primitives,cells:cells.size,textures:count,colourOnly:averaged,furnishedItems:receipt.items.length}));
 
 if(presentation)await fs.writeFile(path.join(out,'replacement-placements.json'),JSON.stringify(removed,null,2));

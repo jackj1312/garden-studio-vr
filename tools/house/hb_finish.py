@@ -581,9 +581,6 @@ def scribe_architraves(objs, N, log, reach=0.035):
                     for i in edge:
                         me.vertices[i].co = Mi @ (W[i] + d * side * (best - 0.0003))
                     moved += 1
-        # At a measured framed return the moulding already beds on its
-        # finished lining; extending its back here drives it through the jack.
-        if (p.get('atom') or {}).get('measured_trim_back'): continue
         # the back of each face's architrave beds onto the wall: where the wall face is set back (a stud head over a door),
         # each back vertex moves in to touch it (<= 15 mm), as a joiner scribes it
         W = [M @ v.co for v in me.vertices]
@@ -592,6 +589,9 @@ def scribe_architraves(objs, N, log, reach=0.035):
             if not grp: continue
             back = min((W[i] - cen).dot(nn) * face for i in grp)
             for i in [i for i in grp if (W[i] - cen).dot(nn) * face < back + 0.001]:
+                # Only the new right jamb has its own measured timber backing.
+                # The retained left masonry still needs its actual scribe.
+                if (p.get('atom') or {}).get('measured_trim_back') and (W[i]-cen).dot(d)>0: continue
                 o = W[i] + nn * face * 0.001
                 h = tree.ray_cast(o, -nn * face, 0.016)
                 if h[0] is not None and h[3] - 0.001 > 0.0008:

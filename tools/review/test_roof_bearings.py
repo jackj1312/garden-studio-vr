@@ -57,9 +57,15 @@ class RoofBearingTests(unittest.TestCase):
         above=[p for p in wall_parts if p['props']['group']=='wall_inner' and bounds(p['mesh'])[2][0]>=4.8234]
         self.assertTrue(above);self.assertAlmostEqual(min(bounds(p['mesh'])[2][0] for p in above),H[2][1],places=4)
         self.assertTrue(all(p['props']['seq']>head['meta']['seq'] for p in above))
-        for p in wall_parts:
-            z0,z1=bounds(p['mesh'])[2]
-            self.assertFalse(z1>H[2][0]+.0001 and z0<H[2][1]-.0001)
+        through_head=[p for p in wall_parts if bounds(p['mesh'])[2][1]>H[2][0]+.0001
+                      and bounds(p['mesh'])[2][0]<H[2][1]-.0001]
+        self.assertTrue(through_head)
+        self.assertEqual({p['props']['group'] for p in through_head},{'wall_lining'})
+        self.assertAlmostEqual(H[1][1]-H[1][0],.082)
+        wall=self.atoms['F-ensL']['wall']
+        near,far=wall.early_jamb
+        self.assertIn((near-.0015,far+.0015,wall.z0,H[2][0],.1,.1125),wall.holes)
+        self.assertTrue(self.atoms['F-F-rearC-bedroom-3-door-762']['measured_trim_back'])
 
     def test_flitch_and_joist_ends_have_physical_area_and_correct_sequence(self):
         beam=self.atoms['B-beam-3']
@@ -69,6 +75,7 @@ class RoofBearingTests(unittest.TestCase):
             with self.subTest(name=name):
                 joist,seat,fillet,fixings=[self.atoms[name+s] for s in ('','-seat','-rafter-fillet','-rafter-fixings')]
                 rafter=self.atoms[fillet['side_bearing']]
+                self.assertEqual(seat['boxed_with'],beam['id'])
                 self.assertEqual(fixings['fastens_to'],(joist['id'],rafter['id']))
                 other_rafter=next(a for a in self.atoms if a.startswith('RF-') and a!=rafter['id'])
                 self.assertNotIn(other_rafter,fixings['fastens_to'])

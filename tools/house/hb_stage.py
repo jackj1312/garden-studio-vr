@@ -333,7 +333,7 @@ def diff_battens(bb, tb, covers):
     proto = {a["plane"].id: a for a in bb + tb}
     for (pid, cat), (pl, polys) in by_plane.items():
         if pid not in proto: continue
-        m = battens_on(pl, polys)
+        m = battens_on(pl, polys, verge=proto[pid].get("verge"))
         if not m: continue
         a = dict(proto[pid]); a["mesh"] = m; a["cat"] = cat; a["id"] = f"{a['id']}-{cat[:4]}"
         if cat == "new": a["mat"] = "batten"
@@ -341,7 +341,10 @@ def diff_battens(bb, tb, covers):
     return out
 
 
-def battens_on(pl, pieces, gauge=0.100, w=0.050, t=0.025):
+def battens_on(pl, pieces, gauge=0.100, w=0.050, t=0.025, verge=None):
+    if verge is not None:
+        trimmed = [clip_half(poly,(-1,0,verge)) for poly in pieces]
+        pieces = [poly for poly in trimmed if len(poly)>=3 and abs(area(poly))>.000001]
     class _S: pass
     s = _S(); s.plane_pieces = lambda q: pieces
     return R.battens(s, pl, gauge, w, t)
@@ -465,6 +468,16 @@ def split_door_head(atoms, owner, opening, detail):
     y0,y1=sorted(w.point(ub,c)[1] for c in (-w.t/2,w.t/2))
     left_start=left_x-detail['left_bearing_m']; end=right_faces[1]
     right.early_jamb=(u_of(right,(right_x,y0)),u_of(right,(right_x,y1)))
+    from hb_room_faces import SKIM
+    for layer in right.layers():
+        if layer['group']!='wall_lining': continue
+        ends=[right.point(right.ua,right.c_of(layer[k]))[0] for k in ('o0','o1')]
+        if min(ends)<right_x and abs(max(ends)-right_x)<.001:
+            start,stop=right.early_jamb
+            right.holes.append((start-SKIM,stop+SKIM,right.z0,z,layer['o0'],layer['o1']))
+    for fixture in atoms:
+        if fixture['kind']=='fixture' and fixture.get('wall').id.split('~')[0]==detail['host'] and fixture['op']['id']==opening['id']:
+            fixture['measured_trim_back']=True
     stem='L-'+slug(w.id)+'-'+slug(opening['id'])
     def member(suffix,label,group,mat,mesh,**fields):
         meta=M(group,w.storey,label,detail['source'],'assumed',label,False)
@@ -482,14 +495,16 @@ def split_door_head(atoms, owner, opening, detail):
                               box(left_start,left_x,py0,py1,bearing_top,z),seq_bias=.03))
     members.append(member('-jamb','Timber jamb within perpendicular partition','wall_inner','timber',
                           box(right_x,end,y0,y1,right.z0,z),seq_bias=.03))
+    core = next(l for l in w.layers() if l['group']=='wall_inner')
+    head_y = sorted(w.point(ub,w.c_of(core[k]))[1] for k in ('o0','o1'))
     head=member('','Concrete head on retained masonry and framed return','lintel','concrete',
-                box(left_start,end,y0,y1,z,high),head=z,top=high,host=w)
+                box(left_start,end,*head_y,z,high),head=z,top=high,host=w)
     members.append(head)
     members.append(member('-cripple','Timber above the framed door return','wall_inner','timber',
                           box(right_x,end,y0,y1,high,right.z1),follow_head=head))
     # Cut the brick and finish to the actual lintel. The remaining masonry is
     # carried by its top surface and courses start at its real seat and top.
-    w.holes.append((ua,ub,z,high,-1,w.t+1))
+    w.holes.append((ua,ub,z,high,core['o0'],core['o1']))
     fixed={round(z,4),round(high,4)}
     w.lifts=sorted(set(w.lifts)|fixed)
     w.__dict__.setdefault('_fixed',set()).update(fixed)

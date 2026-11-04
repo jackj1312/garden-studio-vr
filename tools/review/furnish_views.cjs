@@ -47,7 +47,13 @@ async function main(){
     fs.writeFileSync(path.join(out,name+'.jpg'),Buffer.from(shot.url.split(',')[1],'base64'));
   }
   await select(manifest.default);
-  for(const [name,eye,target] of cameras){
+  const views=[...cameras];
+  if(opts.includes('--joints')){
+    const head=[6.02,4.75,-4.44];
+    views.push(['bedroom-door-head',[5.78,4.2955,-6.42],head],
+      ['landing-door-head',[5.96,4.2955,-2.45],head]);
+  }
+  for(const [name,eye,target] of views){
     const [dx,dy,dz]=target.map((n,i)=>n-eye[i]),deg=180/Math.PI;
     const pose={x:eye[0],z:eye[2],y:eye[1]-1.6,eye:1.6,yawDeg:Math.atan2(-dx,-dz)*deg,pitchDeg:Math.atan2(dy,Math.hypot(dx,dz))*deg};
     await shoot(name,pose);

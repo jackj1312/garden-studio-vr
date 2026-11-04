@@ -217,6 +217,32 @@ def transverse_parts(carrier,rooms,others,N):
                     out.append(part);claimed.append((a,b))
     return out
 
+def jamb_return(w, room, neighbours, left, right, bottom, top, start, face, side):
+    # Stop the outer edge of the reveal against a collinear wall finish
+    # already spanning the junction. Keep the full lining at the free end.
+    intervals_under=[]
+    for other in neighbours:
+        q=other['wall']
+        if q.storey!=w.storey or abs(dot(w.d,q.d))<.999: continue
+        for sign,c in zip((-1,1),active_faces(q)):
+            if dot(w.n,q.n)*side*sign<.999: continue
+            outer=q.point(0,lining_coordinate(q,c,sign,room)+sign*SKIM)
+            if abs(dot(sub(outer,w.a),w.n)-face)>.0001: continue
+            for a,b in room_runs(q,c,sign,room):
+                a,b=corner_run(q,lining_coordinate(q,c,sign,room),sign,room,a,b,
+                               [n for n in neighbours if n is not other])
+                coords=sorted(dot(sub(q.point(u,c),w.a),w.d) for u in (a,b))
+                a,b=max(left,coords[0]),min(right,coords[1])
+                if b>a: intervals_under.append((a,b))
+    cuts=sorted({left,right,*[u for span in intervals_under for u in span]})
+    pieces=[]
+    for a,b in zip(cuts,cuts[1:]):
+        covered=any(lo<=(a+b)/2<=hi for lo,hi in intervals_under)
+        end=face-side*(SKIM-BACK) if covered else face
+        pieces.append(box_uc(w,a,b,bottom,top,*sorted((start,end))))
+    return merge_meshes(pieces)
+
+
 def horizontal_return(w, left, right, jamb_left, jamb_right, start, face, rebate_end, z0, z1):
     """Meet the opening's jambs even where adjoining wall paint stops at a corner.
 
@@ -368,8 +394,8 @@ def build(vb,rooms,items):
                         section=sorted((start,face_c));bits=[]
                         owns_left=lo-.04<=a<=hi+.04
                         owns_right=lo-.04<=b<=hi+.04
-                        if owns_left:bits.append(('left',box_uc(w,a,a+.003,bottom,top,*section)))
-                        if owns_right:bits.append(('right',box_uc(w,b-.003,b,bottom,top,*section)))
+                        if owns_left:bits.append(('left',jamb_return(w,r,neighbours,a,a+.003,bottom,top,start,face_c,side)))
+                        if owns_right:bits.append(('right',jamb_return(w,r,neighbours,b-.003,b,bottom,top,start,face_c,side)))
                         ua=max(lo,a);ub=min(hi,b)
                         if ub-ua>.007:
                             jamb_left=min(ua,a+.003) if owns_left else ua

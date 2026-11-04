@@ -1003,7 +1003,7 @@ class StateBuilder:
             label=detail['source']; prefix=joist['id']
             seat=atom(prefix+'-seat','mesh',beam['phase'],M('timber_beam','roof','Timber bearing pack on flitch',
                       label,'assumed','Ceiling joist bearing',False), sig=sig_of(prefix,'seat',near,end,y,bottom),
-                      mesh=box(near,end,y-half,y+half,cap,bottom),mat='timber',seq_bias=.01)
+                      boxed_with=beam['id'],mesh=box(near,end,y-half,y+half,cap,bottom),mat='timber',seq_bias=.01)
             # Fill the actual side gap, over the intersection of the two timbers.
             # Choose a lap entirely between their upper and lower surfaces.
             lo,hi=rx(bottom+.065),rx(top-.015)
@@ -1044,6 +1044,13 @@ class StateBuilder:
         if not hasattr(self, "systems"): self.systems = []
         self.systems.append((sysspec, sysm))
         sid = sysspec["id"]
+        verge = None
+        if sid == 'porch':
+            from hb_eaves import surveyed_porch, BARGE_THICKNESS
+            porch = surveyed_porch(self.S)
+            outer = porch.get('roof', {}).get('verge_outer_x')
+            if outer is not None and porch.get('verge'):
+                verge = self.S['as_built']['shift'][0] + outer + BARGE_THICKNESS
         holes = []
         for h in sysspec.get("rooflights", []):
             pl = next(p for p in sysm.planes() if p.id == h["plane"])
@@ -1061,6 +1068,9 @@ class StateBuilder:
             out.append(atom(f"RC-{sid}-{pl.id}-{k}", "cover", "tiles", meta, sig=None, plane=pl, poly=Q, layer="tiles",
                             mat="tile" if cat == "new" else "existing_tile", pkey=pl.key(), wing_cat=cat))
         for k, (pl, Q, mesh) in enumerate(lay["membrane"]):
+            if verge is not None:
+                Q = clip_half(Q,(-1,0,verge))
+                if len(Q)<3 or abs(area(Q))<1e-6: continue
             ws = pl.wing.spec
             meta = M("roof_layer", "roof", ws.get("membrane_label", cov["membrane_label"]), ws.get("drawing", cov["drawing"]),
                      "exact" if ws.get("category") == "new" else "assumed", "Breathable roof membrane under the tiles", False)
@@ -1070,12 +1080,12 @@ class StateBuilder:
             ws = pl.wing.spec
             # Use the same clipped tile polygons for battens and the rooflight.
             from hb_stage import battens_on
-            bm=battens_on(pl,[Q for tile,Q,_ in lay['tiles'] if tile is pl])
+            bm=battens_on(pl,[Q for tile,Q,_ in lay['tiles'] if tile is pl],verge=verge)
             if bm:
                 meta = M("roof_layer", "roof", ws.get("batten_label", cov["batten_label"]), ws.get("drawing", cov["drawing"]),
                          "exact" if ws.get("category") == "new" else "assumed", "Tiling battens", False)
                 out.append(atom(f"RB-{sid}-{pl.id}", "batten_set", "battens", meta, sig=None, plane=pl, mesh=bm, mat="batten",
-                                wing_cat=ws.get("category", "new"), pkey=pl.key()))
+                                wing_cat=ws.get("category", "new"), pkey=pl.key(), verge=verge))
             # rafters
             pieces = sysm.plane_pieces(pl)
             if not pieces: continue

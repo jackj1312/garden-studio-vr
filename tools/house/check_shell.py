@@ -510,9 +510,17 @@ if hall_rule:
             clear = hall_width(traced["poly"], depth)
             xs = [a[0] for a,b in zip(traced["poly"], traced["poly"][1:]+traced["poly"][:1]) if a[0] == b[0] and min(a[1],b[1]) <= depth < max(a[1],b[1])]
             origin = Vector((sum(xs)/len(xs), depth, z))
-            hits = [ray(origin, (sign,0,0), 2.0, not_shell) for sign in (-1,1)]
+            direct = [ray(origin, (sign,0,0), 2.0, not_shell) for sign in (-1,1)]
+            # The deeper station crosses flight 2. Keep its clearance alongside
+            # the drawing dimension; only its plastered underside is traversed.
+            def skip(part):
+                return not_shell(part) or (depth==3.16 and part["name"]=="ST-soffit-flight2")
+            hits = [ray(origin, (sign,0,0), 2.0, skip) for sign in (-1,1)]
             width = sum(hit["dist"] for hit in hits) if all(hits) else None
-            stations.append(dict(depth_m=depth, height_m=z, trace_m=clear, finished_m=width, drawing_m=target))
+            stations.append(dict(depth_m=depth, height_m=z, trace_m=clear, finished_m=width, drawing_m=target,
+                clear_ray_m=sum(h["dist"] for h in direct) if all(direct) else None,
+                first_hits=[h["part"]["name"] if h else None for h in direct],
+                wall_hits=[h["part"]["name"] if h else None for h in hits]))
             if abs(clear-target)>.0021 or width is None or abs(width-target)>.015:
                 F["a"].append(dict(room=rule["room_id"],kind="wrong finished hall width at measured station",**stations[-1]))
         INFO["a"]["measured_hall"] = stations

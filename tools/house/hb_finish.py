@@ -242,6 +242,7 @@ def apply(objs, spec_rooms, fin, N, log, finish_seq=0.85, views=()):
     nbox = 0; boxes = []
     for ob, p in live_parts():
         pr = p["props"]; g = pr.get("group", "")
+        if (p.get("atom") or {}).get("boxed_with"): continue  # enclosed by the host flitch box
         if g not in ("steel", "timber_beam") or ob.name.startswith(("SC-", "FS-")): continue
         bb = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
         lo = Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb))); hi = Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
@@ -580,6 +581,9 @@ def scribe_architraves(objs, N, log, reach=0.035):
                     for i in edge:
                         me.vertices[i].co = Mi @ (W[i] + d * side * (best - 0.0003))
                     moved += 1
+        # At a measured framed return the moulding already beds on its
+        # finished lining; extending its back here drives it through the jack.
+        if (p.get('atom') or {}).get('measured_trim_back'): continue
         # the back of each face's architrave beds onto the wall: where the wall face is set back (a stud head over a door),
         # each back vertex moves in to touch it (<= 15 mm), as a joiner scribes it
         W = [M @ v.co for v in me.vertices]

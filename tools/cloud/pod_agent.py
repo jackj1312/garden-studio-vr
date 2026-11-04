@@ -7,7 +7,7 @@ proxy (https://<pod>-8000.proxy.runpod.net), whose 100 s limit is why long comma
     POST /run                      body = a bash command; returns {"id"}; output goes to <work>/run-<id>.log
     GET  /status?id=<id>&tail=<n>  {"done", "code", "tail"}
     GET  /download?path=<file>     stream a file back"""
-import http.server, json, os, shutil, subprocess, threading, urllib.parse
+import http.server, json, os, shutil, subprocess, threading, urllib.parse, uuid
 
 TOKEN = os.environ.get("AGENT_TOKEN", "")
 WORK = os.environ.get("AGENT_WORK", "/tmp/job")
@@ -77,7 +77,7 @@ class Agent(http.server.BaseHTTPRequestHandler):
         path, _ = self._q()
         if path != "/run": return self._json({"error": "unknown"}, 404)
         cmd = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
-        jid = str(len(jobs) + 1); log = os.path.join(WORK, f"run-{jid}.log")
+        jid = uuid.uuid4().hex[:16]; log = os.path.join(WORK, f"run-{jid}.log")
         proc = subprocess.Popen(["bash", "-o", "pipefail", "-c", cmd], stdout=open(log, "w"), stderr=subprocess.STDOUT, cwd=WORK)
         jobs[jid] = {"proc": proc, "log": log}
         self._json({"id": jid, "log": log})

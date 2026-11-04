@@ -281,7 +281,7 @@
       0.26
     ],
     "sun_lux": 55000,
-    "sun_kelvin": 4300,
+    "sun_kelvin": 5200,
     "sky_intensity": 1.3,
     "fog_density": 0.008,
     "volumetric_scattering": 1.2,
@@ -315,6 +315,21 @@
         "width": 1.7,
         "height": 0.95,
         "lumens": 800
+      },
+      {
+        "position": [
+          1.75,
+          1.45,
+          -0.28
+        ],
+        "aim": [
+          1.75,
+          1.2,
+          -3.2
+        ],
+        "lumens": 1500,
+        "width": 1.4,
+        "height": 1.1
       }
     ],
     "description": "Warm late-afternoon golden hour through rear glazing, with balanced interior fill; supersedes bright summer-afternoon profile"
@@ -322,14 +337,14 @@
   "garden": {
     "description": "Early morning golden hour lights the east-facing front; not a physically contradictory sunset in front of the east facade",
     "sun_to_ue": [
-      -0.334,
-      0.919,
-      0.208
+      -0.324,
+      0.89,
+      0.32
     ],
-    "sun_lux": 45000,
-    "sun_kelvin": 4200,
-    "sky_intensity": 0.8,
-    "fog_density": 0.002
+    "sun_lux": 65000,
+    "sun_kelvin": 5500,
+    "sky_intensity": 2.5,
+    "fog_density": 0.0015
   },
   "effects": {
     "stove": {
@@ -397,10 +412,11 @@
     "window_candle": {
       "position": [
         1.75,
-        0.88,
-        -0.39
+        1.004,
+        -0.25
       ],
-      "status": "planned Unreal candle and flame; absent from browser preview"
+      "status": "planned Unreal candle and flame; absent from browser preview",
+      "support_y_m": 0.924
     }
   },
   "checks": [

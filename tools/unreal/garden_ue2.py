@@ -533,7 +533,7 @@ def lighting():
                  ("override_color_saturation", True), ("color_saturation", unreal.Vector4(0.93, 0.93, 0.93, 1.0)),
                  ("override_color_contrast", True), ("color_contrast", unreal.Vector4(0.97, 0.97, 0.97, 1.0)),
                  ("override_scene_fringe_intensity", True), ("scene_fringe_intensity", 0.3),
-                 ("override_grain_intensity", True), ("grain_intensity", 0.08),
+                 ("override_film_grain_intensity", True), ("film_grain_intensity", 0.08),
                  ("override_ambient_occlusion_intensity", True), ("ambient_occlusion_intensity", 0.6),
                  ("override_motion_blur_amount", True), ("motion_blur_amount", 0.0)):
         if v is not None: setp(st, k, v)
@@ -594,10 +594,12 @@ def render(shots, extra=None):
         cfg.find_or_add_setting_by_class(unreal.MoviePipelineImageSequenceOutput_JPG if fmt == "jpg" else unreal.MoviePipelineImageSequenceOutput_PNG)
         o = cfg.find_or_add_setting_by_class(unreal.MoviePipelineOutputSetting)
         o.output_directory = unreal.DirectoryPath(OUT + ("/film" if fmt == "jpg" else "")); o.output_resolution = unreal.IntPoint(*res)
-        o.file_name_format = "{sequence_name}.{frame_number}" if fmt == "jpg" else "{sequence_name}"; o.override_existing_output = True
+        o.file_name_format = "{sequence_name}.{frame_number}" if fmt == "jpg" else "{sequence_name}"; o.override_existing_output = False
+        if fmt=='jpg' and arg('--start-frame') is not None:
+            o.use_custom_playback_range=True;o.custom_start_frame=int(arg('--start-frame'));o.custom_end_frame=int(SC['video']['seconds']*SC['video']['fps'])
         aa = cfg.find_or_add_setting_by_class(unreal.MoviePipelineAntiAliasingSetting)
         aa.override_anti_aliasing = True; aa.anti_aliasing_method = unreal.AntiAliasingMethod.AAM_NONE
-        aa.spatial_sample_count = 1; aa.temporal_sample_count = SPP; aa.engine_warm_up_count = 48; aa.render_warm_up_count = 96
+        aa.spatial_sample_count = 1; aa.temporal_sample_count = min(SPP,16) if fmt=='jpg' else SPP; aa.engine_warm_up_count = 48; aa.render_warm_up_count = 96
         try:
             go = cfg.find_or_add_setting_by_class(unreal.MoviePipelineGameOverrideSetting)
             setp(go, "cinematic_quality_settings", True); setp(go, "texture_streaming", E("MoviePipelineTextureStreamingMethod", "DISABLED"))
@@ -605,6 +607,7 @@ def render(shots, extra=None):
         try:
             cv = cfg.find_or_add_setting_by_class(unreal.MoviePipelineConsoleVariableSetting)
             for k, v in cvars.items():
+                if fmt=="jpg" and k=="r.MotionBlurQuality":v=4
                 if hasattr(cv, "add_or_update_console_variable"): cv.add_or_update_console_variable(k, float(v))
             if not hasattr(cv, "add_or_update_console_variable"):
                 setp(cv, "start_console_commands", [f"{k} {v}" for k, v in cvars.items()])
@@ -648,7 +651,9 @@ def render_video():
     fb = unreal.CameraFilmbackSettings(); setp(fb, "sensor_width", 36.0); setp(fb, "sensor_height", 36.0 * h / w); setp(cc, "filmback", fb)
     setp(cc, "current_focal_length", 18.0 / math.tan(math.radians(V["hfov_deg"]) / 2)); setp(cc, "current_aperture", 11.0)
     fs = cc.get_editor_property("focus_settings"); setp(fs, "focus_method", E("CameraFocusMethod", "DISABLE")); setp(cc, "focus_settings", fs)
-    n = int(V["seconds"] * V["fps"]) + 1
+    if '--cinema' in A:
+        pp=cc.get_editor_property('post_process_settings');setp(pp,'override_motion_blur_amount',True);setp(pp,'motion_blur_amount',.35);setp(pp,'override_auto_exposure_bias',True);setp(pp,'auto_exposure_bias',6.0);setp(cc,'post_process_settings',pp);setp(cc,'post_process_blend_weight',1.)
+    n = int(V["seconds"] * V["fps"])
     seq = fresh("S_walk_film", f"{G}/Seq", unreal.LevelSequence, unreal.LevelSequenceFactoryNew())
     seq.set_display_rate(unreal.FrameRate(V["fps"], 1)); seq.set_playback_start(0); seq.set_playback_end(n)
     b = seq.add_spawnable_from_instance(cam)

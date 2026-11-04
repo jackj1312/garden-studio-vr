@@ -121,11 +121,24 @@ DDC_PATHS = "home/ue4/.config/Epic/UnrealEngine/Common/DerivedDataCache home/ue4
 
 
 def fetch(s, remote, local):
+    import shutil
     with agent(s, "GET", f"/download?path={remote}", stream=True, timeout=900) as resp:
         if resp.status_code != 200: return False
-        os.makedirs(os.path.dirname(local), exist_ok=True)
-        with open(local, "wb") as f:
-            for chunk in resp.iter_content(1 << 20): f.write(chunk)
+        parent=os.path.dirname(os.path.abspath(local))
+        os.makedirs(parent, exist_ok=True)
+        expected=int(resp.headers.get("Content-Length",0))
+        if expected and shutil.disk_usage(parent).free < expected + (1<<30):
+            print("Retained remotely: insufficient local space for", os.path.basename(local))
+            return False
+        temporary=local+".download"
+        written=0
+        with open(temporary, "wb") as f:
+            for chunk in resp.iter_content(1 << 20):
+                f.write(chunk);written+=len(chunk)
+            f.flush();os.fsync(f.fileno())
+        if expected and written!=expected:
+            raise IOError("Incomplete download retained at "+temporary)
+        os.replace(temporary,local)
     return True
 
 

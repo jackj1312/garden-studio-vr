@@ -67,7 +67,7 @@ try:
         studio.new_level()
         yaw,sign=studio.actor_transform(det)
         for mesh,_ in mapping.values():
-            actor=studio.EAS.spawn_actor_from_object(mesh,unreal.Vector(0,0,0),unreal.Rotator(0,yaw,0))
+            actor=studio.EAS.spawn_actor_from_object(mesh,unreal.Vector(0,0,0),unreal.Rotator(roll=0,pitch=0,yaw=yaw))
             actor.set_actor_scale3d(unreal.Vector(1,sign,1))
         studio.lighting()
         # These are photographic assessment frames. Keep visible texture detail.

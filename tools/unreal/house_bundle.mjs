@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {io,studioRequire,sha} from '../house/runtime_assets.mjs';
-const {transformMesh,joinPrimitives,prune}=studioRequire('@gltf-transform/functions');
+const {transformMesh,joinPrimitives,prune,mergeDocuments}=studioRequire('@gltf-transform/functions');
 const {getBounds}=studioRequire('@gltf-transform/core');
 const sharp=studioRequire('sharp');
 const [site,out,permission,sourceHash]=process.argv.slice(2);
@@ -17,6 +17,27 @@ assert.equal(sha(source),receipt.modelSHA256);
 const table=await json(path.join(site,'approved_2b_elements.json'));
 const replaced=new Set(table.elements.filter(e=>e.layer==='as_built').flatMap(e=>e.replaces||[]));
 const doc=await io.readBinary(source), root=doc.getRoot(),scene=root.listScenes()[0];
+const presentation=process.argv.includes('--presentation');
+const removed=[];
+if(presentation){
+ for(const n of [...root.listNodes()]){
+  if(!n.getMesh())continue;
+  const box=getBounds(n);const alcoveLamp=n.getName()==='Product' && Math.abs(box.min[0]-.20497)<.002 && Math.abs(box.min[1]-.9005)<.002 && Math.abs(box.min[2]+4.20003)<.002;
+  if(/^(Plant2_|island_tree_02_)/.test(n.getName()) || n.getExtras().spec_id==='LIV-SHELF' || alcoveLamp){
+   removed.push({name:n.getName(),...getBounds(n)});n.dispose();
+  }else if(n.getExtras().door_leaf && /livHall/.test(n.getName())){
+   // Apply the approved open door pose before batching, about its measured hinge.
+   const p=n.getExtras(),a=p.swing_deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a),[x,y,z]=p.hinge;
+   const rotation=[c,0,-s,0,0,1,0,0,s,0,c,0,x-c*x-s*z,0,z+s*x-c*z,1];
+   const mesh=n.getMesh().clone();for(const prim of mesh.listPrimitives())mesh.removePrimitive(prim).addPrimitive(prim.clone());
+   transformMesh(mesh,n.getWorldMatrix());transformMesh(mesh,rotation);n.setMesh(mesh).setTranslation([0,0,0]).setRotation([0,0,0,1]).setScale([1,1,1]);
+  }
+ }
+ const other=await io.read('out/unreal-house/alcove/Alcove.gltf');
+ const map=mergeDocuments(doc,other);
+ for(const child of other.getRoot().listScenes()[0].listChildren())scene.addChild(map.get(child));
+ for(const sc of root.listScenes())if(sc!==scene)sc.dispose();
+}
 const sourceNodes=root.listNodes(), buckets=new Map();
 let itemNodes=0, primitives=0;
 function visit(node,show){
@@ -64,7 +85,7 @@ for(const tex of root.listTextures()){
 for(const [i,m] of root.listMaterials().entries())m.setName('Finish_'+i).setExtras({});
 for(const a of root.listAccessors())a.setName('').setExtras({});
 for(const mesh of root.listMeshes())for(const prim of mesh.listPrimitives())prim.setExtras({});
-for(const b of root.listBuffers())b.setName('House').setURI('House.bin').setExtras({});
+for(const [i,b] of root.listBuffers().entries())b.setName('House'+i).setURI('House'+i+'.bin').setExtras({});
 scene.setName('House').setExtras({});root.setExtras({});
 await fs.mkdir(out,{recursive:true});await io.write(path.join(out,'House.gltf'),doc);
 const written=await json(path.join(out,'House.gltf'));
@@ -81,5 +102,7 @@ const cameras=[
   const [x,y,z]=eye,dx=aim[0]-x,dy=aim[1]-y,dz=aim[2]-z;
   return {name,pos_cm:[100*x,100*z,100*y],fwd:[dx,dz,dy],up:[0,0,1],focal_mm,sensor_w_mm:36,sensor_h_mm:20.25,w:2560,h:1440};
 });
-await fs.writeFile(path.join(out,'scene.json'),JSON.stringify({site:'House',cameras,bounds,check:cameras.map(c=>c.name),sun:{to_sun_ue:[-.45,.60,.66]},source:receipt.modelSHA256},null,2));
+await fs.writeFile(path.join(out,'scene.json'),JSON.stringify({site:'House',cameras,bounds,check:cameras.map(c=>c.name),sun:{to_sun_ue:[-.45,.60,.66]},source:presentation?sha(Buffer.concat([source,await fs.readFile('out/unreal-house/alcove/Alcove.bin'),Buffer.from('presentation-v1')])):receipt.modelSHA256},null,2));
 console.log(JSON.stringify({itemNodes,primitives,cells:cells.size,textures:count,colourOnly:averaged,furnishedItems:receipt.items.length}));
+
+if(presentation)await fs.writeFile(path.join(out,'replacement-placements.json'),JSON.stringify(removed,null,2));

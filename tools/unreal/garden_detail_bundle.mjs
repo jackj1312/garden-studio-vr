@@ -27,9 +27,14 @@ for(const node of src.getRoot().listNodes()){
  for(let j=0;j<n;j++){let u=Math.sqrt(rnd()),v=rnd();const q=a.map((x,k)=>(1-u)*x+u*(1-v)*b[k]+u*v*c[k]);if(q[2]<0||q[2]>23)continue;
  const key=kind+'_'+Math.floor(q[0]/3)+'_'+Math.floor(q[2]/3);counts[kind]++;
  if(kind==='grass'){
- const h=.025+rnd()*.033,w=.0018+rnd()*.0015,angle=rnd()*Math.PI*2,dx=Math.cos(angle)*w,dz=Math.sin(angle)*w,lean=.012*rnd(),f=.65+rnd()*.6;
- const col=[.085*f,.145*f,.025*f];q[1]+=.0005;
- triangle(key,grass,[q[0]-dx,q[1],q[2]-dz],[q[0]+dx,q[1],q[2]+dz],[q[0]+Math.sin(angle)*lean,q[1]+h,q[2]+Math.cos(angle)*lean],col);
+ const patch=.5+.25*Math.sin(q[0]*3.1+Math.sin(q[2]*1.7))+.25*Math.sin(q[2]*4.3-q[0]);
+ const h=.038+rnd()*.037+patch*.025,w=.0015+rnd()*.0018,angle=rnd()*Math.PI*2,dx=Math.cos(angle)*w,dz=Math.sin(angle)*w,lean=h*(.2+rnd()*.45),f=.65+rnd()*.35+patch*.3;
+ const col=[.075*f,.135*f,.023*f];q[1]+=.0005;
+ const a=[q[0]-dx,q[1],q[2]-dz],b=[q[0]+dx,q[1],q[2]+dz];
+ const mid=[q[0]+Math.sin(angle)*lean*.25,q[1]+h*.55,q[2]+Math.cos(angle)*lean*.25];
+ const ml=[mid[0]-dx*.6,mid[1],mid[2]-dz*.6],mr=[mid[0]+dx*.6,mid[1],mid[2]+dz*.6];
+ const tip=[q[0]+Math.sin(angle)*lean,q[1]+h,q[2]+Math.cos(angle)*lean];
+ triangle(key,grass,a,b,mr,col);triangle(key,grass,a,mr,ml,col);triangle(key,grass,ml,mr,tip,col);
  }else{
  const r=.009+rnd()*.012,h=.005+rnd()*.009,angle=rnd()*Math.PI*2,f=.55+rnd()*.85,col=[.26*f,.21*f,.145*f];
  const top=[q[0],q[1]+h,q[2]],ring=[];for(let k=0;k<6;k++){const t=angle+k*Math.PI/3;ring.push([q[0]+Math.cos(t)*r,q[1]+.001,q[2]+Math.sin(t)*r*.72]);}

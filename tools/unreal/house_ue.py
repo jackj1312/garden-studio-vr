@@ -11,23 +11,24 @@ import garden_ue2 as studio
 
 checkpoint=os.path.join(studio.OUT,'checkpoint.json')
 EAL=studio.EAL
+asset_root="/Game/House/Revision_"+studio.SC["source"][:12]+"/Assets"
 try:
     saved=json.load(open(checkpoint)) if os.path.exists(checkpoint) else {}
     restored=False
-    if saved.get('source')==studio.SC['source'] and saved.get('axisVerified') and EAL.does_asset_exist(saved.get('map','')):
+    if saved.get('source')==studio.SC['source'] and saved.get('assetRoot')==asset_root and saved.get('axisVerified') and EAL.does_asset_exist(saved.get('map','')):
         loaded=studio.LES.load_level(saved['map'])
         actors=studio.EAS.get_all_level_actors()
         restored=bool(loaded) and sum(isinstance(a,unreal.StaticMeshActor) for a in actors)>=saved.get('meshes',113) and any(isinstance(a,unreal.DirectionalLight) for a in actors)
         if restored: studio.LEVEL['path']=saved['map']
         else: studio.warn('Saved map did not restore the house; reconstructing from persistent imported meshes')
     if not restored:
-        if saved.get('source')==studio.SC['source']:
-            imported=[data.get_asset() for data in unreal.AssetRegistryHelpers.get_asset_registry().get_assets_by_path('/Game/House/Assets',recursive=True)
+        if saved.get('source')==studio.SC['source'] and saved.get('assetRoot')==asset_root:
+            imported=[data.get_asset() for data in unreal.AssetRegistryHelpers.get_asset_registry().get_assets_by_path(asset_root,recursive=True)
                       if str(data.asset_class_path.asset_name)=='StaticMesh']
         else:
             task=unreal.AssetImportTask()
             task.filename=os.path.join(studio.BUNDLE,'House.gltf')
-            task.destination_path='/Game/House/Assets'
+            task.destination_path=asset_root
             task.automated=True
             task.replace_existing=True
             task.save=True
@@ -35,7 +36,7 @@ try:
             imported=task.get_objects()
         meshes=[a for a in imported if isinstance(a,unreal.StaticMesh)]
         if not meshes:
-            meshes=[EAL.load_asset(p) for p in EAL.list_assets('/Game/House/Assets') if EAL.find_asset_data(p).asset_class_path.asset_name=='StaticMesh']
+            meshes=[EAL.load_asset(p) for p in EAL.list_assets(asset_root) if EAL.find_asset_data(p).asset_class_path.asset_name=='StaticMesh']
         if not meshes: raise RuntimeError('The glTF importer produced no house meshes')
         known=studio.SC['bounds']
         mapping={}
@@ -76,17 +77,21 @@ try:
                 continue
             if isinstance(actor,unreal.PostProcessVolume):
                 settings=actor.settings
-                studio.setp(settings,'override_grain_intensity',True);studio.setp(settings,'grain_intensity',0.)
+                studio.setp(settings,'override_film_grain_intensity',True);studio.setp(settings,'film_grain_intensity',0.)
                 studio.setp(settings,'override_scene_fringe_intensity',True);studio.setp(settings,'scene_fringe_intensity',0.)
                 studio.setp(actor,'settings',settings)
         unreal.EditorLoadingAndSavingUtils.save_current_level()
         EAL.save_directory('/Game/House',only_if_is_dirty=True,recursive=True)
-        saved={'source':studio.SC['source'],'map':studio.LEVEL['path'],'meshes':len(meshes),'axis':studio.REPORT['axis'],'axisVerified':True}
+        saved={'source':studio.SC['source'],'assetRoot':asset_root,'map':studio.LEVEL['path'],'meshes':len(meshes),'axis':studio.REPORT['axis'],'axisVerified':True}
         with open(checkpoint+'.part','w') as f:json.dump(saved,f,indent=2)
         os.replace(checkpoint+'.part',checkpoint)
     if '--garden-detail' in sys.argv:
         import garden_look
         garden_look.apply()
+    mode=studio.arg('--look','interior')
+    if '--cinema' in sys.argv:
+        import house_cinema
+        house_cinema.apply(mode)
     shots=studio.cameras()
     pending=[]
     for cam,res,description in shots:
@@ -94,12 +99,13 @@ try:
         studio.setp(component,'post_process_blend_weight',1.)
         pp=component.get_editor_property('post_process_settings')
         studio.setp(pp,'override_auto_exposure_bias',True)
-        studio.setp(pp,'auto_exposure_bias',5.5 if description['name']!='Front_left_garden' else .35)
+        studio.setp(pp,'auto_exposure_bias',(1.5 if mode=='garden' else 6.0) if '--cinema' in sys.argv else (5.5 if description['name']!='Front_left_garden' else .35))
         studio.setp(component,'post_process_settings',pp)
         target=os.path.join(studio.OUT,'S_'+description['name']+'.png')
         if not os.path.isfile(target) or os.path.getsize(target)<4096:
             pending.append((cam,res,description))
-    if pending: studio.render(pending)
+    extra=studio.render_video() if '--film' in sys.argv else []
+    if pending or extra: studio.render(pending,extra=extra)
     else: unreal.SystemLibrary.quit_editor()
 except Exception:
     error=traceback.format_exc()

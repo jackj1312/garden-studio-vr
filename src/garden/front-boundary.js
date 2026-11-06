@@ -31,7 +31,8 @@ export function createFrontBoundary(T,scene){
   const panelVertices=[],panelUV=[];
   function panel(lo,hi,bottom,top,z){
    const u=.074,rot=Math.PI/4,c=Math.cos(rot),s=Math.sin(rot),cx=(lo+hi)/2,cy=(bottom+top)/2;
-   for(let a=-25;a<25;a++)for(let b=-25;b<25;b++)for(const [ox,oy,w,h] of [[0,0,3,1],[3,0,1,3]]){
+   const aLimit=Math.ceil((top-bottom)/(6*u*Math.SQRT2))+3,bLimit=Math.ceil((hi-lo)/(2*u*Math.SQRT2))+4;
+   for(let a=-aLimit;a<=aLimit;a++)for(let b=-bLimit;b<=bLimit;b++)for(const [ox,oy,w,h] of [[0,0,3,1],[3,0,1,3]]){
     let p=[[.05,.05],[w-.05,.05],[w-.05,h-.05],[.05,h-.05]].map(([x,y])=>{x=(x+3*a+b+ox)*u;y=(y+3*a-b+oy)*u;return[cx+x*c-y*s,cy+x*s+y*c];});
     for(const [ax,n,sign] of [[0,lo,1],[0,hi,-1],[1,bottom,1],[1,top,-1]]){if(!p.length)break;p=clip(p,ax,n,sign);}
     for(let k=1;k<p.length-1;k++)for(const q of [p[0],p[k],p[k+1]]){
@@ -53,7 +54,7 @@ export function createFrontBoundary(T,scene){
     clusters.forEach((v,i)=>{m.compose(new T.Vector3(...v),q,new T.Vector3(.095,.09,.10));leaves.setMatrixAt(i,m);leaves.setColorAt(i,new T.Color().setHSL(.22+rand()*.04,.35+rand()*.15,.14+rand()*.10));});
     leaves.castShadow=true;leaves.receiveShadow=true;leaves.name='Neighbour hedge irregular closed foliage';group.add(leaves);continue;
    }
-   const height=b.max.y-ground,pier=.34,capWidth=.42,span=hi-lo,sections=Math.max(1,Math.ceil(span/3.0));
+   const height=b.max.y-ground,pier=.34,capWidth=.42,span=hi-lo,sections=1;
    const wallHeight=height-.14,bodyTop=wallHeight-.215;
    const core=box(span,wallHeight,.215,(lo+hi)/2,ground+wallHeight/2,z,mortar);core.name='Continuous owner wall core';barriers.push(core);
    for(let row=0;row*.075<wallHeight;row++){

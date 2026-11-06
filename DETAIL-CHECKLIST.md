@@ -274,3 +274,5 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Run tools/review/front_boundary_check.mjs; inspect front and angled views for continuous wall and two end openings (row 543)
 - Wall ray sweep, street height and version switch checks in tools/review/front_boundary_check.mjs (row 544)
 - Wall detail and driveway-angle screenshots show brick-faced end strip (row 545)
+- front_boundary_check.mjs asserts two piers and a single infill; front view confirms (row 546)
+- Project traced ground edges onto at least two solved original video frames before publishing street correction (row 547)

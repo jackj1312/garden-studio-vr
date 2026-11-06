@@ -19,6 +19,7 @@ const box=new T.Box3().setFromObject(core);assert(Math.abs(box.min.x-expected.le
 const actual=new T.Box3();for(const child of wall.group.children)if(!child.name.startsWith('Neighbour hedge'))actual.expandByObject(child);
 assert(Math.abs(actual.min.x-expected.left)<1e-5);assert(Math.abs(actual.max.x-expected.right)<1e-5);assert(Math.abs(actual.max.y-expected.top)<1e-5,'Actual cap top differs from hedge');
 const dims=wall.group.userData.wallDimensions;assert(Math.abs(dims.height-(expected.top-expected.ground))<1e-7);
+assert.equal(dims.pierXs.length,2,'Exactly two end piers required');assert.equal(wall.group.userData.wallRuns.length,1,'Infill must be uninterrupted');
 const ray=(x)=>new T.Ray(new T.Vector3(x,expected.ground+.8,expected.front+2),new T.Vector3(0,0,-1));
 for(let x=expected.left+.02;x<expected.right;x+=.05)assert(wall.blockRay(ray(x),3),`Wall hole at ${x}`);
 assert.equal(wall.blockRay(ray(.2),3),null,'Pedestrian opening blocked');assert.equal(wall.blockRay(ray(10),3),null,'Driveway blocked');

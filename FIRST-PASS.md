@@ -89,8 +89,10 @@ before Jack sees the build.
 - **F334 (row 530, ruled)** Garden walking was hidden behind Minimise and view buttons disappeared while walking Rule: Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode
 - **F335 (row 531, ruled)** Garden header title squeezed beneath action buttons Rule: Wrap header actions below the title in narrow garden panels
 - **F336 (row 532, ruled)** New vehicle kinds omitted from catalogue expectation and guide picking Rule: Test guide picking and save exclusion with catalogue changes
+- **F337 (row 533, ruled)** Cached catalogue lacked new vehicle kinds and blocked garden startup Rule: Version catalogue imports when adding editor kinds
 
 ## Lessons from the latest rounds (newest first)
+- house-wip · codex-garden · row 533: Cached catalogue lacked new vehicle kinds and blocked garden startup → **Version catalogue imports when adding editor kinds** (check: Reload actual browser and verify new tools)
 - house-wip · codex-garden · row 532: New vehicle kinds omitted from catalogue expectation and guide picking → **Test guide picking and save exclusion with catalogue changes** (check: Vehicle regression tests)
 - house-wip · codex-garden · row 531: Garden header title squeezed beneath action buttons → **Wrap header actions below the title in narrow garden panels** (check: Inspect header at desktop and phone widths)
 - house-wip · codex-garden · row 530: Garden walking was hidden behind Minimise and view buttons disappeared while walking → **Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode** (check: Switch every view pair and retain selected footprint and history)
@@ -150,7 +152,6 @@ before Jack sees the build.
 - house-wip · codex-look · row 476: Floor photographs look flat at eye level and the saved model provides no textile or finish response to light. → **Carry matching colour, normal and roughness scans through the planner, walkthrough and saved GLB and inspect at grazing light.** (check: Actual baked material has all three inputs, correct scale and metre UVs; use matched lit detail views.)
 - house-wip · codex-furnish · row 475: The separate SVG planner clears the wall hit lines when redrawing furniture selection. → **Use a permanent face layer in the SVG plan and check wall switching after a redraw.** (check: Click two distinct wall spans in the client room planner.)
 - house-wip · codex-look · row 474: Switching on the lounge table lamp and then all lamps caused frames of 7733 and 7683 ms. → **Prepare combinations used by actual room windows and practical fixtures before Explore; measure first switch and grouped lamps on the normal route.** (check: Measure individual and grouped first-use switches in the furnished lounge.)
-- house-wip · codex-furnish · row 473: Moving the bowl makes unrelated kitchen units flicker and the bowl can jump. → **Keep the original projected grab plane, bound shallow-angle drag response and update only changed instance batches.** (check: Move a bowl and compare stationary batch matrices and geometry versions.)
 
 ## Every rule we have learned, by gate (CORRECTIONS-LOG.md)
 ### G0
@@ -590,6 +591,7 @@ before Jack sees the build.
 - (530) Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode  _[Garden walking was hidden behind Minimise and view buttons disappeared while walking]_
 - (531) Wrap header actions below the title in narrow garden panels  _[Garden header title squeezed beneath action buttons]_
 - (532) Test guide picking and save exclusion with catalogue changes  _[New vehicle kinds omitted from catalogue expectation and guide picking]_
+- (533) Version catalogue imports when adding editor kinds  _[Cached catalogue lacked new vehicle kinds and blocked garden startup]_
 
 ### G7
 - (13) Site mode shows the site's own name and hides demo controls  _[Viewer showed the demo's "tattoo studio" text on a real garden]_

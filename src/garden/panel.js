@@ -1,6 +1,6 @@
-import { KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES } from './catalogue.mjs';
+import { KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES } from './catalogue.mjs?v=vehicles1';
 import { centerOf, measureGeometry, outlineMeasurements, transformGeometry } from './geometry.mjs';
-import { angleOf } from './drawing.mjs';
+import { angleOf } from './drawing.mjs?v=vehicles1';
 
 const methods = {
   auto: 'Auto-fit stroke', straight: 'Straight runs', curve: 'Smooth curve', arc: 'Circular arc',

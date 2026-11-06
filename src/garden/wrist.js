@@ -1,7 +1,7 @@
 import { helpPage } from '../editor-help.js';
-import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs';
+import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs?v=vehicles1';
 import { measureGeometry, outlineMeasurements } from './geometry.mjs';
-import { angleOf } from './drawing.mjs';
+import { angleOf } from './drawing.mjs?v=vehicles1';
 
 const BASE = 'outbuilding-base';
 const W = 704, H = 816, WRIST_W = .265, WRIST_H = WRIST_W * H / W;

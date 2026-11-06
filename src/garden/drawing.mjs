@@ -1,5 +1,5 @@
 import {arc, circle, rectangle, point, fitStroke, measureGeometry, transformGeometry, centerOf, handlesOf, moveHandle, isClosed, sampleGeometry, validateGeometry} from './geometry.mjs';
-import {KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES, newFeatureId, createFeature} from './catalogue.mjs';
+import {KINDS, MATERIALS, PALETTES, PATTERNS, SPECIES, newFeatureId, createFeature} from './catalogue.mjs?v=vehicles1';
 
 const rad = Math.PI / 180;
 const distance = (a,b) => Math.hypot(a[0]-b[0],a[1]-b[1]);

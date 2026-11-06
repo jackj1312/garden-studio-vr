@@ -264,3 +264,4 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Switch every view pair and retain selected footprint and history (row 530)
 - Inspect header at desktop and phone widths (row 531)
 - Vehicle regression tests (row 532)
+- Reload actual browser and verify new tools (row 533)

@@ -1,13 +1,13 @@
 import * as T from 'three';
 import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
-import {GardenStore} from './store.mjs';
+import {GardenStore} from './store.mjs?v=vehicles1';
 import {createGardenPanel} from './panel.js?v=views3';
-import {createGardenScene} from './scene.js';
+import {createGardenScene} from './scene.js?v=vehicles1';
 import {createGardenTerrain} from './terrain.js';
 import {createGardenPlan} from './plan.js';
 import {createGardenWrist} from './wrist.js';
-import {createDrawing,angleOf} from './drawing.mjs';
-import {createFeature} from './catalogue.mjs';
+import {createDrawing,angleOf} from './drawing.mjs?v=vehicles1';
+import {createFeature} from './catalogue.mjs?v=vehicles1';
 import {fitStroke,handlesOf,outlineMeasurements} from './geometry.mjs';
 
 export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,walkPreview,openFurniture,indoor,occlusion,normalPass}) {

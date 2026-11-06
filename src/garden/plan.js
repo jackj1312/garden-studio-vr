@@ -1,5 +1,5 @@
 import {sampleGeometry, handlesOf, centerOf, isClosed, outlineMeasurements} from './geometry.mjs';
-import {KINDS,MATERIALS,SPECIES} from './catalogue.mjs';
+import {KINDS,MATERIALS,SPECIES} from './catalogue.mjs?v=vehicles1';
 
 const cssColour=(m, fallback='#a38f74')=>m?.color??fallback;
 export function createGardenPlan(T,{renderer,scene,canvas,terrain}) {

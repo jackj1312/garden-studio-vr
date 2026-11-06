@@ -544,6 +544,7 @@ same run; tools/check_site_export.py fails if it is older than either GLB).
 | 530 | Garden walking was hidden behind Minimise and view buttons disappeared while walking | Jack view-switch request | View controls were nested inside the collapsible tool body | Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode | G6 |
 | 531 | Garden header title squeezed beneath action buttons | Visual review | Header action row and title competed for narrow panel width | Wrap header actions below the title in narrow garden panels | G6 |
 | 532 | New vehicle kinds omitted from catalogue expectation and guide picking | Guide review and tests | Temporary category added without updating exhaustive dispatch | Test guide picking and save exclusion with catalogue changes | G6 |
+| 533 | Cached catalogue lacked new vehicle kinds and blocked garden startup | Browser reload | Changed catalogue retained its old module URL | Version catalogue imports when adding editor kinds | G6 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

@@ -1,5 +1,5 @@
 /** Metre-based proposal meshes. The host viewer owns the surveyed terrain and its cut mask. */
-import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs';
+import { KINDS, MATERIALS, PATTERNS, PALETTES, SPECIES } from './catalogue.mjs?v=vehicles1';
 import { isClosed, sampleGeometry } from './geometry.mjs';
 
 const TAU = 2*Math.PI;

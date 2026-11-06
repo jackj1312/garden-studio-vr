@@ -1,4 +1,4 @@
-import { KINDS, newFeatureId, validateFeatureGeometry } from './catalogue.mjs';
+import { KINDS, newFeatureId, validateFeatureGeometry } from './catalogue.mjs?v=vehicles1';
 import { transformGeometry } from './geometry.mjs';
 
 const permanent = objects => objects.filter(f => !['car-guide','van-guide'].includes(f.kind));

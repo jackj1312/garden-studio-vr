@@ -54,6 +54,8 @@ function kind(label, form, material, pattern, palette, extras = {}) {
   return { label, form, material, pattern, palette, width: 0, height: 0, level: 0, coping: '', ...extras };
 }
 export const KINDS = {
+  'car-guide': kind('Car size guide (temporary)', 'area', 'steel', 'plain', 'cool', {height:1.5}),
+  'van-guide': kind('Van size guide (temporary)', 'area', 'steel', 'plain', 'cool', {height:2.5}),
   'outbuilding-base': kind('Outbuilding base', 'area', 'concrete', 'plain', 'cool', { height: .15, level: .10 }),
   patio: kind('Patio', 'area', 'paving', 'laid-flags', 'natural'),
   path: kind('Path', 'line', 'paving', 'running-bond', 'natural', { width: .90 }),

@@ -1,6 +1,8 @@
 import { KINDS, newFeatureId, validateFeatureGeometry } from './catalogue.mjs';
 import { transformGeometry } from './geometry.mjs';
 
+const permanent = objects => objects.filter(f => !['car-guide','van-guide'].includes(f.kind));
+
 function sameData(a, b) {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
@@ -71,7 +73,7 @@ export class GardenStore {
   // Public objects are detached. A move or recolour only enters history through put().
   get objects() { return structuredClone(this.#objects); }
   get revision() { return this.#revision; }
-  get dirty() { return !sameData(this.#objects, this.#baseline); }
+  get dirty() { return !sameData(permanent(this.#objects), permanent(this.#baseline)); }
   get canUndo() { return this.#undo.length > 0; }
   get canRedo() { return this.#redo.length > 0; }
   get saving() { return this.#saving !== null; }
@@ -179,12 +181,12 @@ export class GardenStore {
     const baseRevision = this.#revision;
     const remote = await this.#request({
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseRevision, section: 'garden', garden: { schema: 1, objects: snapshot } }),
+      body: JSON.stringify({ baseRevision, section: 'garden', garden: { schema: 1, objects: permanent(snapshot) } }),
     });
     if (remote.revision <= baseRevision) throw new Error('The server did not acknowledge this garden revision');
     this.#revision = remote.revision;
-    this.#baseline = sameData(snapshot, remote.objects) ? snapshot : remote.objects;
-    if (this.#objects === snapshot) this.#objects = this.#baseline;
+    this.#baseline = remote.objects;
+    if (this.#objects === snapshot) this.#objects = [...this.#baseline,...snapshot.filter(f => !permanent([f]).length)];
     return true;
   }
 

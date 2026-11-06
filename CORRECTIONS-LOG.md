@@ -541,6 +541,9 @@ same run; tools/check_site_export.py fails if it is older than either GLB).
 | 527 | Progress monitor reported zero video frames while files were being written | Remote file inventory | Unreal JPEG output uses .jpeg while the temporary monitor expected .jpg | Inspect actual output filenames and derive frame inventories from the renderer output rather than an assumed suffix | G8 |
 | 528 | The gallery video stayed hidden because its scripted fetch failed | Chrome playback test | Chrome rejects scripted binary fetches on this server and native playback cannot seek reliably without byte-range support | For a self-contained review on the unchanged server, package media as a local data source and verify full playback and backward seeking before delivery | G8 |
 | 529 | The gallery existed locally but its direct renders URL returned 404 on the LAN server | LAN link verification | The LAN server deliberately allowlists public resources; the unrestricted loopback route does not imply LAN access | Package render deliveries through the existing inventory-limited preview route and test the exact shared URL | G8 |
+| 530 | Garden walking was hidden behind Minimise and view buttons disappeared while walking | Jack view-switch request | View controls were nested inside the collapsible tool body | Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode | G6 |
+| 531 | Garden header title squeezed beneath action buttons | Visual review | Header action row and title competed for narrow panel width | Wrap header actions below the title in narrow garden panels | G6 |
+| 532 | New vehicle kinds omitted from catalogue expectation and guide picking | Guide review and tests | Temporary category added without updating exhaustive dispatch | Test guide picking and save exclusion with catalogue changes | G6 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

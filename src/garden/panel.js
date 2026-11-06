@@ -7,6 +7,7 @@ const methods = {
   circle: 'Circle', rectangle: 'Rectangle', square: 'Square', corners: 'Click corners',
 };
 const groups = {
+  'Temporary size guides': ['car-guide','van-guide'],
   Surfaces: ['patio','path','lawn','gravel','decking'],
   Structures: ['outbuilding-base','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging'],
   Planting: ['planting-bed','plant','tree'],
@@ -88,14 +89,15 @@ export function createGardenPanel({ action }) {
       </div>
     </header>
     <div class="gd-walk-hint"><span class="gd-mouse-walk">WASD to walk · Mouse to look · Esc releases · Tab shows tools</span><span class="gd-touch-walk">Use the thumb controls to walk and look. Tap Show tools to draw again.</span></div>
-    <div class="gd-body">
       <div class="gd-view-row">
         <button type="button" data-cmd="vr" hidden>Enter VR</button>
         <div class="gd-segment gd-views" aria-label="Garden view">
-          <button type="button" data-cmd="view" data-val="bird">Bird’s-eye</button>
-          <button type="button" data-cmd="view" data-val="stand">Standing</button>
+          <button type="button" data-cmd="view" data-val="bird">Plan</button>
+          <button type="button" data-cmd="view" data-val="stand">3D</button>
+          <button type="button" data-cmd="view" data-val="walk">Walk</button>
         </div>
       </div>
+    <div class="gd-body">
       <section class="gd-section gd-draw-section">
         <h3 class="gd-heading">Tools</h3>
         <div class="gd-segment gd-modes" aria-label="Edit mode">
@@ -200,6 +202,7 @@ export function createGardenPanel({ action }) {
     const intro = el('div', 'gd-object-heading');
     intro.append(el('span', 'gd-kind-tag', KINDS[f.kind].label), el('span', 'gd-metrics'));
     inspector.append(intro);
+    if(f.kind.endsWith('-guide')) inspector.append(el('p','gd-hint','Temporary size envelope — excluded from Save garden. Generic dimensions include mirror allowance; type your actual vehicle width, length and height. Drag to move; edit Rotation to turn. Delete removes it.'));
     const details = box(inspector);
     field(details, 'label', 'Name', { type: 'text', wide: true });
     if (f.kind === 'tree' || f.kind === 'plant') {
@@ -211,7 +214,7 @@ export function createGardenPanel({ action }) {
       field(dims, 'radius', 'Radius', { unit: 'm', min: .001 });
     } else if (f.geometry.type !== 'point') {
       field(dims, 'sizeX', 'Plan width', { unit: 'm', min: .001 });
-      field(dims, 'sizeZ', 'Plan depth', { unit: 'm', min: .001 });
+      field(dims, 'sizeZ', f.kind.endsWith('-guide') ? 'Vehicle length' : 'Plan depth', { unit: 'm', min: .001 });
     }
     if (f.geometry.type !== 'circle') field(dims, 'angle', 'Rotation', { unit: '°' });
     field(dims, 'positionX', 'Centre X', { unit: 'm' });
@@ -284,7 +287,7 @@ export function createGardenPanel({ action }) {
     if (cmd === 'collapse') {
       action('collapse');
     } else if (cmd === 'view') {
-      if ((val === 'bird') !== !!state.bird) action('view');
+      action('view-mode', val);
     } else if (cmd === 'tool') action('tool', val);
     else action(cmd);
   });
@@ -313,7 +316,7 @@ export function createGardenPanel({ action }) {
     list.value = selected?.id || '';
     count.textContent = String(state.objects.length);
     for (const b of root.querySelectorAll('button[data-cmd=tool]')) b.setAttribute('aria-pressed', String(b.dataset.val === state.tool));
-    for (const b of root.querySelectorAll('button[data-cmd=view]')) b.setAttribute('aria-pressed', String((b.dataset.val === 'bird') === !!state.bird));
+    for (const b of root.querySelectorAll('button[data-cmd=view]')) b.setAttribute('aria-pressed', String(b.dataset.val === (state.collapsed ? 'walk' : state.bird ? 'bird' : 'stand')));
     kind.value = state.kind; method.value = state.method;
     method.disabled = KINDS[state.kind]?.form === 'point';
     drawActions.hidden = state.tool !== 'draw';

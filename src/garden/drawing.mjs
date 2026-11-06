@@ -15,6 +15,7 @@ export function angleOf(g) {
 }
 export function drawnGeometry(kind,method,coords,finish=false) {
   const form=KINDS[kind].form, start=coords[0], end=coords.at(-1);
+  if (kind==='car-guide'||kind==='van-guide') return rectangle(end,kind==='car-guide'?2:2.4,kind==='car-guide'?4.5:6);
   if (form==='point') return point(end);
   if (method==='circle') return circle(start,distance(start,end));
   if (method==='rectangle') return rectangle([(start[0]+end[0])/2,(start[1]+end[1])/2],Math.abs(end[0]-start[0]),Math.abs(end[1]-start[1]));
@@ -154,7 +155,7 @@ export function createDrawing({store,pick,ground,changed}) {
     const f=selected();
     try{
       state.status='';
-      if(name==='kind'){if(!KINDS[value])throw Error('Unknown feature');cancel();state.kind=value;state.tool='draw';state.selectedId=null;if(value==='outbuilding-base')state.method='corners';if(KINDS[value].form==='line'&&['circle','square','rectangle'].includes(state.method))state.method='auto';}
+      if(name==='kind'){if(!KINDS[value])throw Error('Unknown feature');cancel();state.kind=value;state.tool='draw';state.selectedId=null;if(value==='outbuilding-base')state.method='corners';if(value.endsWith('-guide'))state.method='rectangle';if(KINDS[value].form==='line'&&['circle','square','rectangle'].includes(state.method))state.method='auto';}
       else if(name==='method'){cancel();state.method=value;state.tool='draw';}
       else if(name==='tool'){cancel();state.tool=value;}
       else if(name==='select'){cancel();state.selectedId=value;state.tool='select';}

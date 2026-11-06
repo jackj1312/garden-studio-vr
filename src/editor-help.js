@@ -28,13 +28,14 @@ const pages = {
     ["Quest", "Choose tools and thumbnails on the left wrist. Point the right ray and hold the trigger to move furniture, then release to place it. Push the right stick sideways to turn a selected piece. Bird’s-eye brings the measured room plan into reach."],
   ]],
   garden: ["Garden design", [
+    ["Temporary vehicles", "Choose Car size guide or Van size guide and click the ground. Select and drag it, or type width, length, height and rotation. These generic envelopes are only size references: use your actual vehicle dimensions. They are excluded from Save garden and disappear on reload."],
     ["Draw in metres", "Pick a feature and a drawing method. Drag from the centre for a circle or square, or between opposite corners for a rectangle. Sweep an outline for a smooth curve. Complete the loop to fill an area."],
     ["Adjust the drawing", "Choose Select. Drag the feature to move it, or drag a point, tangent or edge handle. Use the size and angle fields for exact dimensions. Copy, delete, undo and redo act on the current design."],
     ["Levels and planting", "A positive level raises a shape and a negative level sinks it. Add steps to connect the two levels. Choose a material, paving pattern or bed palette. Place each tree or plant with its own click."],
     ["iPad and Apple Pencil", "Use Apple Pencil to draw, select and drag handles. After the first Pencil stroke, a finger pans the plan; two fingers pinch to zoom. Without a Pencil, one finger draws and two fingers navigate."],
     ["Outbuilding base", "Choose Outbuilding base, click each corner and finish, or choose a circle, rectangle or smooth outline. Read edge or curved lengths, area and perimeter in metres. Set slab thickness and top level. Save, then Copy base reference for a later design session."],
     ["Walk with the tools minimised", "Furniture returns to the room editor. Minimise returns to standing view. On a computer, move the mouse to turn your head and use WASD or the arrow keys to walk. Click the garden to start mouse look again. In the in-app browser, either edge continues the turn. Escape frees the pointer. Tab or Show tools restores the previous design view. On touchscreens use the thumb controls."],
-    ["Plan and walkthrough", "Bird’s-eye looks straight down on the plot. Standing returns to the house and garden. Save writes the design for this house version. Open the same site and version on your other device."],
+    ["Plan and walkthrough", "Plan looks straight down on the plot for measured drawing. 3D lets you edit in the house and garden view. Walk minimises drawing tools so you can move around. The three view buttons stay visible; switching preserves your design. Save writes the design for this house version. Open the same site and version on your other device."],
     ["Quest", "Aim the right ray at the left wrist to choose a tool. Hold the right trigger and sweep, or drag out a perfect shape. In Select, grab a point or the shape. Push the right stick up or down to change the selected level. The wrist switches between Bird’s-eye and Standing."],
   ]],
   scan: ["Room scan", [

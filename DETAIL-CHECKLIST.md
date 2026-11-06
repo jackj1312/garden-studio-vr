@@ -261,3 +261,6 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Final inventory and encoder use .jpeg and verify frames 0000 through 0575 (row 527)
 - Desktop playback reaches 24 seconds; seeking and phone player load pass (row 528)
 - The immutable LAN review URL and its media return 200 without altering the house current-preview pointer (row 529)
+- Switch every view pair and retain selected footprint and history (row 530)
+- Inspect header at desktop and phone widths (row 531)
+- Vehicle regression tests (row 532)

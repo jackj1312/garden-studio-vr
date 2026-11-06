@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
 import {GardenStore} from './store.mjs';
-import {createGardenPanel} from './panel.js?v=walk1';
+import {createGardenPanel} from './panel.js?v=views3';
 import {createGardenScene} from './scene.js';
 import {createGardenTerrain} from './terrain.js';
 import {createGardenPlan} from './plan.js';
@@ -122,6 +122,11 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
       if(name==='vr'){document.getElementById('vr').click();return;}
       if(name==='furniture'){await openFurniture();return;}
       if(name==='collapse'){collapse(!collapsed);return;}
+      if(name==='view-mode'){
+        if(value==='walk')collapse(true);
+        else if(value==='bird'||value==='stand'){if(collapsed)collapse(false);view(value==='bird');}
+        return;
+      }
       if(name==='view'){view(!bird);return;} if(name==='close'){leave();return;}
       if(name==='save'){await store.save();status='Saved · revision '+store.revision;draw.state.conflict=false;}
       else if(name==='reload'){

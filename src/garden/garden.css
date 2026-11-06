@@ -197,3 +197,11 @@
 .gd-collapsed .gd-walk-hint {display:block}
 .gd-touch-walk {display:none}
 @media (pointer:coarse){.gd-touch-walk{display:inline}.gd-mouse-walk{display:none}}
+
+/* View navigation remains available when drawing tools are minimised. */
+[data-garden-panel] > .gd-view-row { padding: 8px 12px; flex-shrink: 0; }
+[data-garden-panel] > .gd-view-row .gd-views { flex: 1; }
+[data-garden-panel] > .gd-view-row .gd-views button { flex: 1; min-height: 40px; }
+[data-garden-panel] .gd-header { flex-wrap: wrap; }
+[data-garden-panel] .gd-brand { flex: 1 0 100%; }
+[data-garden-panel] .gd-head-actions { flex-wrap: wrap; }

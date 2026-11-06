@@ -86,8 +86,14 @@ before Jack sees the build.
 - **F322 (row 518, ruled)** Replacement alcove faces the wall and the old lounge camera is obscured by the open entrance door; fire has a green edge artifact Rule: Use signed spec yaw through the house adapter; recheck cameras after door poses; use ordered smoothstep bounds and visually inspect emissive effects
 - **F323 (row 519, ruled)** The changed alcove orientation reused the old imported model; flame and steam were too dim under physical exposure Rule: Hash every geometry and transform input; judge emissive effects at the actual physical camera exposure and suppress visible point-light source reflections
 - **F330 (row 526, ruled)** Small green optical ghosts remain beside the bright stove Rule: Do not close an optical-artifact finding from an assumed cause; isolate material, reflection and post-processing contributions before declaring it fixed
+- **F334 (row 530, ruled)** Garden walking was hidden behind Minimise and view buttons disappeared while walking Rule: Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode
+- **F335 (row 531, ruled)** Garden header title squeezed beneath action buttons Rule: Wrap header actions below the title in narrow garden panels
+- **F336 (row 532, ruled)** New vehicle kinds omitted from catalogue expectation and guide picking Rule: Test guide picking and save exclusion with catalogue changes
 
 ## Lessons from the latest rounds (newest first)
+- house-wip · codex-garden · row 532: New vehicle kinds omitted from catalogue expectation and guide picking → **Test guide picking and save exclusion with catalogue changes** (check: Vehicle regression tests)
+- house-wip · codex-garden · row 531: Garden header title squeezed beneath action buttons → **Wrap header actions below the title in narrow garden panels** (check: Inspect header at desktop and phone widths)
+- house-wip · codex-garden · row 530: Garden walking was hidden behind Minimise and view buttons disappeared while walking → **Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode** (check: Switch every view pair and retain selected footprint and history)
 - house-wip · codex-unreal · row 529: The gallery existed locally but its direct renders URL returned 404 on the LAN server → **Package render deliveries through the existing inventory-limited preview route and test the exact shared URL** (check: The immutable LAN review URL and its media return 200 without altering the house current-preview pointer)
 - house-wip · codex-unreal · row 528: The gallery video stayed hidden because its scripted fetch failed → **For a self-contained review on the unchanged server, package media as a local data source and verify full playback and backward seeking before delivery** (check: Desktop playback reaches 24 seconds; seek to 13.5 seconds and phone player load pass)
 - house-wip · codex-unreal · row 527: Progress monitor reported zero video frames while files were being written → **Inspect actual output filenames and derive frame inventories from the renderer output rather than an assumed suffix** (check: Final inventory and encoder use .jpeg and verify frames 0000 through 0575)
@@ -145,9 +151,6 @@ before Jack sees the build.
 - house-wip · codex-furnish · row 475: The separate SVG planner clears the wall hit lines when redrawing furniture selection. → **Use a permanent face layer in the SVG plan and check wall switching after a redraw.** (check: Click two distinct wall spans in the client room planner.)
 - house-wip · codex-look · row 474: Switching on the lounge table lamp and then all lamps caused frames of 7733 and 7683 ms. → **Prepare combinations used by actual room windows and practical fixtures before Explore; measure first switch and grouped lamps on the normal route.** (check: Measure individual and grouped first-use switches in the furnished lounge.)
 - house-wip · codex-furnish · row 473: Moving the bowl makes unrelated kitchen units flicker and the bowl can jump. → **Keep the original projected grab plane, bound shallow-angle drag response and update only changed instance batches.** (check: Move a bowl and compare stationary batch matrices and geometry versions.)
-- house-wip · codex-furnish · row 472: Minimised editors can intercept camera clicks or fail to retry mouse capture. → **Release drawing input when collapsed; allow a fresh scene click to retry capture and drag-to-look if denied.** (check: Minimise both panels, move camera and restore editing.)
-- house-wip · codex-furnish · row 471: Bird’s-eye walls cannot be picked or identified, and carpet and concrete show as flat colour blocks. → **Hit test measured wall spans and show the selected face. Use metre-scaled photographed finishes in plans and 3D.** (check: Select two distinct faces and compare photo texture output for carpet and concrete.)
-- house-wip · codex-furnish · row 470: Selecting shelf accessories can project them outdoors; small horizontal and vertical adjustments are unavailable or rejected. → **Keep the initial grab plane, distinguish select from drag, and validate precise supported adjustments including deliberate height offsets.** (check: Exercise signed living-room lamp and bowl moves and save validation.)
 
 ## Every rule we have learned, by gate (CORRECTIONS-LOG.md)
 ### G0
@@ -584,6 +587,9 @@ before Jack sees the build.
 - (458) Encode reviewed linear leaf colours with the sRGB transfer when writing diffuse images, preserve the linear normal data, and verify the actual rendered plants.  _[The first textured stipa and lavender leaves looked too dark in their actual shaded garden view.]_
 - (483) Unpack material and triangle and pass numeric half-plane coefficients to clip_half.  _[The floor overlap probe read a material label as a vertex.]_
 - (484) Identify the two actual timbers each fixing connects. Only those contacts are intentional; keep all unrelated parts subject to the normal clash check.  _[Four joist-to-rafter fixings were reported as collisions at their 4 mm designed penetration into their own rafters.]_
+- (530) Keep explicit Plan, 3D and Walk controls visible in every desktop garden mode  _[Garden walking was hidden behind Minimise and view buttons disappeared while walking]_
+- (531) Wrap header actions below the title in narrow garden panels  _[Garden header title squeezed beneath action buttons]_
+- (532) Test guide picking and save exclusion with catalogue changes  _[New vehicle kinds omitted from catalogue expectation and guide picking]_
 
 ### G7
 - (13) Site mode shows the site's own name and hides demo controls  _[Viewer showed the demo's "tattoo studio" text on a real garden]_

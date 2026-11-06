@@ -628,7 +628,19 @@ export function createGardenScene(THREE, scene){
     const points=sampleGeometry(f.geometry,f.kind==='outbuilding-base'?.0005:.008),box=bounds2(points);
     const e={feature:f,group,points,signature,box,closed:isClosed(f.geometry),form:KINDS[f.kind].form,
              center:[(box.x+box.X)/2,(box.z+box.Z)/2],treads:[],cuts:[],cap:null,floor:null};
-    if(f.kind==='outbuilding-base')slabObject(state,e);
+    if(f.kind==='car-guide'||f.kind==='van-guide'){
+      e.form='guide'; e.outlineY=f.baseY+f.level;
+      const vehicle=new T.Group(),g=f.geometry,w=g.width,d=g.depth,h=f.height;
+      vehicle.position.set(g.center[0],f.baseY+f.level,g.center[1]);vehicle.rotation.y=-g.yaw;group.add(vehicle);
+      const bodyMat=material('steel','plain','cool'),glassMat=material('slate','plain','cool');
+      const box=(width,height,length,x,y,z,mat)=>{const m=new T.Mesh(new T.BoxGeometry(width,height,length),mat);m.position.set(x,y,z);vehicle.add(m);};
+      box(w*.9,h*.43,d,0,h*.35,0,bodyMat);
+      box(w*.82,h*.45,d*(f.kind==='van-guide'?.78:.53),0,h*.775,d*.05,glassMat);
+      for(const x of [-1,1])for(const z of [-1,1])box(w*.12,h*.25,d*.12,x*w*.44,h*.125,z*d*.32,bodyMat);
+      // Full rectangular envelope is the clearance reference, including mirrors.
+      box(w,.04,.20,0,h*.5,-d*.17,bodyMat);
+    }
+    else if(f.kind==='outbuilding-base')slabObject(state,e);
     else if(e.form==='area')areaObject(state,e);
     else if(e.form==='line')lineObject(state,e);
     else{
@@ -721,7 +733,7 @@ export function createGardenScene(THREE, scene){
     const p=[x,z];
     for(const e of ordered)if(e.point && along(p,e.point)<=e.radius+tolerance)return e.feature.id;
     for(const e of ordered)if(e.form==='line' && nearLine(p,e.points,e.closed)<=e.lineWidth/2+tolerance)return e.feature.id;
-    for(const e of ordered)if(e.form==='area' && (inside(p,e.points)||nearLine(p,e.points,true)<=tolerance||
+    for(const e of ordered)if((e.form==='area'||e.form==='guide') && (inside(p,e.points)||nearLine(p,e.points,true)<=tolerance||
       e.treads.some(t=>inside(p,t.poly))))return e.feature.id;
     return null;
   }

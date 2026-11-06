@@ -55,8 +55,21 @@ function endpoint() {
 }
 const makeStore = (api, onChange) => new GardenStore({ site: 'front-garden', version: 'existing_2022', fetcher: api.fetcher, onChange });
 
+test('temporary vehicle guides never enter a saved garden', async () => {
+  const api=endpoint(), store=makeStore(api);
+  await store.load();
+  const car=createFeature('car-guide',rectangle([2,3],2,4.5));
+  store.put(car); assert(!store.dirty,'A guide alone must not dirty the saved design');
+  const base=createFeature('outbuilding-base',rectangle([5,8],3,4));
+  store.put(base); await store.save();
+  assert(store.get(car.id),'Save must retain the visible temporary guide');
+  assert(!store.dirty,'Saved permanent design must be clean');
+  const reopened=makeStore(api);await reopened.load();
+  assert(reopened.get(base.id)&&!reopened.get(car.id),'Only permanent base should reopen');
+});
+
 test('all tools have usable material, pattern and planting defaults', () => {
-  const expected = ['outbuilding-base','patio','path','lawn','gravel','decking','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging','planting-bed','plant','tree'];
+  const expected = ['car-guide','van-guide','outbuilding-base','patio','path','lawn','gravel','decking','wall','retaining-wall','raised-bed','sunken-area','fire-pit','steps','fence','edging','planting-bed','plant','tree'];
   equal(Object.keys(KINDS).sort(), expected.sort(), 'Catalogue coverage');
   const ids = new Set();
   for (const [k, defaults] of Object.entries(KINDS)) {

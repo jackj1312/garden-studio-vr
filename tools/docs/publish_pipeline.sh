@@ -7,6 +7,6 @@ DST="$HOME/Desktop/Garden Studio Pipeline"
 # Preserve guide assets from concurrent worktrees; publish updates without pruning unrelated files.
 mkdir -p "$DST"; rsync -a --exclude "*.pdf" "$SRC/" "$DST/"
 CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-[ -x "$CH" ] && "$CH" --headless=new --disable-gpu --no-pdf-header-footer --virtual-time-budget=8000 \
+[ -x "$CH" ] && "$CH" --headless=new --disable-gpu --no-pdf-header-footer --virtual-time-budget=8000 --timeout=30000 \
   --print-to-pdf="$DST/Garden Studio Pipeline.pdf" "file://$DST/Garden Studio Pipeline.html" 2>/dev/null
 echo "published: $DST"

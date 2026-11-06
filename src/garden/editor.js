@@ -48,7 +48,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   async function useVersion(entry){
     if(version===entry.def.id)return;
     if(store){draw.cancel();if(store.dirty)status='The previous version still has an unsaved draft.';}
-    version=entry.def.id;if(site==='house-wip'&&version==='approved_2b'){frontBoundary.update(entry);streetFrontage.update(entry);}else{frontBoundary.group.visible=false;streetFrontage.group.visible=false;}draw.state.selectedId=null;terrain.version(entry);plan.version(terrain.extent);
+    version=entry.def.id;if(site==='house-wip'&&version==='approved_2b'){frontBoundary.update(entry);streetFrontage.update(entry);}else{frontBoundary.group.visible=false;streetFrontage.setVisible(false);}draw.state.selectedId=null;terrain.version(entry);plan.version(terrain.extent);
     if(!stores.has(version))stores.set(version,new GardenStore({site,version,fetcher:layoutFetcher(site,version),onChange:(s)=>{if(s===store)sync();}}));
     store=stores.get(version);const target=store;loaded=false;
     try{if(!target.dirty)await target.refresh();if(target===store){loaded=true;status='';}}

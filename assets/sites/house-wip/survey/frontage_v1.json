@@ -1,0 +1,224 @@
+{
+  "revision": "2026-11-06-lidar-video-1",
+  "status": "source-supported reconstruction; unverified spans explicitly retained",
+  "axes": "viewer metres: X width, Y up, Z towards road",
+  "source_plan_to_viewer": {
+    "x_add": 4.63,
+    "z_from_plan_y": "3.09 - plan_y",
+    "capture_height_add": -0.231
+  },
+  "registration": {
+    "angle_deg": 66.6454948083496,
+    "east": 558933.85230909,
+    "north": 110067.97138790233,
+    "odn_offset_m": 25.133585428098485,
+    "rms_m": 0.24640315368013582,
+    "roof_points": 573,
+    "ground_points": 617
+  },
+  "road_plane": {
+    "crossfall_dz_dx": -0.02948895193133611,
+    "crossfall_dz_dy": 0.02399077559962361,
+    "odn_intercept": 25.98101228978899,
+    "rms_m": 0.012183802960070274,
+    "samples": 504
+  },
+  "edge_fit": {
+    "observations_540x960": {
+      "grass": {
+        "0145": [
+          [
+            160,
+            423
+          ],
+          [
+            480,
+            396
+          ]
+        ],
+        "0147": [
+          [
+            453,
+            430
+          ],
+          [
+            525,
+            425
+          ]
+        ],
+        "0149": [
+          [
+            130,
+            497
+          ],
+          [
+            480,
+            421
+          ]
+        ]
+      },
+      "kerb": {
+        "0145": [
+          [
+            30,
+            411
+          ],
+          [
+            480,
+            379
+          ]
+        ],
+        "0147": [
+          [
+            40,
+            410
+          ],
+          [
+            490,
+            404
+          ]
+        ],
+        "0149": [
+          [
+            30,
+            469
+          ],
+          [
+            480,
+            391
+          ]
+        ]
+      }
+    },
+    "fit": {
+      "grass": {
+        "intercept": -24.250321162096018,
+        "slope": -0.049077067065341144,
+        "ground_z_at_x4_5": -0.18,
+        "rms_plan_m": 0.09840747869492769,
+        "observed_points": [
+          [
+            3.947690140655566,
+            -24.350398915547615,
+            -0.1661922535163891
+          ],
+          [
+            -0.3541571761204878,
+            -24.30074320065987,
+            -0.058646070596987565
+          ],
+          [
+            3.9136568296246566,
+            -24.439031923660416,
+            -0.1653414207406163
+          ],
+          [
+            3.2325388107339528,
+            -24.588637757162093,
+            -0.14831347026834862
+          ],
+          [
+            3.906078818526743,
+            -24.390483393543956,
+            -0.16515197046316832
+          ],
+          [
+            -0.2772322397562732,
+            -24.137799309924265,
+            -0.06056919400609306
+          ]
+        ]
+      },
+      "kerb": {
+        "intercept": -25.47143117650836,
+        "slope": 0.0019827688488525245,
+        "ground_z_at_x4_5": -0.26,
+        "rms_plan_m": 0.15765614377022266,
+        "observed_points": [
+          [
+            5.159527523739158,
+            -25.45113137517842,
+            -0.27648818809347864
+          ],
+          [
+            -1.507667836987678,
+            -25.43639640701473,
+            -0.10980830407530795
+          ],
+          [
+            8.201600348166352,
+            -25.246979906631204,
+            -0.3525400087041586
+          ],
+          [
+            3.240689513096972,
+            -25.516468222076547,
+            -0.22851723782742406
+          ],
+          [
+            4.3677581661440525,
+            -25.765952937170418,
+            -0.2566939541536013
+          ],
+          [
+            -2.1462996296990218,
+            -25.37732536267003,
+            -0.09384250925752435
+          ]
+        ]
+      }
+    }
+  },
+  "sources": [
+    {
+      "name": "EA 2022 composite DTM / DSM",
+      "local_capture": "P_10779; 4\u201320 January 2019",
+      "resolution_m": 1,
+      "licence": "Open Government Licence; \u00a9 Environment Agency copyright and/or database right 2022",
+      "url": "https://environment.data.gov.uk/survey"
+    },
+    {
+      "name": "Garden scan registered camera solve",
+      "file": "sfm2/aligned.json",
+      "used_frames": [
+        "0133",
+        "0145",
+        "0147",
+        "0149",
+        "0153"
+      ],
+      "scale_locked": true
+    },
+    {
+      "name": "Street View 20817",
+      "date": "August 2024",
+      "use": "grass ordering and diagonal pedestrian approach only"
+    }
+  ],
+  "controls": {
+    "wall_front_z": 23.048814535,
+    "start_z": 21.6900003,
+    "grass_edge_plan_y_intercept": -24.250321162096018,
+    "grass_edge_plan_y_slope": -0.049077067065341144,
+    "kerb_plan_y_intercept": -25.47143117650836,
+    "kerb_plan_y_slope": 0.0019827688488525245,
+    "road_crossfall_x": -0.02948895193133611,
+    "road_crossfall_z": -0.02399077559962361,
+    "retained_gravel_y": -0.2390000075,
+    "retained_paving_y": -0.2310000062,
+    "kerb_upstand_m": 0.08,
+    "carriageway_width_m": 8.2,
+    "capture_ground_local_height_add": -0.129
+  },
+  "uncertainty": {
+    "registration": "Roof/ground fit RMS 0.246m; coarse registration, not survey control. Ground offset is reconciled to retained thresholds.",
+    "edges": "Manual ground-contact traces: fit residual 0.10m grass / 0.16m kerb; allow about 0.3m position uncertainty.",
+    "levels": "2019 terrain establishes broad lateral/road falls; current capture determines near entrance fall. Absolute ODN datum not independently surveyed. Existing paved/hedge datum is retained; a local height offset of about -0.129m ties the street capture at the hedge to viewer ground. The 27mm difference at the inner driveway is blended into the retained threshold. This does not move the house.",
+    "assumed": [
+      "Diagonal pedestrian approach beyond the captured path uses old Street View, clipped at the new public path.",
+      "Carriageway far edge and opposite context are approximate; no current measured opposite-kerb line.",
+      "Crossfall between supported points is interpolated; no centimetre-accuracy claim.",
+      "2016 50cm archive coverage verified, but bounded tile download exceeded 120MB and was not used."
+    ]
+  }
+}

@@ -271,3 +271,6 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Inspect rendered plan at full size (row 537)
 - Exterior matched views and boundary extent checks (row 538)
 - Neighbour hedge frontal capture (row 539)
+- Run tools/review/front_boundary_check.mjs; inspect front and angled views for continuous wall and two end openings (row 543)
+- Wall ray sweep, street height and version switch checks in tools/review/front_boundary_check.mjs (row 544)
+- Wall detail and driveway-angle screenshots show brick-faced end strip (row 545)

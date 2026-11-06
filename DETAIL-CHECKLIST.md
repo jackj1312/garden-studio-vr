@@ -265,3 +265,7 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Inspect header at desktop and phone widths (row 531)
 - Vehicle regression tests (row 532)
 - Reload actual browser and verify new tools (row 533)
+- Source snapshot untouched and base hash retained (row 534)
+- Snapshot byte comparison plus retained layout and original capture (row 535)
+- Inspect both original views for clear roof, frontage and no marks (row 536)
+- Inspect rendered plan at full size (row 537)

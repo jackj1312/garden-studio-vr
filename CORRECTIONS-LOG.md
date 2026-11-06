@@ -545,6 +545,10 @@ same run; tools/check_site_export.py fails if it is older than either GLB).
 | 531 | Garden header title squeezed beneath action buttons | Visual review | Header action row and title competed for narrow panel width | Wrap header actions below the title in narrow garden panels | G6 |
 | 532 | New vehicle kinds omitted from catalogue expectation and guide picking | Guide review and tests | Temporary category added without updating exhaustive dispatch | Test guide picking and save exclusion with catalogue changes | G6 |
 | 533 | Cached catalogue lacked new vehicle kinds and blocked garden startup | Browser reload | Changed catalogue retained its old module URL | Version catalogue imports when adding editor kinds | G6 |
+| 534 | Published snapshot permissions prevented updating copied manifest | Snapshot copy | copy2 preserved read-only release mode | Make copied local manifest writable before modifying metadata; never edit the source snapshot | G6 |
+| 535 | Garden editor opened the old house despite newer published preview | Jack scene review | Editor house-wip assets and private preview were maintained separately | Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately | G6 |
+| 536 | Front hedge obscured studio and historical marks appeared in capture | First reference view | Camera was outside the hedge and capture retained review overlays | Place reference camera inside drive and hide review overlays before capture | G6 |
+| 537 | Entry door swing used an offset arc centre and welcome label inherited pale fill | PDF visual review | PDF drawing state and arc bounding box not reset explicitly | Centre each swing on its hinge and set label colour explicitly | G6 |
 
 ## How to use this
 - Before each stage of WORKFLOW.md, read the rows that point at its gate.

@@ -31,3 +31,7 @@ Re-read this plan, FIRST-PASS and the relevant project rules before each stage, 
 2026-11-06 · Jack wants a studio base for a later tattoo-studio concept. Expose persistent Plan / 3D / Walk buttons using the existing shared scene and walking controls; check round trips, base selection, desktop and phone. Browser is the appropriate tool for measured interactive layout; nothing in this UI change is deferred to Unreal. Jack draws and saves the footprint first, then the agent constructs a box from that exact base and uses its original render for image generation.
 
 2026-11-06 · Add temporary car and van clearance guides using existing rectangle editing and selection. Generic editable envelopes, not manufacturer dimensions; exclude them from saved layouts. Check moving/rotating/resizing, rendering and save exclusion.
+
+2026-11-06 · Retain saved footprint, back up replaced assets, and update local editor from published browser snapshot 7905fbd39ff074116840 (not the blocked candidate). Build a reversible browser shell on the saved base: provisional 2.4 m eaves, 0.8 m roof rise, 0.2 m overhang, entrance facing drive +X. Browser geometry is sufficient for this original image reference; no Unreal detail deferred. Verify footprint and roof bounds, then capture two original studio views for image generation.
+
+2026-11-06 · Jack added an interior: simple WC partition, two tattoo beds and trolleys, cleaning sink/counter, drawing desk and welcome desk. Add a roof-off reference view. Keep equipment conceptual; spacing is for review, not regulatory approval.

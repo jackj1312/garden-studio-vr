@@ -90,8 +90,16 @@ before Jack sees the build.
 - **F335 (row 531, ruled)** Garden header title squeezed beneath action buttons Rule: Wrap header actions below the title in narrow garden panels
 - **F336 (row 532, ruled)** New vehicle kinds omitted from catalogue expectation and guide picking Rule: Test guide picking and save exclusion with catalogue changes
 - **F337 (row 533, ruled)** Cached catalogue lacked new vehicle kinds and blocked garden startup Rule: Version catalogue imports when adding editor kinds
+- **F338 (row 534, ruled)** Published snapshot permissions prevented updating copied manifest Rule: Make copied local manifest writable before modifying metadata; never edit the source snapshot
+- **F339 (row 535, ruled)** Garden editor opened the old house despite newer published preview Rule: Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately
+- **F340 (row 536, ruled)** Front hedge obscured studio and historical marks appeared in capture Rule: Place reference camera inside drive and hide review overlays before capture
+- **F341 (row 537, ruled)** Entry door swing used an offset arc centre and welcome label inherited pale fill Rule: Centre each swing on its hinge and set label colour explicitly
 
 ## Lessons from the latest rounds (newest first)
+- house-wip · codex-garden · row 537: Entry door swing used an offset arc centre and welcome label inherited pale fill → **Centre each swing on its hinge and set label colour explicitly** (check: Inspect rendered plan at full size)
+- house-wip · codex-garden · row 536: Front hedge obscured studio and historical marks appeared in capture → **Place reference camera inside drive and hide review overlays before capture** (check: Inspect both original views for clear roof, frontage and no marks)
+- house-wip · codex-garden · row 535: Garden editor opened the old house despite newer published preview → **Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately** (check: Snapshot byte comparison plus retained layout and original capture)
+- house-wip · codex-garden · row 534: Published snapshot permissions prevented updating copied manifest → **Make copied local manifest writable before modifying metadata; never edit the source snapshot** (check: Source snapshot untouched and base hash retained)
 - house-wip · codex-garden · row 533: Cached catalogue lacked new vehicle kinds and blocked garden startup → **Version catalogue imports when adding editor kinds** (check: Reload actual browser and verify new tools)
 - house-wip · codex-garden · row 532: New vehicle kinds omitted from catalogue expectation and guide picking → **Test guide picking and save exclusion with catalogue changes** (check: Vehicle regression tests)
 - house-wip · codex-garden · row 531: Garden header title squeezed beneath action buttons → **Wrap header actions below the title in narrow garden panels** (check: Inspect header at desktop and phone widths)
@@ -148,10 +156,6 @@ before Jack sees the build.
 - house-wip · codex-look · row 480: Daylight clicks off when the viewer crosses the room boundary. → **Rank real glazed openings in continuous world space, keep stable slots and fade between competing apertures before moving any shadow source.** (check: Cross the measured exterior/room threshold and inspect actual aperture persistence.)
 - house-wip · codex-furnish · row 479: Garden design has no visible way back to the furnished house or furniture editor. → **Keep reciprocal navigation in the editor headers and wrist panels. Preserve the version and unsaved design when switching.** (check: Go from furniture into garden and return in the same version without losing an unsaved edit.)
 - house-wip · codex-look · row 478: Switched-on bulbs disappear outside their own room and individual switches complicate presentation. → **Use one house-wide switch. Every present bulb responds from any viewpoint. Cache emitters separately from the small real-time light pool.** (check: Switch using the toolbar, inspect the same fixtures from the garden and connecting room, and measure on/off frame intervals.)
-- house-wip · codex-look · row 477: Clicking the minimised scene still leaves the mouse unlocked in the actual ChatGPT in-app browser. → **Keep native lock where supported. When refused, switch to button-free relative look within the scene and allow continuous turning at its edge, with Escape, blur and tool restore releasing the pointer.** (check: Minimise and verify mouse look turns in the real in-app browser after native capture is refused.)
-- house-wip · codex-look · row 476: Floor photographs look flat at eye level and the saved model provides no textile or finish response to light. → **Carry matching colour, normal and roughness scans through the planner, walkthrough and saved GLB and inspect at grazing light.** (check: Actual baked material has all three inputs, correct scale and metre UVs; use matched lit detail views.)
-- house-wip · codex-furnish · row 475: The separate SVG planner clears the wall hit lines when redrawing furniture selection. → **Use a permanent face layer in the SVG plan and check wall switching after a redraw.** (check: Click two distinct wall spans in the client room planner.)
-- house-wip · codex-look · row 474: Switching on the lounge table lamp and then all lamps caused frames of 7733 and 7683 ms. → **Prepare combinations used by actual room windows and practical fixtures before Explore; measure first switch and grouped lamps on the normal route.** (check: Measure individual and grouped first-use switches in the furnished lounge.)
 
 ## Every rule we have learned, by gate (CORRECTIONS-LOG.md)
 ### G0
@@ -592,6 +596,10 @@ before Jack sees the build.
 - (531) Wrap header actions below the title in narrow garden panels  _[Garden header title squeezed beneath action buttons]_
 - (532) Test guide picking and save exclusion with catalogue changes  _[New vehicle kinds omitted from catalogue expectation and guide picking]_
 - (533) Version catalogue imports when adding editor kinds  _[Cached catalogue lacked new vehicle kinds and blocked garden startup]_
+- (534) Make copied local manifest writable before modifying metadata; never edit the source snapshot  _[Published snapshot permissions prevented updating copied manifest]_
+- (535) Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately  _[Garden editor opened the old house despite newer published preview]_
+- (536) Place reference camera inside drive and hide review overlays before capture  _[Front hedge obscured studio and historical marks appeared in capture]_
+- (537) Centre each swing on its hinge and set label colour explicitly  _[Entry door swing used an offset arc centre and welcome label inherited pale fill]_
 
 ### G7
 - (13) Site mode shows the site's own name and hides demo controls  _[Viewer showed the demo's "tattoo studio" text on a real garden]_

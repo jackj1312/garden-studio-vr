@@ -1,3 +1,4 @@
+import {createStudioConcept} from './studio-concept.js';
 import * as T from 'three';
 import {openLayoutEditor,layoutFetcher} from '../studio-layout-service.js';
 import {GardenStore} from './store.mjs?v=vehicles1';
@@ -13,6 +14,7 @@ import {fitStroke,handlesOf,outlineMeasurements} from './geometry.mjs';
 export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepare,look,walkPreview,openFurniture,indoor,occlusion,normalPass}) {
   const canvas=document.createElement('canvas');canvas.id='garden-plan';canvas.hidden=true;canvas.setAttribute('aria-label','Measured garden drawing plan');document.body.append(canvas);
   const terrain=createGardenTerrain(T,normalPass), garden=createGardenScene(T,scene), plan=createGardenPlan(T,{renderer,scene,canvas,terrain});
+  const studioConcept=createStudioConcept(T,scene);
   const stores=new Map();let active=false,bird=false,collapsed=false,resumeBird=false,version='',store=null,loaded=false,oldPen=false,vrWas=false;
   const overlay=new T.Group();overlay.name='Garden edit handles';overlay.userData.gardenOverlay=true;scene.add(overlay);
   const handleGeo=new T.SphereGeometry(1,8,6),handleMat=new T.MeshBasicMaterial({color:0xffdc91,depthTest:false,toneMapped:false});
@@ -30,6 +32,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     const draft=collapsed?null:draw.draft,objects=draft?[...cacheObjects.filter(f=>f.id!==draft.id),draft]:cacheObjects;
     const id=active&&!collapsed?draw.state.selectedId:null;
     overlay.visible=active&&!collapsed;
+    studioConcept.update(objects);
     garden.set(objects,id);terrain.cuts(garden.cuts());
     plan.update(objects,active && draft?.kind==='outbuilding-base'?draft.id:id,strokes,active);
     for(const o of [...overlay.children]){overlay.remove(o);if(o.isLine)o.geometry.dispose();}

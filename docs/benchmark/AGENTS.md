@@ -1,0 +1,3 @@
+# Every agent entering this folder
+
+Read README.md and SOURCE-POLICY.md first. Follow PASTE-THIS-PROMPT.txt for a new benchmark run. Read REQUIREMENTS.md, PROJECT-BRIEF.md, ACCEPTANCE.md, MCP-AND-SKILLS.md and both lesson sets. Do not read previous results before presenting your own frozen submission. Common reusable tools and lessons are allowed; independently derive the house from original inputs. Maintain this master through MAINTAINING.md for every addition, decision and fix. Results stay outside this folder. BUILD-ENGINE-RULE.md applies to every element. No pushes, spending, private upload or login without specific authority.

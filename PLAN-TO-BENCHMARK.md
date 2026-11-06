@@ -1,3 +1,7 @@
+## Complete product benchmark — 6 November 2026
+The current agent-neutral benchmark is `~/Desktop/Garden Studio Benchmark/README.md`, with `PASTE-THIS-PROMPT.txt`. It covers the ENTIRE house pipeline: original source reconstruction; full interior/kit; all garden/furniture/finish/planner editors; desktop/iPad/Pencil/phone/Quest/VR controls and help; persistence, marks, terrain, performance; native/Unreal/AI presentation workflows; MCPs/skills and both agents' mistakes. Every agent maintains it through `MAINTAINING.md`. Methods are unrestricted: existing tools are optional resources, not mandatory workflow. The full functionality and quality are required.
+**Blind-run rule supersedes older comparison wording:** no previous benchmark result, model, render, score, production plan or report may be opened until the entrant has frozen AND PRESENTED its independent submission. Lessons and the explicitly supplied generic tool/asset baseline are allowed. This historical visual-reference document contains earlier output studies; new contestants must use the clean pack instead.
+
 # Plan to reach the benchmarks (31 Oct 2026)
 
 Benchmarks are in BENCHMARKS.md. Honest gap today:

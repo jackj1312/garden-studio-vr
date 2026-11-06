@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Publish the clean benchmark resources locally; never include completed site output."""
+import argparse, hashlib, json, os, shutil, sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+REPO=Path(__file__).resolve().parents[2]
+DOCS=REPO/'docs/benchmark'
+DEST=Path.home()/'Desktop/Garden Studio Benchmark'
+LIVE=Path.home()/'Garden Studio VR'
+DATALESS=0x40000000
+CODE={'.py','.js','.mjs','.cjs','.css','.html','.sh','.command','.glsl','.vert','.frag'}
+EXCLUDED={'src/garden/front-boundary.js','src/garden/street-frontage.js','src/garden/frontage-survey.js','src/garden/studio-concept.js'}
+
+def digest(path):
+ h=hashlib.sha256()
+ with path.open('rb') as f:
+  for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+ return h.hexdigest()
+def ready(p):return p.is_file() and not p.is_symlink() and not (p.stat().st_flags & DATALESS)
+def add_tree(files,base,prefix,predicate):
+ if not base.exists():return
+ for d,dirs,names in os.walk(base,followlinks=False):
+  dirs[:]=sorted(x for x in dirs if x not in {'__pycache__','.git','node_modules','.DS_Store'} and not (Path(d)/x).is_symlink())
+  for name in sorted(names):
+   p=Path(d)/name
+   if ready(p) and predicate(p):files[str(Path(prefix)/p.relative_to(base))]=p
+
+def collect():
+ files={p.name:p for p in DOCS.glob('*') if ready(p) and p.suffix in {'.md','.txt'}}
+ files['BUILD-ENGINE-RULE.md']=REPO/'BUILD-ENGINE-RULE.md'
+ for tag,base in [('claude-live',LIVE),('codex-active',REPO)]:
+  for name in ['FIRST-PASS.md','CORRECTIONS-LOG.md','DETAIL-CHECKLIST.md']:
+   p=base/name
+   if not ready(p):raise RuntimeError('Required lesson source unavailable: '+str(p))
+   files[f'lessons/{tag}/{name}']=p
+ # Original mistakes remain explicitly allowed, not previous result packs.
+ old=Path.home()/'Desktop/23 Battle Road/CODEX-MISTAKES.md'
+ if ready(old):files['lessons/earlier-codex/CODEX-MISTAKES.md']=old
+ for family in ['src','tools']:
+  add_tree(files,REPO/family,f'shared-tools/{family}',lambda p:p.suffix in CODE and str(p.relative_to(REPO)) not in EXCLUDED and ('benchmark' not in p.parts or p.name in {'launch_server.py','register_launcher.py'}))
+ # The generic furniture kit is an authorised COMMON asset baseline, not a house.
+ add_tree(files,REPO/'tools/library/kit','shared-tools/tools/library/kit',lambda p:p.name not in {'.DS_Store'} and p.suffix not in {'.blend','.blend1','.pyc'})
+ add_tree(files,REPO/'assets/vendor','shared-tools/assets/vendor',lambda p:p.suffix in {'.js','.wasm','.json','.txt','.md'})
+ for name in ['house.html','planner.html','index.html','splat.html','scan.html']:
+  if ready(REPO/name):files['shared-tools/'+name]=REPO/name
+ for name in ['plan/index.html','garden/index.html','p/index.html','w/index.html']:
+  if ready(REPO/name):files['shared-tools/'+name]=REPO/name
+ skills={
+ 'blender-mcp-workflow':Path.home()/'.codex/skills/blender-mcp-workflow/SKILL.md',
+ 'imagegen':Path.home()/'.codex/skills/.system/imagegen/SKILL.md',
+ 'architectural-presentation-stills':Path.home()/'.codex/memories/skills/architectural-presentation-stills/SKILL.md',
+ 'generated-image-continuity-review':Path.home()/'.codex/memories/skills/generated-image-continuity-review/SKILL.md',
+ }
+ for name,p in skills.items():
+  if ready(p):files[f'skills/{name}/SKILL.md']=p
+ # Original owner-supplied references, made durable instead of /tmp links.
+ refs={
+ '20813-wall.jpg':'/tmp/codex-remote-attachments/01a1a287-48e7-7523-92b0-0e924898f1eb/be76be8a-471f-4f1e-a810-6e7051bbe7ca/1-20813.jpg',
+ '20814-sign.jpg':'/tmp/codex-remote-attachments/01a1a287-48e7-7523-92b0-0e924898f1eb/be76be8a-471f-4f1e-a810-6e7051bbe7ca/2-20814.jpg',
+ '20817-street.jpg':'/tmp/codex-remote-attachments/01a1a287-48e7-7523-92b0-0e924898f1eb/bf88fb8c-a4c2-4cd5-b85f-db96e6770d18/1-20817.jpg'}
+ for name,path in refs.items():
+  p=Path(path)
+  # Retain original durable copies on subsequent publications.
+  if not ready(p):p=DEST/'inputs'/name
+  if ready(p):files['inputs/'+name]=p
+ for name in ['ea-battle-road-dtm-1m.tif','ea-battle-road-dsm-1m.tif','ea-battle-road-dtm-url.txt','ea-battle-road-dsm-url.txt','ea-LIDAR_Composite_1m_DTM_2022_extents.json','ea-National_LIDAR_Programme_Index_Catalogue.json']:
+  p=REPO/'renders/garden-tool/front-boundary/lidar-source'/name
+  if ready(p):files['inputs/public-lidar/'+name]=p
+ return files
+
+def source_inventory():
+ rows=[]
+ home=Path.home();garden=home/'Desktop/garden-scans'
+ bases=[(home/'Desktop/23 Battle Road/sources/bds-originals',{'.pdf'},False,'original architect document'),(garden,{'.jpg','.jpeg','.png','.mp4','.mov','.usdz'},False,'original owner capture'),(garden/'front-garden',{'.jpg','.jpeg','.mp4','.mov','.usdz'},False,'original garden capture'),(garden/'closeups',{'.jpg','.jpeg','.png'},True,'original closeup'),(garden/'house-scan',{'.usdz','.ply','.obj','.jpg','.jpeg','.json'},True,'original scan input'),(garden/'front-garden/frames4k',{'.jpg','.png'},False,'extracted original video frame')]
+ for base,suffixes,recurse,kind in bases:
+  if not base.exists():continue
+  for p in sorted(base.rglob('*') if recurse else base.iterdir()):
+   if p.is_symlink() or not p.is_file() or p.suffix.lower() not in suffixes:continue
+   # Annotated/derived PNGs are not raw scene authority.
+   if p.name=='planting_marked.png':continue
+   st=p.stat();rows.append({'path':str(p),'kind':kind,'bytes':st.st_size,'availability':'icloud-placeholder' if st.st_flags&DATALESS else 'local-bytes','sha256':None,'hash_note':'Hash when materialised in a run; do not read prior derived site data.'})
+ return {'policy':'Use only listed originals, packaged owner inputs and independently obtained public source data. No parent-directory discovery into old results.','files':rows}
+
+def verify(dest):
+ record=json.loads((dest/'release.json').read_text());bad=[]
+ for name,h in record['files'].items():
+  p=dest/name
+  if not ready(p) or digest(p)!=h:bad.append(name)
+ if bad:raise RuntimeError('Publication changed or incomplete; reconcile before publishing: '+', '.join(bad[:12]))
+ return record
+
+def main():
+ parser=argparse.ArgumentParser();g=parser.add_mutually_exclusive_group(required=True);g.add_argument('--check',action='store_true');g.add_argument('--publish',action='store_true');g.add_argument('--verify',action='store_true');parser.add_argument('--destination',type=Path,default=DEST);args=parser.parse_args();dest=args.destination
+ if args.verify:
+  r=verify(dest);print('Verified',r['release_id'],len(r['files']),'files');return
+ files=collect();required=['PASTE-THIS-PROMPT.txt','REQUIREMENTS.md','PROJECT-BRIEF.md','SOURCE-POLICY.md','ACCEPTANCE.md','MCP-AND-SKILLS.md','MAINTAINING.md','COVERAGE-AUDIT.md','AGENTS.md','CLAUDE.md']
+ assert all(x in files for x in required)
+ assert not any('/assets/sites/' in x or x.endswith('.blend') for x in files)
+ inventory=source_inventory();placeholders=sum(x['availability']=='icloud-placeholder' for x in inventory['files'])
+ print('Ready:',len(files),'common files;',len(inventory['files']),'original source records;',placeholders,'iCloud placeholders')
+ if args.check:return
+ marker=DOCS/'.published-release.json'
+ if (dest/'release.json').exists():
+  existing=verify(dest)
+  if marker.exists() and json.loads(marker.read_text())['release_id']!=existing['release_id']:raise RuntimeError('Another agent published a newer Desktop release. Reconcile its docs first; preserve additions before updating the local publication marker.')
+ dest.mkdir(parents=True,exist_ok=True)
+ tools=[]
+ for name,source in sorted(files.items()):
+  target=dest/name;target.parent.mkdir(parents=True,exist_ok=True)
+  if source.resolve()!=target.resolve() and (not target.exists() or digest(target)!=digest(source)):
+   temp=target.with_name(target.name+'.incoming');shutil.copy2(source,temp);temp.replace(target)
+  if name.startswith(('shared-tools/','skills/','lessons/')):tools.append({'file':name,'source':str(source),'sha256':digest(target)})
+ # Exact owner-authored footprint only; no prior generated house or placements.
+ base_source=REPO/'assets/sites/house-wip/layout/approved_2b.json'
+ if ready(base_source):
+  data=json.loads(base_source.read_text());garden=data.get('garden',{});items=garden.get('objects',garden.get('items',[])) if isinstance(garden,dict) else garden
+  owner=[x for x in items if x.get('id')=='outbuilding-base-9a8d5ad5-6bbf-4bad-9a46-c2d96c151976']
+  if not owner:raise RuntimeError('Owner footprint missing; do not publish a fabricated replacement')
+  (dest/'inputs/owner-base.json').write_text(json.dumps({'authority':'Owner-drawn footprint only, explicitly preserved for later structure design. Not prior model geometry.','objects':owner},indent=2)+'\n')
+ else:raise RuntimeError('Owner base source unavailable')
+ for name,data in [('source-manifest.json',inventory),('tool-manifest.json',{'excluded_site_overlays':sorted(EXCLUDED),'resources':tools})]: (dest/name).write_text(json.dumps(data,indent=2)+'\n')
+ # Hash only this explicitly managed release; no run/results folder traversal.
+ names=set(files)|{'source-manifest.json','tool-manifest.json','inputs/owner-base.json'}
+ hashes={name:digest(dest/name) for name in sorted(names)}
+ rid=hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()[:16]
+ record={'release_id':rid,'created_utc':datetime.now(timezone.utc).isoformat(),'protocol':'optional shared tools; independent house; comparison only after presented submission','files':hashes}
+ temp=dest/'release.json.incoming';temp.write_text(json.dumps(record,indent=2)+'\n');temp.replace(dest/'release.json')
+ marker.write_text(json.dumps({'release_id':rid,'destination':str(dest)},indent=2)+'\n')
+ verify(dest);print('Published and verified:',dest,'release',rid)
+if __name__=='__main__':
+ try:main()
+ except Exception as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

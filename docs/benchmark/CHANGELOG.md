@@ -1,0 +1,7 @@
+# Benchmark changes
+
+- 2026-11-06 · Codex · Jack requested a Desktop master maintained by every agent, a single full-product prompt, all editors/VR/kit/tooling/MCPs/skills and both Claude/Codex lesson sets. Added R01–R32, original-input policy, full conversation/pipeline coverage, frozen-run protocol and AFTER-presentation comparison boundary. Distinguished required native product, gated paid presentation and research integrations; preserved later corrections over obsolete rules.
+- 2026-11-06 · Codex · Jack explicitly removed method restrictions: all existing tooling/workflow is optional reference infrastructure; agents may choose or invent a better route while meeting the complete product/quality contract. Privacy, spending authority and blind comparison remain binding.
+- 2026-11-06 · Codex · Full pipeline/source-tool audit added R33–R36 so construction/architect/inspector, measurements, references, capture/splat and VR presence controls also carry forward. Included both original mistakes sets; public terrain source URLs/licence accompany rasters.
+- 2026-11-06 · Codex · Added R37/SERVERS: one persistent server/root/port per run, model/date/run-labelled launchers in the separate Desktop Garden Studio Launchers folder. Preserve same-model repeats and verify server ownership.
+- 2026-11-06 · Codex · Hardened pipeline publishing against iCloud-only destination assets: print embedded local illustrations, preserve the prior PDF on failure, constrain portrait evidence and visually check changed pages. Added the prevention lessons to the shared snapshots.

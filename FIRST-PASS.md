@@ -94,8 +94,14 @@ before Jack sees the build.
 - **F339 (row 535, ruled)** Garden editor opened the old house despite newer published preview Rule: Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately
 - **F340 (row 536, ruled)** Front hedge obscured studio and historical marks appeared in capture Rule: Place reference camera inside drive and hide review overlays before capture
 - **F341 (row 537, ruled)** Entry door swing used an offset arc centre and welcome label inherited pale fill Rule: Centre each swing on its hinge and set label colour explicitly
+- **F342 (row 538, ruled)** Front hedge has visible missing surfaces; neighbour hedge must remain when owner replaces theirs Rule: Identify ownership by measured ranges and preserve access gaps; close neighbour hedge interior without deleting its exterior
+- **F343 (row 539, ruled)** Neighbour hedge core still read as a hollow frame with inherited material Rule: Use an independent opaque foliage material for closed repair surfaces and inspect front-on
+- **F344 (row 540, open)** Boundary prototype has overly patchy brick colours and its inset panel is not legible enough at the review distance; neighbour core reads as a flat box. Rule: Do not mark a reference-matched boundary complete until front-on and close-up captures show the brickwork and natural hedge finish.
 
 ## Lessons from the latest rounds (newest first)
+- house-wip · codex-garden · row 540: Boundary prototype has overly patchy brick colours and its inset panel is not legible enough at the review distance; neighbour core reads as a flat box. → **Do not mark a reference-matched boundary complete until front-on and close-up captures show the brickwork and natural hedge finish.**
+- house-wip · codex-garden · row 539: Neighbour hedge core still read as a hollow frame with inherited material → **Use an independent opaque foliage material for closed repair surfaces and inspect front-on** (check: Neighbour hedge frontal capture)
+- house-wip · codex-garden · row 538: Front hedge has visible missing surfaces; neighbour hedge must remain when owner replaces theirs → **Identify ownership by measured ranges and preserve access gaps; close neighbour hedge interior without deleting its exterior** (check: Exterior matched views and boundary extent checks)
 - house-wip · codex-garden · row 537: Entry door swing used an offset arc centre and welcome label inherited pale fill → **Centre each swing on its hinge and set label colour explicitly** (check: Inspect rendered plan at full size)
 - house-wip · codex-garden · row 536: Front hedge obscured studio and historical marks appeared in capture → **Place reference camera inside drive and hide review overlays before capture** (check: Inspect both original views for clear roof, frontage and no marks)
 - house-wip · codex-garden · row 535: Garden editor opened the old house despite newer published preview → **Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately** (check: Snapshot byte comparison plus retained layout and original capture)
@@ -153,9 +159,6 @@ before Jack sees the build.
 - house-wip · codex-marks · row 483: The floor overlap probe read a material label as a vertex. → **Unpack material and triangle and pass numeric half-plane coefficients to clip_half.** (check: Measure coplanar triangle intersections in the issued and candidate floors.)
 - house-wip · codex-look · row 482: The renderer uploads opaque draw-list textures on every camera turn even when the same pieces are visible. → **Only advance a draw-list generation on real changes and invalidate its cached GPU state after native shadow or alternate camera draws.** (check: Matched pixels, doorway visibility and measured moving-frame intervals in the Wi-Fi preview.)
 - house-wip · codex-look · row 481: Oatmeal carpet showed a prominent plaid and the concrete mottling was too strong at grazing angles. → **Review the actual tile close up, use undyed looped pile for the wool finishes and keep polished concrete colour quiet while retaining its roughness variation.** (check: Inspect the colour, normal and roughness material strip.)
-- house-wip · codex-look · row 480: Daylight clicks off when the viewer crosses the room boundary. → **Rank real glazed openings in continuous world space, keep stable slots and fade between competing apertures before moving any shadow source.** (check: Cross the measured exterior/room threshold and inspect actual aperture persistence.)
-- house-wip · codex-furnish · row 479: Garden design has no visible way back to the furnished house or furniture editor. → **Keep reciprocal navigation in the editor headers and wrist panels. Preserve the version and unsaved design when switching.** (check: Go from furniture into garden and return in the same version without losing an unsaved edit.)
-- house-wip · codex-look · row 478: Switched-on bulbs disappear outside their own room and individual switches complicate presentation. → **Use one house-wide switch. Every present bulb responds from any viewpoint. Cache emitters separately from the small real-time light pool.** (check: Switch using the toolbar, inspect the same fixtures from the garden and connecting room, and measure on/off frame intervals.)
 
 ## Every rule we have learned, by gate (CORRECTIONS-LOG.md)
 ### G0
@@ -600,6 +603,8 @@ before Jack sees the build.
 - (535) Show source snapshot explicitly and compare model and sidecar bytes when updating the editor; preserve layout separately  _[Garden editor opened the old house despite newer published preview]_
 - (536) Place reference camera inside drive and hide review overlays before capture  _[Front hedge obscured studio and historical marks appeared in capture]_
 - (537) Centre each swing on its hinge and set label colour explicitly  _[Entry door swing used an offset arc centre and welcome label inherited pale fill]_
+- (538) Identify ownership by measured ranges and preserve access gaps; close neighbour hedge interior without deleting its exterior  _[Front hedge has visible missing surfaces; neighbour hedge must remain when owner replaces theirs]_
+- (539) Use an independent opaque foliage material for closed repair surfaces and inspect front-on  _[Neighbour hedge core still read as a hollow frame with inherited material]_
 
 ### G7
 - (13) Site mode shows the site's own name and hides demo controls  _[Viewer showed the demo's "tattoo studio" text on a real garden]_
@@ -719,6 +724,7 @@ before Jack sees the build.
 - (493) Include the authored stairwell ceiling footprint in the roof-member enclosure, and verify the previously exposed ray from the landing.  _[A screenshot retained a small amber hover highlight from the previous camera and made the white landing finish look like exposed timber.]_
 - (494) Choose a reference whose eight horizontal orientation hypotheses have distinct bounds, and verify it before accepting camera placement.  _[The first house import script used the largest mesh as its axis reference; the square far-ground bounds cannot distinguish rotation and reflection.]_
 - (495) Treat adjacent authored ceiling footprints with the same room owner as one region when enclosing a projecting roof member. Preserve ceiling ownership and measured structure.  _[Adding the stair ceiling to roof boxing still left the retained valley visible over the lowered stair guard.]_
+- (540) Do not mark a reference-matched boundary complete until front-on and close-up captures show the brickwork and natural hedge finish.  _[Boundary prototype has overly patchy brick colours and its inset panel is not legible enough at the review distance; neighbour core reads as a flat box.]_
 
 ## Then the detail checklist
 DETAIL-CHECKLIST.md, line by line, at G3 and G6 (and G5b/G5c for a house). Every line came from a past mistake.

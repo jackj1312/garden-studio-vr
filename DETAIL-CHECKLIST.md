@@ -269,3 +269,5 @@ layer (soft furnishings, books, plants, fruit) and slight natural variation and 
 - Snapshot byte comparison plus retained layout and original capture (row 535)
 - Inspect both original views for clear roof, frontage and no marks (row 536)
 - Inspect rendered plan at full size (row 537)
+- Exterior matched views and boundary extent checks (row 538)
+- Neighbour hedge frontal capture (row 539)

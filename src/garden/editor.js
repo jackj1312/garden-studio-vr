@@ -1,3 +1,4 @@
+import {createStreetFrontage} from './street-frontage.js';
 import {createFrontBoundary} from './front-boundary.js';
 import {createStudioConcept} from './studio-concept.js';
 import * as T from 'three';
@@ -17,6 +18,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   const terrain=createGardenTerrain(T,normalPass), garden=createGardenScene(T,scene), plan=createGardenPlan(T,{renderer,scene,canvas,terrain});
   const studioConcept=createStudioConcept(T,scene);
   const frontBoundary=createFrontBoundary(T,scene);
+  const streetFrontage=createStreetFrontage(T,scene);
   const stores=new Map();let active=false,bird=false,collapsed=false,resumeBird=false,version='',store=null,loaded=false,oldPen=false,vrWas=false;
   const overlay=new T.Group();overlay.name='Garden edit handles';overlay.userData.gardenOverlay=true;scene.add(overlay);
   const handleGeo=new T.SphereGeometry(1,8,6),handleMat=new T.MeshBasicMaterial({color:0xffdc91,depthTest:false,toneMapped:false});
@@ -46,7 +48,7 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
   async function useVersion(entry){
     if(version===entry.def.id)return;
     if(store){draw.cancel();if(store.dirty)status='The previous version still has an unsaved draft.';}
-    version=entry.def.id;if(site==='house-wip'&&version==='approved_2b')frontBoundary.update(entry);else frontBoundary.group.visible=false;draw.state.selectedId=null;terrain.version(entry);plan.version(terrain.extent);
+    version=entry.def.id;if(site==='house-wip'&&version==='approved_2b'){frontBoundary.update(entry);streetFrontage.update(entry);}else{frontBoundary.group.visible=false;streetFrontage.group.visible=false;}draw.state.selectedId=null;terrain.version(entry);plan.version(terrain.extent);
     if(!stores.has(version))stores.set(version,new GardenStore({site,version,fetcher:layoutFetcher(site,version),onChange:(s)=>{if(s===store)sync();}}));
     store=stores.get(version);const target=store;loaded=false;
     try{if(!target.dirty)await target.refresh();if(target===store){loaded=true;status='';}}
@@ -230,6 +232,8 @@ export function createGardenEditor({scene,camera,renderer,site,marks,inVR,prepar
     if(Math.abs(v)>.6&&!stickLatch){stickLatch=true;const f=store.get(draw.state.selectedId);if(f)action('field',{key:'level',value:Math.round((f.level-Math.sign(v)*.05)*100)/100});}
     return Math.abs(v)>.35;
   }
-  return {enter,leave,action,state,useVersion,frame,wrist,consumer,stickLevel,plan,garden,terrain,draw,get enabled(){return active;},get bird(){return active&&bird;},get store(){return store;},get objects(){return cacheObjects;}};
+  function heightAt(x,z){return garden.heightAt(x,z)??streetFrontage.heightAt(x,z);}
+  function blockRay(ray,far){const a=garden.blockRay(ray,far),b=frontBoundary.blockRay(ray,far);return a&&b?(a.distance<b.distance?a:b):(a||b);}
+  return {heightAt,blockRay,enter,leave,action,state,useVersion,frame,wrist,consumer,stickLevel,plan,garden,terrain,draw,get enabled(){return active;},get bird(){return active&&bird;},get store(){return store;},get objects(){return cacheObjects;}};
 }
 

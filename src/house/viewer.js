@@ -425,10 +425,10 @@ let boardTab = MODE.tabs[0];
 const section = createSection(() => [...versions.values()].flatMap(v => v.model ? [...v.model.sets.values()] : []));
 const measure = createMeasure(scene);
 const walker = createWalker(() => V.bvh, () => V.model.masks.solid, () => V.model.masks.floor, {
-  height: (x,z) => garden?.objects.length ? garden.garden.heightAt(x,z) : null,
+  height: (x,z) => garden?.heightAt(x,z)??null,
   base: (x,z) => garden?.terrain.ground(x,z),
   indoors: (x,y,z) => !!V?.model.roomAt(x,y+.10,z),
-  barrier: (ray,far) => garden?.objects.length ? garden.garden.blockRay(ray,far) : null,
+  barrier: (ray,far) => garden?.blockRay(ray,far)??null,
 });
 const requests = createRequests({ site: SITE, getVersion: () => V?.def.id, mode: MODE.key,readOnly:PREVIEW });
 const recorder = createRecorder();

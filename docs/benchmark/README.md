@@ -15,6 +15,9 @@ approved by Jack before the next starts:
    shells in one site frame, checked against the drawings and photos; STOP and present.
 2. `PASS-2-FINISH-PROMPT.txt`: finishes, fittings, furniture, planting and light on the approved scene; present.
 3. `PASTE-THIS-PROMPT.txt`: the full studio tools and features on top of the approved finished house.
+**To start a test, Jack drags the red file `~/Desktop/Garden Studio — PASS 1 Start Prompt.txt` into the agent.** It is an exact
+copy of `PASS-1-SCENE-PROMPT.txt`: whoever changes that prompt must copy it over the Desktop file again (keep its red tag),
+so every test starts from the identical prompt.
 `AS-BUILT-NOTES.md` gives the owner facts the drawings don't show (porch as built, loft conversion, tape measurements,
 current drawing revisions); a real client job gets these from a short call.
 

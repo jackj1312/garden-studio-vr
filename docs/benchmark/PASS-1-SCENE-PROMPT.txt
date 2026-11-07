@@ -37,10 +37,9 @@ THE METHOD (in order; each step has a check that must pass before the next)
    three written dimensions and the owner's tape measurements, and draw the plan back over each sheet as proof.
 
    GATE 1A (2D) — STOP AND PRESENT: the source register, the floor plans and site plan overlaid on every drawing sheet,
-   the room inventory, the scale residuals, the shared-check report, the independent review (below) with your fixes, and every
-   uncertainty. Include ONE batch of genuine questions for me, like a
-   client call (only what the sources cannot settle; each with your recommended answer). Wait for my approval and answers
-   before building anything in 3D.
+   the room inventory, the scale residuals, the shared-check report, the independent review (below) with your fixes,
+   and every uncertainty. Include ONE batch of genuine questions for me, like a client call (only what the sources
+   cannot settle; each with your recommended answer). Wait for my approval and answers before building anything in 3D.
 
 4. Things the drawings don't show (as-built changes, conversions, garden) come from dated photos and video, measured:
    solve the camera positions (structure-from-motion, or against known geometry) for enough frames to cover every area,
@@ -86,8 +85,8 @@ instead, and say so.
 GATE 1B (3D) — STOP AND PRESENT
 Only when every check passes, STOP and present: the source register, the plan overlays on each sheet, the photo and video
 overlays with their residuals, the closure, circulation and evidence check results (the shared-check report), the
-independent review with your fixes, the walk-round of every room and the
-outside (Before and After), and every assumption with the evidence behind it. Do not start any other pass until I approve.
+independent review with your fixes, the walk-round of every room and the outside (Before and After), and every
+assumption with the evidence behind it. Do not start any other pass until I approve.
 
 Keep a short PLAN.md (goal, steps, the check for each) and re-read it at every step and before you present. Log every
 mistake in MISTAKES.md with its cause and the rule that prevents it before fixing it. Work in your own run folder and git

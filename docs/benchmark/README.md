@@ -8,6 +8,16 @@ Jack · 6 November 2026 · Living master for every coding agent and model.
 
 This is a **shared-tools, independent-house benchmark**. All entrants may use the same frozen tool kit, generic assets, skills and accumulated lessons; none is mandatory if a better method achieves the full required outcome. Each reconstructs its own measured house and placements from original plans/media. Previous entrants' houses, images, scores and production decisions stay sealed until the new entrant has **presented its own frozen result to Jack**. Freezing without presenting does not unlock comparison. This supersedes the older benchmark's permission to compare before presentation.
 
+## Staged protocol (Jack, 7 November 2026): use this for the next tests
+A first test asked for everything at once and the layout came out wrong. The benchmark is now run in passes, each
+approved by Jack before the next starts:
+1. `PASS-1-SCENE-PROMPT.txt`: the whole scene (house Before/After, No. 21, neighbours, street, front garden) as exact
+   shells in one site frame, checked against the drawings and photos; STOP and present.
+2. `PASS-2-FINISH-PROMPT.txt`: finishes, fittings, furniture, planting and light on the approved scene; present.
+3. `PASTE-THIS-PROMPT.txt`: the full studio tools and features on top of the approved finished house.
+`AS-BUILT-NOTES.md` gives the owner facts the drawings don't show (porch as built, loft conversion, tape measurements,
+current drawing revisions); a real client job gets these from a short call.
+
 ## Contents
 - `PASTE-THIS-PROMPT.txt`: the one prompt to start a fresh, isolated run.
 - `REQUIREMENTS.md`: complete functional and quality contract, with stable IDs.

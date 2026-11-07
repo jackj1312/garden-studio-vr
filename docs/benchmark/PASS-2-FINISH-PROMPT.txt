@@ -1,0 +1,22 @@
+PASS 2 OF THE STAGED BENCHMARK — FINISH AND FURNISH THE APPROVED SCENE (Jack, 7 November 2026)
+
+Only start this after I have approved your Pass 1 scene. Do not move, resize or re-derive any approved wall, opening, level,
+roof or site element; if you find a genuine error in it, stop and show me before changing it.
+
+Goal: make the approved scene a finished, lived-in home, Before and After, inside and out, at the highest quality you can
+achieve. Read REQUIREMENTS.md (the quality sections), PROJECT-BRIEF.md, DETAIL-CHECKLIST and the lessons first.
+1. Finishes built in as each surface is made: plastered reveals, skirting, architraves, window boards, floors at true scale,
+   tiles, ceilings. No raw brick, block or timber inside; no plaster on an outside face.
+2. Fixed fittings: kitchens, bathrooms, en-suite, cloaks, utility, radiators, lights, switches, sockets, doors and hardware,
+   windows and surrounds.
+3. Furniture and styling from one coherent kit or style: every item at its real size (never a whole item stretched), facing
+   into the room, sitting on its surface, nothing clipping or floating. Soft things (cushions, throws, curtains, towels,
+   bedding) with real folds.
+4. Outside: planting, grass, trees and hedges, garden details, and the neighbours' facades refined.
+5. Light: a warm sun, daylight from each room's real windows, soft contact shadows, working lamps, no blue-grey cast.
+Check it room by room from every direction in the actual viewer, fix causes, and present to me with matched views of the
+kitchen-diner, lounge and front garden. Keep PLAN.md current and re-read it at every step; log every mistake before fixing.
+Same tools, Mac and approval rules as Pass 1.
+
+PASS 3 (later, separate): the studio tools and features in REQUIREMENTS.md (planner, furniture and finish editor, garden
+CAD, VR, marking, saving, builder/architect modes...) using PASTE-THIS-PROMPT.txt, on top of the approved finished house.

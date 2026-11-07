@@ -1,0 +1,52 @@
+PASS 1 OF THE STAGED BENCHMARK — THE SCENE, EXACTLY RIGHT (Jack, 7 November 2026)
+
+Open ~/Desktop/Garden Studio Benchmark as your workspace. This pass has ONE goal: reconstruct 23 Battle Road and its
+surroundings, Before and After, with every wall, opening, level and roof exactly right. Nothing else. No furniture, no
+planting detail, no lighting design, no editors, no VR, no extra features. Those come in later passes, only after I have
+approved this one. Layout accuracy beats everything: a perfect plain scene is a pass; a beautiful scene with a wall in the
+wrong place is a fail.
+
+READ FIRST
+- AS-BUILT-NOTES.md (what is really there that the drawings don't show; this outranks the drawings).
+- source-manifest.json and SOURCE-POLICY.md (the original drawings, photos, video, scan and LiDAR you may use).
+- The lessons in lessons/ (Claude's and Codex's mistakes): apply every rule about drawings, scale, openings, roofs,
+  layers and raw surfaces.
+- BUILD-ENGINE-RULE.md. You may not open any earlier entrant's house, layout, renders, plans or reports.
+
+THE DRAWINGS (all in sources/bds-originals/)
+- 4915.1 = the house as surveyed in 2022 (existing). 4915.2B, 4915.3A and 4915.4A are the latest revisions of the approved
+  scheme; 4915.2 and 4915.2A are superseded (use them only to understand changes). 4915.SP is the site plan (1:500),
+  4915.LP the location plan (1:1250). The planning statement and decision notices confirm what was approved.
+- Before = the house today (AS-BUILT-NOTES.md says what was built after the 2022 survey). After = the approved scheme
+  finished.
+
+WHAT TO BUILD, IN THIS ORDER
+1. One site frame for everything: the plot boundary, ground levels (drawings, site plan and the supplied LiDAR), north,
+   and the footprints of this house, No. 21 attached, the neighbours, the road and pavement. Every later object is
+   placed in this frame; never build the house and the surroundings separately.
+2. Read the drawings into exact data: every wall (line, thickness, height), opening (width, height, sill, head, which way
+   doors swing), floor and ceiling level, stair, chimney, roof plane, eaves and verge. Check the scale against at least
+   three written dimensions on the drawings and against the tape measurements in AS-BUILT-NOTES.md, and write the
+   residuals down. Draw the plan back from your data and overlay it on each drawing sheet as proof.
+3. The whole scene as clean shells, Before and After: this house (walls, floors, ceilings, stairs, roofs, openings with
+   simple frames and glass, the porch and loft as built), No. 21 attached, the neighbours as massing with their roof
+   shapes and facade openings, the road, pavement, kerbs, and the front garden as it is today (paving, beds, lawn, walls,
+   fences, boundary, as hard surfaces and simple volumes). Plain neutral materials are fine; brick and roof colour help.
+4. Check it against the photos: solve the camera positions of the supplied photos and video frames, render the scene from
+   each, and overlay its outlines on the photo. Fix anything that doesn't sit on the real edges. Walk every room and the
+   outside: no gaps, no walls through openings, no missing room, cupboard or stair.
+
+TOOLS
+Blender through the MCP connector (or headless Blender), with every step saved as a script so the scene rebuilds exactly
+from the data. My Mac is an 8 GB M1 Air: one heavy job at a time, no Cycles renders or light bakes. No spending, logins,
+purchases or uploads of private material without my approval.
+
+STOP AND PRESENT
+When the scene is done and checked, STOP. Present to me: the plan overlays on each drawing sheet, the photo overlays, a
+walk-round of every room and the outside (Before and After), the scale residuals, and a list of anything you assumed or
+could not determine (with the evidence you used). Do not start furnishing or any other pass until I approve. I will mark
+anything wrong; fix it and present again.
+
+Keep a short PLAN.md (goal, steps, the check for each) and re-read it at every step and before you present. Log every
+mistake with its cause and the rule that prevents it before fixing it. Work in your own run folder and git branch; never
+overwrite another run; never push.

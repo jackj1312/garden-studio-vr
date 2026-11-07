@@ -36,6 +36,18 @@ WHAT TO BUILD, IN THIS ORDER
    each, and overlay its outlines on the photo. Fix anything that doesn't sit on the real edges. Walk every room and the
    outside: no gaps, no walls through openings, no missing room, cupboard or stair.
 
+ACCEPTANCE (all must hold before you present; a failed check is fixed, never explained away in a caption)
+- Photo register first: every photo and video with its capture date and what it shows. Model the latest state; overlay
+  each photo against the scene as it was on that photo's date.
+- Use the videos: solve cameras for at least 40 frames of the latest garden walk and 10 of the September video, at full
+  resolution, and set scale from known lengths (house dimensions, the path, A4 sheets held up in some photos). Build the
+  garden from these, not from typed estimates.
+- Overlays at full resolution: camera solve RMS at most 8 px; every structural edge within 15 px. Hide neighbours and other
+  context when rendering elevation checks so nothing blocks the house.
+- Rooms: list every labelled room, cupboard and stair from each drawing (including thin stud walls); a computed check that
+  each is a closed space with the drawing's door count, Before and After.
+- Walk-round cameras at 1.6 m in each room's centre, two opposite views per room, every room in both versions.
+
 TOOLS
 Blender through the MCP connector (or headless Blender), with every step saved as a script so the scene rebuilds exactly
 from the data. My Mac is an 8 GB M1 Air: one heavy job at a time, no Cycles renders or light bakes. No spending, logins,

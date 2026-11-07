@@ -12,6 +12,10 @@ READ FIRST
 - AS-BUILT-NOTES.md: the owner's facts about this property that the drawings don't show. They outrank the drawings.
 - source-manifest.json and SOURCE-POLICY.md: the drawings, photos, videos, scans and LiDAR you may use. Check every file is
   actually readable (iCloud placeholders may need downloading); list anything you could not read.
+- inputs/prepared/source-register.json: every supplied file with its capture date, and frames from every video at one per
+  second with their timestamps (inputs/prepared/frames/). Start your register from it; take full-resolution frames from
+  the original videos for camera solves.
+- PLAN-DATA-SCHEMA.md: the format your plan is exported in, so it can be checked by machine.
 - lessons/ (Claude's and Codex's mistakes) and BUILD-ENGINE-RULE.md. Turn every applicable lesson into a check.
 - Do not open any earlier entrant's house, layout, renders, plans or reports.
 
@@ -32,6 +36,12 @@ THE METHOD (in order; each step has a check that must pass before the next)
    room inventory from the drawings' labels: every room, cupboard, landing and stair. Check the scale against at least
    three written dimensions and the owner's tape measurements, and draw the plan back over each sheet as proof.
 
+   GATE 1A (2D) — STOP AND PRESENT: the source register, the floor plans and site plan overlaid on every drawing sheet,
+   the room inventory, the scale residuals, the shared-check report, the independent review (below) with your fixes, and every
+   uncertainty. Include ONE batch of genuine questions for me, like a
+   client call (only what the sources cannot settle; each with your recommended answer). Wait for my approval and answers
+   before building anything in 3D.
+
 4. Things the drawings don't show (as-built changes, conversions, garden) come from dated photos and video, measured:
    solve the camera positions (structure-from-motion, or against known geometry) for enough frames to cover every area,
    at full resolution, with scale from known lengths. Never estimate or type in positions by eye.
@@ -44,6 +54,9 @@ THE METHOD (in order; each step has a check that must pass before the next)
    hedge, step, structure and tree that the sources show.
 
 6. Machine checks (computed, not eyeballed), Before and After:
+   - At GATE 1A and again at GATE 1B, export the plan as plan-data.json in the PLAN-DATA-SCHEMA.md format and run the
+     shared checks: python3 shared-tools/checks/run_checks.py plan-data.json --gate 1A (at 1B: --gate 1B with
+     --overlays). Keep the report; every FAIL is fixed before you present.
    - Closure: every room in the inventory is a closed space with the drawing's door count; no missing wall, no gap in any
      wall, floor or ceiling, every opening has wall above and below it as drawn, the structure is watertight per storey.
    - Circulation: every stair rises the right way, keeps its headroom and lands clear; no stair, door swing or fitted item
@@ -63,9 +76,17 @@ Any engine or tool you judge best (Blender via MCP or headless, or another), wit
 exactly from the data. The Mac is an 8 GB M1 Air: one heavy job at a time, no Cycles renders or light bakes. No spending,
 logins, purchases or uploads of private material without my approval.
 
-STOP AND PRESENT
+INDEPENDENT REVIEW (before presenting at GATE 1A, and again at GATE 1B)
+Start a separate reviewer agent with a fresh context. Give it the gate's output, the original sources, the shared checks
+and lessons/, but not your reasoning or excuses. It checks the output against the sources and lists every fault with its
+evidence. Log each finding in MISTAKES.md, fix it at its cause, re-run the affected checks, and include the reviewer's
+report and your fixes in the presentation. If your environment has no subagents, do a separate review pass from scratch
+instead, and say so.
+
+GATE 1B (3D) — STOP AND PRESENT
 Only when every check passes, STOP and present: the source register, the plan overlays on each sheet, the photo and video
-overlays with their residuals, the closure, circulation and evidence check results, the walk-round of every room and the
+overlays with their residuals, the closure, circulation and evidence check results (the shared-check report), the
+independent review with your fixes, the walk-round of every room and the
 outside (Before and After), and every assumption with the evidence behind it. Do not start any other pass until I approve.
 
 Keep a short PLAN.md (goal, steps, the check for each) and re-read it at every step and before you present. Log every

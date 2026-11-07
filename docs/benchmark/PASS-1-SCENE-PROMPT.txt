@@ -1,64 +1,70 @@
-PASS 1 OF THE STAGED BENCHMARK — THE SCENE, EXACTLY RIGHT (Jack, 7 November 2026)
+PASS 1 OF THE STAGED BENCHMARK — THE WHOLE SITE, EXACTLY RIGHT (Jack, revised 7 November 2026)
 
-Open ~/Desktop/Garden Studio Benchmark as your workspace. This pass has ONE goal: reconstruct 23 Battle Road and its
-surroundings, Before and After, with every wall, opening, level and roof exactly right. Nothing else. No furniture, no
-planting detail, no lighting design, no editors, no VR, no extra features. Those come in later passes, only after I have
-approved this one. Layout accuracy beats everything: a perfect plain scene is a pass; a beautiful scene with a wall in the
-wrong place is a fail.
+Open ~/Desktop/Garden Studio Benchmark as your workspace. Treat this as a paying client's home that you have never seen:
+everything you build must come from the supplied sources, and everything must be checked before I see it.
+
+This pass has ONE goal: reconstruct the property and its surroundings, Before and After, exactly: the house AND the garden,
+which matters almost as much as the house. Nothing else: no furniture, no planting detail, no lighting design, no editors,
+no VR. A perfect plain scene is a pass. A beautiful scene with a wall in the wrong place, a missing room or an invented
+object is a fail.
 
 READ FIRST
-- AS-BUILT-NOTES.md (what is really there that the drawings don't show; this outranks the drawings).
-- source-manifest.json and SOURCE-POLICY.md (the original drawings, photos, video, scan and LiDAR you may use).
-- The lessons in lessons/ (Claude's and Codex's mistakes): apply every rule about drawings, scale, openings, roofs,
-  layers and raw surfaces.
-- BUILD-ENGINE-RULE.md. You may not open any earlier entrant's house, layout, renders, plans or reports.
+- AS-BUILT-NOTES.md: the owner's facts about this property that the drawings don't show. They outrank the drawings.
+- source-manifest.json and SOURCE-POLICY.md: the drawings, photos, videos, scans and LiDAR you may use. Check every file is
+  actually readable (iCloud placeholders may need downloading); list anything you could not read.
+- lessons/ (Claude's and Codex's mistakes) and BUILD-ENGINE-RULE.md. Turn every applicable lesson into a check.
+- Do not open any earlier entrant's house, layout, renders, plans or reports.
 
-THE DRAWINGS (all in sources/bds-originals/)
-- 4915.1 = the house as surveyed in 2022 (existing). 4915.2B, 4915.3A and 4915.4A are the latest revisions of the approved
-  scheme; 4915.2 and 4915.2A are superseded (use them only to understand changes). 4915.SP is the site plan (1:500),
-  4915.LP the location plan (1:1250). The planning statement and decision notices confirm what was approved.
-- Before = the house today (AS-BUILT-NOTES.md says what was built after the 2022 survey). After = the approved scheme
-  finished.
+THE METHOD (in order; each step has a check that must pass before the next)
 
-WHAT TO BUILD, IN THIS ORDER
-1. One site frame for everything: the plot boundary, ground levels (drawings, site plan and the supplied LiDAR), north,
-   and the footprints of this house, No. 21 attached, the neighbours, the road and pavement. Every later object is
-   placed in this frame; never build the house and the surroundings separately.
-2. Read the drawings into exact data: every wall (line, thickness, height), opening (width, height, sill, head, which way
-   doors swing), floor and ceiling level, stair, chimney, roof plane, eaves and verge. Check the scale against at least
-   three written dimensions on the drawings and against the tape measurements in AS-BUILT-NOTES.md, and write the
-   residuals down. Draw the plan back from your data and overlay it on each drawing sheet as proof.
-3. The whole scene as clean shells, Before and After: this house (walls, floors, ceilings, stairs, roofs, openings with
-   simple frames and glass, the porch and loft as built), No. 21 attached, the neighbours as massing with their roof
-   shapes and facade openings, the road, pavement, kerbs, and the front garden as it is today (paving, beds, lawn, walls,
-   fences, boundary, as hard surfaces and simple volumes). Plain neutral materials are fine; brick and roof colour help.
-4. Check it against the photos: solve the camera positions of the supplied photos and video frames, render the scene from
-   each, and overlay its outlines on the photo. Fix anything that doesn't sit on the real edges. Walk every room and the
-   outside: no gaps, no walls through openings, no missing room, cupboard or stair.
+1. Source register. List every drawing (number, revision, date, existing or proposed, superseded or current), every photo
+   and every video (capture date from metadata, what it shows). Sources disagree because properties change over time:
+   resolve by DATE. "Today" is the latest capture of each area; earlier captures count only for what has not changed since.
+   Record, for every element you build, which source and date it came from.
 
-ACCEPTANCE (all must hold before you present; a failed check is fixed, never explained away in a caption)
-- Photo register first: every photo and video with its capture date and what it shows. Model the latest state; overlay
-  each photo against the scene as it was on that photo's date.
-- Use the videos: solve cameras for at least 40 frames of the latest garden walk and 10 of the September video, at full
-  resolution, and set scale from known lengths (house dimensions, the path, A4 sheets held up in some photos). Build the
-  garden from these, not from typed estimates.
-- Overlays at full resolution: camera solve RMS at most 8 px; every structural edge within 15 px. Hide neighbours and other
-  context when rendering elevation checks so nothing blocks the house.
-- Rooms: list every labelled room, cupboard and stair from each drawing (including thin stud walls); a computed check that
-  each is a closed space with the drawing's door count, Before and After.
-- Walk-round cameras at 1.6 m in each room's centre, two opposite views per room, every room in both versions.
+2. One site frame. The plot boundary, ground levels (drawings, site plan, LiDAR), north, and the footprints of the house,
+   attached and neighbouring buildings, road and pavement, in one coordinate system. Everything is built in this frame;
+   never build the house and its surroundings separately.
 
-TOOLS
-Blender through the MCP connector (or headless Blender), with every step saved as a script so the scene rebuilds exactly
-from the data. My Mac is an 8 GB M1 Air: one heavy job at a time, no Cycles renders or light bakes. No spending, logins,
-purchases or uploads of private material without my approval.
+3. Drawings to data. Read every element, not just the obvious ones: thick and thin (stud) walls, the wall below and above
+   every window (sill walls and lintels), chimney breasts and the walls between them, openings (width, height, sill, head,
+   door swing), floors and ceilings per storey, stairs (direction, rise, going, headroom), roofs, eaves and verges. Make a
+   room inventory from the drawings' labels: every room, cupboard, landing and stair. Check the scale against at least
+   three written dimensions and the owner's tape measurements, and draw the plan back over each sheet as proof.
+
+4. Things the drawings don't show (as-built changes, conversions, garden) come from dated photos and video, measured:
+   solve the camera positions (structure-from-motion, or against known geometry) for enough frames to cover every area,
+   at full resolution, with scale from known lengths. Never estimate or type in positions by eye.
+
+5. Build the scene as clean shells, Before and After: the house, attached and neighbouring buildings (real roof shapes
+   and facade openings), road, pavement and kerbs, and the garden as it is today: every path, edge, bed, lawn, wall, fence,
+   hedge, step, structure and tree that the sources show.
+
+6. Machine checks (computed, not eyeballed), Before and After:
+   - Closure: every room in the inventory is a closed space with the drawing's door count; no missing wall, no gap in any
+     wall, floor or ceiling, every opening has wall above and below it as drawn, the structure is watertight per storey.
+   - Circulation: every stair rises the right way, keeps its headroom and lands clear; no stair, door swing or fitted item
+     blocks another stair, door or route; every room is reachable.
+   - Evidence: every built object, inside and out, cites its source; anything not seen in a dated source is not built.
+     No invented hedges, walls, fences or features.
+   - Overlays at full resolution, for the drawings and for every solved photo or frame: camera RMS at most 8 px; every
+     structural edge within 15 px. Hide other buildings when checking an elevation so nothing blocks it.
+   A failed check is fixed at its cause and re-run. Never explain a failure away in a caption.
+
+7. Self-review. Walk every room and every part of the outside: cameras at 1.6 m in each room's centre, two opposite views
+   per room, every room in both versions, and views of the garden from the same positions as the photos and video frames.
+   Look at every view yourself and log every fault with its cause before fixing it.
+
+TOOLS AND LIMITS
+Any engine or tool you judge best (Blender via MCP or headless, or another), with every step scripted so the scene rebuilds
+exactly from the data. The Mac is an 8 GB M1 Air: one heavy job at a time, no Cycles renders or light bakes. No spending,
+logins, purchases or uploads of private material without my approval.
 
 STOP AND PRESENT
-When the scene is done and checked, STOP. Present to me: the plan overlays on each drawing sheet, the photo overlays, a
-walk-round of every room and the outside (Before and After), the scale residuals, and a list of anything you assumed or
-could not determine (with the evidence you used). Do not start furnishing or any other pass until I approve. I will mark
-anything wrong; fix it and present again.
+Only when every check passes, STOP and present: the source register, the plan overlays on each sheet, the photo and video
+overlays with their residuals, the closure, circulation and evidence check results, the walk-round of every room and the
+outside (Before and After), and every assumption with the evidence behind it. Do not start any other pass until I approve.
 
 Keep a short PLAN.md (goal, steps, the check for each) and re-read it at every step and before you present. Log every
-mistake with its cause and the rule that prevents it before fixing it. Work in your own run folder and git branch; never
-overwrite another run; never push.
+mistake in MISTAKES.md with its cause and the rule that prevents it before fixing it. Work in your own run folder and git
+branch; never overwrite another run; never push.

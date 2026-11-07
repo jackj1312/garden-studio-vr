@@ -36,7 +36,10 @@ THE METHOD (in order; each step has a check that must pass before the next)
    solve the camera positions (structure-from-motion, or against known geometry) for enough frames to cover every area,
    at full resolution, with scale from known lengths. Never estimate or type in positions by eye.
 
-5. Build the scene as clean shells, Before and After: the house, attached and neighbouring buildings (real roof shapes
+5. Build the scene so it is easy to judge, Before and After: not textured yet, but every surface in its real colour and
+   finish so walls, floors, ceilings, doors, frames and fittings read clearly (painted plaster, timber or carpet floors,
+   tiled areas, white ceilings, brick and roof tiles outside in their colours). Stairs complete with treads, risers,
+   strings and handrails; doors and windows with frames, glass and sills; skirting where it belongs. Build: the house, attached and neighbouring buildings (real roof shapes
    and facade openings), road, pavement and kerbs, and the garden as it is today: every path, edge, bed, lawn, wall, fence,
    hedge, step, structure and tree that the sources show.
 

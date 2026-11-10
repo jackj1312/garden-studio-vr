@@ -5,6 +5,8 @@ import json, math, re
 from geom import sub, add, mul, unit, length, left_normal, rect, sector, point_in_poly
 
 SCHEMA_ID = "garden-studio/plan-data/1"
+SCHEMA_IDS = ("garden-studio/plan-data/1", "garden-studio/plan-data/2")
+HOUSE = "house"
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ELEMENT_LISTS = ["walls", "openings", "rooms", "stairs", "slabs", "objects"]
 DOOR_KINDS = {"door", "opening", "garage_door", "french_door", "bifold_door", "sliding_door"}
@@ -12,6 +14,11 @@ FREE_WALL_KINDS = {"boundary", "garden", "fence", "retaining", "dwarf", "screen"
 BLOCKING_OBJECT_KINDS = {"fitted", "kitchen_unit", "appliance", "wardrobe", "bath", "shower", "wc", "basin",
                          "chimney_breast", "hearth", "boiler", "tank", "column", "furniture"}
 BOUNDARY_OBJECT_KINDS = {"balustrade", "guard", "rail", "screen", "glass_screen"}
+ROOF_LINE_KINDS = {"ridge", "hip", "valley", "eaves", "verge", "abutment", "gutter"}
+VIEW_KINDS = {"plan", "elevation", "section", "roof_plan", "site_plan", "location_plan"}
+# object kinds that never touch the ground themselves (checked elsewhere or not at all)
+NOT_GROUNDED_KINDS = {"parcel", "facade_window", "rooflight", "lining", "beam", "boxing", "shelf", "mirror", "rail",
+                      "balustrade", "canopy", "sign", "lamp"}
 
 
 class Result:
@@ -45,8 +52,8 @@ def validate(data):
     err = []
     if not isinstance(data, dict):
         return ["top level must be an object"]
-    if data.get("schema") != SCHEMA_ID:
-        err.append("schema must be %r (got %r)" % (SCHEMA_ID, data.get("schema")))
+    if data.get("schema") not in SCHEMA_IDS:
+        err.append("schema must be one of %r (got %r)" % (SCHEMA_IDS, data.get("schema")))
     if data.get("units", "m") != "m":
         err.append("units must be 'm'")
     vers = data.get("versions")
@@ -150,6 +157,71 @@ def validate(data):
         for ob in v.get("objects", []):
             if not (_poly(ob.get("footprint")) or (isinstance(ob.get("line"), list) and len(ob["line"]) >= 2) or _pt(ob.get("position"))):
                 err.append(P + "object %s needs footprint, line or position" % ob.get("id"))
+        err += validate_v2(v, P, ids)
+    err += validate_v2(data, "", {})
+    return err
+
+
+def _pt3(p):
+    return isinstance(p, (list, tuple)) and len(p) == 3 and all(_num(c) for c in p)
+
+
+def validate_v2(block, P, ids):
+    """Structural checks of the version-2 blocks (roofs, drawn_views, conflicts, terrain) wherever they appear
+    (top level or inside a version). Missing blocks are not errors here: the checks report their absence per gate."""
+    err = []
+    roofs = block.get("roofs")
+    if roofs is not None:
+        if not isinstance(roofs, list):
+            err.append(P + "roofs must be a list")
+        else:
+            for rf in roofs:
+                if not isinstance(rf, dict) or not rf.get("id"):
+                    err.append(P + "every roofs[] entry needs an id"); continue
+                if rf["id"] in ids:
+                    err.append(P + "duplicate id %s (roofs and %s)" % (rf["id"], ids[rf["id"]]))
+                ids[rf["id"]] = "roofs"
+                for f in rf.get("faces", []) or []:
+                    poly = f.get("polygon_3d") if isinstance(f, dict) else None
+                    if not (isinstance(poly, list) and len(poly) >= 3 and all(_pt3(q) for q in poly)):
+                        err.append(P + "roof %s: every face needs polygon_3d of 3+ [x, y, z] points" % rf["id"])
+                for ln in rf.get("lines", []) or []:
+                    if not isinstance(ln, dict) or not (_pt3(ln.get("start")) and _pt3(ln.get("end"))):
+                        err.append(P + "roof %s: every line needs kind, start [x, y, z] and end [x, y, z]" % rf["id"]); continue
+                    if ln.get("kind") not in ROOF_LINE_KINDS:
+                        err.append(P + "roof %s: line kind %r not in %s" % (rf["id"], ln.get("kind"), sorted(ROOF_LINE_KINDS)))
+    dv = block.get("drawn_views")
+    if dv is not None:
+        if not isinstance(dv, list):
+            err.append(P + "drawn_views must be a list")
+        else:
+            seen = set()
+            for d in dv:
+                if not isinstance(d, dict) or not d.get("id"):
+                    err.append(P + "every drawn_views[] entry needs an id"); continue
+                if d["id"] in seen:
+                    err.append(P + "duplicate drawn view id %s" % d["id"])
+                seen.add(d["id"])
+                if d.get("kind") not in VIEW_KINDS:
+                    err.append(P + "drawn view %s: kind %r not in %s" % (d["id"], d.get("kind"), sorted(VIEW_KINDS)))
+                if d.get("kind") in ("section", "elevation"):
+                    ln = d.get("line")
+                    if not (isinstance(ln, list) and len(ln) == 2 and all(_pt(q) for q in ln)):
+                        err.append(P + "drawn view %s: a %s needs line [[x, y], [x, y]]" % (d["id"], d.get("kind")))
+    cf = block.get("conflicts")
+    if cf is not None:
+        if not isinstance(cf, list):
+            err.append(P + "conflicts must be a list")
+        else:
+            for c in cf:
+                if not isinstance(c, dict) or not c.get("id"):
+                    err.append(P + "every conflicts[] entry needs an id"); continue
+                vals = c.get("values")
+                if not isinstance(vals, list) or len(vals) < 2:
+                    err.append(P + "conflict %s needs values[] with at least two entries" % c["id"])
+    tr = block.get("terrain")
+    if tr is not None and not isinstance(tr, dict):
+        err.append(P + "terrain must be an object")
     return err
 
 
@@ -300,6 +372,48 @@ class Version:
         self.flights = {sid: [Flight(f, sid, i) for i, f in enumerate(s.get("flights", []))] for sid, s in self.stairs.items()}
         self.slabs = v.get("slabs", []) or []
         self.objects = v.get("objects", []) or []
+        # version-2 blocks: inside the version, or at the top level (optionally tagged with "version")
+        self.roofs = v.get("roofs") if v.get("roofs") is not None else [r for r in (self.data.get("roofs") or []) if r.get("version") in (None, name)]
+        self.has_roofs = v.get("roofs") is not None or self.data.get("roofs") is not None
+        self.drawn_views = v.get("drawn_views") if v.get("drawn_views") is not None else \
+            [d for d in (self.data.get("drawn_views") or []) if d.get("version") in (None, name)]
+        self.has_views = v.get("drawn_views") is not None or self.data.get("drawn_views") is not None
+        self.conflicts = v.get("conflicts") if v.get("conflicts") is not None else (self.data.get("conflicts"))
+        self.terrain = v.get("terrain") or self.data.get("terrain")
+
+    def plane(self, storey_id):
+        """Absolute height of the storey's one ceiling plane (D10), or None if the storey has no ceiling_m."""
+        st = self.storey.get(storey_id, {})
+        if _num(st.get("ceiling_m")):
+            return self.level[storey_id] + float(st["ceiling_m"])
+        return None
+
+    def house_walls(self, building=HOUSE):
+        return [w for w in self.walls.values() if (w.building or HOUSE) == building]
+
+    def external_doors(self):
+        """Doors with `external: true`, or whose wall has a room on one side only."""
+        out = []
+        for o in self.openings.values():
+            if o.wall is None or not o.is_door:
+                continue
+            if o.raw.get("external"):
+                out.append(o); continue
+            pl, pr = o.probes()
+            L = self.rooms_at(pl, o.wall.storey); R = self.rooms_at(pr, o.wall.storey)
+            if bool(L) != bool(R):
+                out.append(o)
+        return out
+
+    def outdoor_objects(self):
+        """Objects of the outside: `area` set and no storey (or kind in the outdoor set), and not an exempt kind."""
+        out = []
+        for ob in self.objects:
+            if ob.get("kind") in NOT_GROUNDED_KINDS or ob.get("ground") == "n/a":
+                continue
+            if ob.get("area") and ob.get("storey") is None:
+                out.append(ob)
+        return out
 
     def above(self, storey_id):
         lv = self.level.get(storey_id)
@@ -318,7 +432,15 @@ class Version:
         if isinstance(c, dict) and _num(c.get("min_m")):
             return (f + c["min_m"], f + float(c.get("max_m", c["min_m"])))
         st = self.storey.get(r.get("storey"), {})
-        if _num(st.get("ceiling_m")): return (f + st["ceiling_m"], f + st["ceiling_m"])
+        if _num(st.get("ceiling_m")):
+            top = f + st["ceiling_m"]
+            dep = r.get("ceiling_departure")
+            # v2 (D10): a cited sloped/dropped departure lowers the ceiling where its plane is below the storey plane
+            if isinstance(dep, dict) and isinstance(dep.get("underside_plane"), list) and len(dep["underside_plane"]) == 3 and r.get("polygon"):
+                a, b, c0 = (float(x) for x in dep["underside_plane"])
+                low = min(min(top, a * x + b * y + c0) for x, y in r["polygon"])
+                return (low, top)
+            return (top, top)
         return None
 
     def stair_plan(self, sid, grow=0.0):

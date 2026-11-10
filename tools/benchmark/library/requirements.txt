@@ -1,0 +1,10 @@
+PyMuPDF
+numpy
+shapely
+opencv-python-headless
+trimesh
+scipy
+pillow
+pytest
+pygltflib
+rasterio

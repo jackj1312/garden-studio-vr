@@ -46,3 +46,34 @@ Source inventory currently includes iCloud placeholders. Native originals must b
 Final source-tool audit also carries the original builder/architect/inspector modes, stage playback, sections/x-ray/as-built, wall/opening edit operations, tape/heights/scale figure, requests/inspections/regs/source-reference panels, frame logs, presence/height calibration/haptics, and capture/splat workflow (R33–R36). These came from the existing viewer contract and complete workflow, not merely the later garden/furniture conversation. Advanced architectural CAD is distinguished from the editing operations already present.
 
 R37 carries the latest owner request: each run, including repeated models, has a unique dated launcher and its own server; the launcher folder is separate on the Desktop. Prior launchers are owner-only sealed access during a blind run.
+
+## Rebuild additions (8 Nov 2026, Claude Opus; BENCHMARK-REBUILD-PLAN.md)
+| Source request | Carried requirements | Status distinction |
+|---|---|---|
+| Run 02 review: roof, sections, elevations never used; ceilings as min/max slabs | R38, R39 | Tools shipped 9 Nov 2026 (87 check tests pass); the studio's own plan of the house stays out of the pack (unsigned). |
+| Garden traced from a bad solve; invented and omitted elements | R40, R41 | Tools shipped 9 Nov 2026; not yet proven on a full run. |
+| Gates were words; checks circular and self-reported | R42, R43 | Gate shipped 9 Nov 2026 (38 tests pass); not yet proven on a full run. |
+| Pack shipped code only; positives left behind | R44, R46 | Shipped (publish.py allowlist, library, methods, judges method, STUDIO-MEMORY, run MISTAKES). |
+| Brief contradicted itself (plain scene vs real finish) | R45 | Minimum look in PROJECT-BRIEF and the Pass 1 prompt (9 Nov 2026). |
+| 4915.2A damaged; October photos offline; street photo not required | R46, SOURCE-POLICY | Shipped: 4915.2A excluded, OFFLINE-ORIGINALS.md, 20813/20817/20814 required. |
+
+## Additions of 9 November 2026 (Claude, Fable 5.2; Jack's answers and the marks-round lessons)
+| Source request | Carried requirements | Status distinction |
+|---|---|---|
+| "Something in the browser is running very slowly and it keeps freezing"; moving dropped the picture "to an awful state" | R47 | Requirement and prompt rule; no shared measuring tool yet. |
+| "I also want this recorded as the north star for what I want the build to be like" | R48, `NORTH-STAR.md` | Written from the primary source; read by every pass. |
+| "Just the neighbour and the big building to keep"; a mark widened into 26 houses and 30 trees; an invented owner fact acted on | R49, AS-BUILT-NOTES surroundings | Brief and prompt rule; element checklist is the check. |
+| "A repeatable workflow that I intend to sell as a service for people trying to visualize their extensions before anything has been built" | R50 | Brief; share link on a phone is part of delivery. |
+| Bark area is the kids' play area with the playhouse; internal doors white Before, oak After incl. porch-to-hall; tidy and embellish | PROJECT-BRIEF decisions of 9 Nov | Owner facts recorded with their quotes. |
+| After extension rear window colour: D4 (white) against the signed spec (anthracite) | AS-BUILT-NOTES, OPEN | Not settled; asked at Gate 1A. |
+| Two owner photo sets (back garden and rear 7 Nov; loft and stair 8 Nov) | `source-manifest.json`, prepared register | In the allowlist with fingerprints; frames not re-extracted. |
+
+## Additions of 10 November 2026 (Claude, Opus 5.5; from the 23 Battle Road CAD upgrade to the Pass 1 standard)
+| Source request | Carried requirements | Status distinction |
+|---|---|---|
+| 10 of 87 check tests failed on a fresh `setup_env.sh` venv (no scipy for the trimesh mesh checks) | R46 | Fixed: `scipy` in `shared-tools/requirements.txt`; `publish.py --check` runs every test folder green. |
+| Plan overlays scored wall faces buried inside a junction (every 300 mm L-corner failed at t/2) | R39 | Fixed in `checks/overlays.py`; regression `checks/tests/test_run_fixes.py` (fails on the old code). |
+| A room taking the storey plane ignored its cited sloped `ceiling_departure.underside_plane` (kneewalls reported as gaps above) | R38 | Fixed in `checks/plandata.py` `room_ceiling`; regression in the same file. |
+| Reader output failed the checks' schema; surrounds read as openings; apexes on the rafter line; views without version/storey | R39, R43 | Documented, not fixed in the readers: readers README says the output is candidates; lessons/extra/2026-11-10-cad-upgrade.md; `tools/plan2d/surround.py` and `faces.py` (tests in `tools/plan2d/tests`). |
+| Storey registration on one face pair; datums off the dpc line; as-built placeholders deferred; steps not from nosings; conflict text ahead of the data | R42, R43 | Prevention rules in lessons/extra/2026-11-10-cad-upgrade.md, mapped there to checks or to the independent review; no new computed check for steps or registration yet. |
+| Elevation reader lists only end-on ridges while the checker counts every model hip apex | R39 | OPEN: a checker change (visible apexes only) is suggested, not made. |
